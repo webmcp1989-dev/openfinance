@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Tests and coverage
+coverage/
+playwright-report/
+test-results/
+
+# Environment and local provider state
+.env
+.env.*
+!.env.example
+.vercel/
+.supabase/
+
+# Tooling
+*.tsbuildinfo
+.eslintcache
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log

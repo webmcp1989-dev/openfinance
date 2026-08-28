@@ -1,0 +1,21 @@
+{
+  "name": "openfinance",
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:openfinance": "bun --cwd apps/openfinance-ar dev",
+    "dev:acme": "bun --cwd apps/acme-ap dev",
+    "build": "bun run build:openfinance && bun run build:acme",
+    "build:openfinance": "bun --cwd apps/openfinance-ar build",
+    "build:acme": "bun --cwd apps/acme-ap build",
+    "typecheck": "bun run typecheck:openfinance && bun run typecheck:acme",
+    "typecheck:openfinance": "bun --cwd apps/openfinance-ar typecheck",
+    "typecheck:acme": "bun --cwd apps/acme-ap typecheck",
+    "lint": "bun run lint:openfinance && bun run lint:acme",
+    "lint:openfinance": "bun --cwd apps/openfinance-ar lint",
+    "lint:acme": "bun --cwd apps/acme-ap lint"
+  }
+}
