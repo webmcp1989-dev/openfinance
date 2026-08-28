@@ -1,71 +1,61 @@
-# System architecture
+# Architecture
 
-## Context
+## System boundary
 
-OpenFinance contains two independent applications:
-
-- **OpenFinance AR**, used by a supplier's accounts-receivable team.
-- **Acme AP**, used by that supplier inside a customer's supplier portal.
-
-The applications have separate origins, authentication sessions, authorization models, persistence, APIs, deployments, and WebMCP tools. They do not call one another.
-
-## Deployment topology
+OpenFinance AR and Acme AP are separate applications deployed on different origins and backed by different Supabase projects. Their only runtime bridge is the human-directed browser agent.
 
 ```text
-Vercel project: openfinance-ar
-  -> apps/openfinance-ar
-  -> OpenFinance Supabase project only
-
-Vercel project: openfinance-acme-ap
-  -> apps/acme-ap
-  -> Acme Supabase project only
-
-ChatGPT in-app browser
-  -> observes and invokes WebMCP tools from each open, authenticated origin
-  -> carries user-approved workflow data between tool calls
+┌────────────────────────────┐                 ┌────────────────────────────┐
+│ OpenFinance AR             │                 │ Acme Supplier Portal       │
+│ openfinance-ar.vercel.app  │                 │ openfinance-ap.vercel.app  │
+│                            │                 │                            │
+│ Next.js UI + BFF routes    │                 │ Next.js UI + BFF routes    │
+│ imperative WebMCP tools    │                 │ imperative WebMCP tools    │
+│ own Supabase Auth + DB     │                 │ own Supabase Auth + DB     │
+└─────────────┬──────────────┘                 └─────────────┬──────────────┘
+              │ signed-in page tool                            │ signed-in page tool
+              └────────────── ChatGPT + human ─────────────────┘
 ```
 
-Two Vercel projects may reference the same Git repository while using different root directories and isolated environment variables. Each frontend receives only its own Supabase URL and publishable key.
+There is no shared database, session cookie, service credential, server-to-server API, queue, webhook, or hidden synchronization path.
 
-## Application layering
+## Layers inside each app
 
-Each bounded application follows the same dependency direction without sharing domain code:
+1. UI renders human-readable state and registers tools only on an authenticated top-level page.
+2. Site tools use narrow JSON Schemas and same-origin `fetch` with the site's existing cookie session.
+3. Next.js route handlers enforce content type, same-origin writes, verified Supabase claims, Zod validation, and stable error contracts.
+4. Services implement use cases and map database records into provider-agnostic domain objects.
+5. Supabase Data API calls run as the authenticated user; Postgres grants and RLS enforce tenant scope independently of application code.
+6. Private Postgres functions perform consequential multi-row changes atomically and idempotently.
 
-```text
-UI and WebMCP registration
-  -> typed API client
-    -> Supabase Edge Function HTTP boundary
-      -> application service / use case
-        -> domain rules
-          -> repository interface
-            -> Supabase/Postgres adapter
-```
+The browser never receives a service-role key. The frontend is not an authorization or business-rule boundary.
 
-Business rules and authorization are enforced in Edge Functions and Postgres. Browser code may repeat validation for usability but is not authoritative.
+## AP submission transaction
 
-## Data movement
+`submit_invoice_batch` is a public security-invoker wrapper around a private security-definer function with `search_path = ''`. Execution is revoked from `public` and `anon` and granted only to `authenticated`.
 
-There is no server-to-server data movement between the two applications. A typical workflow is:
+Within one database transaction it:
 
-1. The browser agent invokes a OpenFinance read tool.
-2. OpenFinance authorizes the current user and returns a bounded invoice submission package.
-3. The agent invokes Acme validation tools using the relevant user-approved data.
-4. Acme authorizes the independently signed-in supplier and evaluates its own rules.
-5. After human confirmation, the agent invokes Acme's idempotent submission tool.
-6. The agent invokes OpenFinance's recording tool with Acme's returned reference and status.
+1. verifies the caller has a submitter role and derives its supplier and buyer IDs;
+2. resolves or creates the supplier-scoped idempotency record;
+3. locks every referenced PO row;
+4. revalidates ownership, open status, currency, remaining balance, uniqueness, PDF signature, size, and SHA-256;
+5. inserts receipt records and decrements balances;
+6. writes one audit event and stores the immutable response;
+7. commits all invoices or none.
 
-## Provider boundaries
+Application preflight improves the human-agent experience but the transaction is authoritative, preventing time-of-check/time-of-use errors.
 
-Supabase-specific code is confined to authentication adapters, repository implementations, Edge Function bootstrapping, migrations, and deployment configuration. Domain rules do not import Supabase clients or depend on Postgres-specific types.
+## Data transfer
 
-Vercel-specific configuration is confined to deployment files and environment configuration. Application code must run in a standard Next.js production environment.
+The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. The browser agent passes that explicit package to Acme. Acme independently decodes, bounds, identifies, and hashes it. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
 
-## Performance approach
+## Performance choices
 
-- Server-render authenticated application shells where safe and useful.
-- Keep authenticated responses private and non-cacheable when session refresh is possible.
-- Select only required database columns.
-- Batch invoice reads and writes rather than issuing per-row network calls.
-- Use indexes that correspond to tenant, supplier, status, PO, and idempotency access paths.
-- Keep WebMCP outputs concise and task-specific.
-- Measure before introducing caches or additional infrastructure.
+- Server Components load identity and workspace data concurrently.
+- Workspace refreshes use one same-origin endpoint after writes.
+- Query indexes match tenant, status, PO, uniqueness, and recent-audit access paths.
+- Validation queries PO and duplicate state concurrently.
+- No caching is allowed for authenticated financial state.
+
+These are bounded optimizations; correctness and isolation remain the primary constraints.

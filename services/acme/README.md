@@ -1,17 +1,8 @@
-# Acme backend
+# Acme Supabase boundary
 
-This directory owns Acme's independent Supabase project configuration, database migrations, Edge Functions, database tests, and generated types.
+This directory belongs only to the independent Acme AP Supabase project.
 
-It must never reference OpenFinance's Supabase project, service credentials, database schema, or private API.
+- `supabase/migrations/202608290001_initial.sql` creates supplier-scoped PO and submission data, seeds the challenge state, enables RLS, and installs the atomic idempotent submission transaction.
+- `supabase/tests/rls.test.sql` asserts grants, RLS, policy presence, and privileged-function hardening with pgTAP.
 
-Planned structure:
-
-```text
-supabase/
-  config.toml
-  migrations/
-  functions/
-  tests/
-```
-
-The structure will be initialized once Supabase CLI access is configured.
+Do not point this migration at the OpenFinance project. Runtime access uses only the Acme publishable key and the authenticated Acme supplier session.

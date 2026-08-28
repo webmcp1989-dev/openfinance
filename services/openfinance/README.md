@@ -1,17 +1,8 @@
-# OpenFinance backend
+# OpenFinance Supabase boundary
 
-This directory owns OpenFinance's independent Supabase project configuration, database migrations, Edge Functions, database tests, and generated types.
+This directory belongs only to the OpenFinance AR Supabase project.
 
-It must never reference Acme's Supabase project, service credentials, database schema, or private API.
+- `supabase/migrations/202608290001_initial.sql` creates tenant-scoped AR data, seeds the challenge queue, enables RLS, and installs idempotent delivery-result recording.
+- `supabase/tests/rls.test.sql` asserts grants, RLS, policy presence, and privileged-function hardening with pgTAP.
 
-Planned structure:
-
-```text
-supabase/
-  config.toml
-  migrations/
-  functions/
-  tests/
-```
-
-The structure will be initialized once Supabase CLI access is configured.
+Do not point this migration at the Acme project. Runtime access uses only the OpenFinance publishable key and the authenticated OpenFinance user session.

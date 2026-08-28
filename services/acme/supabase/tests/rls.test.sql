@@ -1,0 +1,18 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path = public, extensions;
+select plan(12);
+select has_table('public', 'suppliers', 'suppliers exists');
+select has_table('public', 'purchase_orders', 'purchase orders exist');
+select has_table('public', 'invoice_submissions', 'invoice submissions exist');
+select is((select relrowsecurity from pg_class where oid = 'public.purchase_orders'::regclass), true, 'purchase order RLS is enabled');
+select is((select relrowsecurity from pg_class where oid = 'public.invoice_submissions'::regclass), true, 'submission RLS is enabled');
+select ok(not has_table_privilege('anon', 'public.purchase_orders', 'select'), 'anonymous cannot read purchase orders');
+select ok(has_table_privilege('authenticated', 'public.purchase_orders', 'select'), 'authenticated role can reach purchase-order RLS');
+select ok(not has_table_privilege('authenticated', 'public.invoice_submissions', 'insert'), 'authenticated role cannot insert submissions directly');
+select is((select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'purchase_orders'), 1, 'purchase orders have one supplier-scoped select policy');
+select is((select prosecdef from pg_proc where oid = 'public.submit_invoice_batch(text,text,jsonb)'::regprocedure), false, 'public RPC wrapper is security invoker');
+select is((select prosecdef from pg_proc where oid = 'private.submit_invoice_batch(text,text,jsonb)'::regprocedure), true, 'private submit function is security definer');
+select ok((select coalesce(array_to_string(proconfig, ','), '') = 'search_path=""' from pg_proc where oid = 'private.submit_invoice_batch(text,text,jsonb)'::regprocedure), 'private function pins an empty search path');
+select * from finish();
+rollback;

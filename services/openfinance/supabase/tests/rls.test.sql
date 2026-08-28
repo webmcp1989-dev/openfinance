@@ -1,0 +1,16 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path = public, extensions;
+select plan(10);
+select has_table('public', 'organizations', 'organizations exists');
+select has_table('public', 'invoices', 'invoices exists');
+select is((select relrowsecurity from pg_class where oid = 'public.invoices'::regclass), true, 'invoice RLS is enabled');
+select ok(not has_table_privilege('anon', 'public.invoices', 'select'), 'anonymous cannot read invoices');
+select ok(has_table_privilege('authenticated', 'public.invoices', 'select'), 'authenticated role can reach invoice RLS');
+select ok(not has_table_privilege('authenticated', 'public.invoices', 'insert'), 'authenticated role cannot insert invoices directly');
+select is((select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'invoices'), 1, 'invoice table has one scoped select policy');
+select is((select prosecdef from pg_proc where oid = 'public.record_delivery_event(public.delivery_event_type,text,text,jsonb)'::regprocedure), false, 'public RPC wrapper is security invoker');
+select is((select prosecdef from pg_proc where oid = 'private.record_delivery_event(public.delivery_event_type,text,text,jsonb)'::regprocedure), true, 'private delivery function is security definer');
+select ok((select coalesce(array_to_string(proconfig, ','), '') = 'search_path=""' from pg_proc where oid = 'private.record_delivery_event(public.delivery_event_type,text,text,jsonb)'::regprocedure), 'private function pins an empty search path');
+select * from finish();
+rollback;

@@ -1,58 +1,37 @@
-const invoices = [
-  { id: "INV-10482", amount: "$18,420", po: "PO-8821", status: "Ready" },
-  { id: "INV-10491", amount: "$7,250", po: "PO-8844", status: "Ready" },
-  { id: "INV-10503", amount: "$12,900", po: "Missing", status: "Needs attention" },
-];
+import { redirect } from "next/navigation";
 
-export default function OpenFinanceHome() {
-  return (
-    <main className="shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">OpenFinance</p>
-          <h1>Portal delivery</h1>
-        </div>
-        <div className="identity" aria-label="Signed-in organization">
-          <span>Sarah Cohen</span>
-          <small>Example Supplier Ltd</small>
-        </div>
-      </header>
+import { signOut } from "@/app/login/actions";
+import { OpenFinanceWorkspace } from "@/components/openfinance-workspace";
+import { listInvoiceQueue } from "@/lib/services/invoice-service";
+import { createClient } from "@/lib/supabase/server";
 
-      <section className="summary" aria-labelledby="summary-title">
-        <div>
-          <p className="eyebrow">Acme Manufacturing</p>
-          <h2 id="summary-title">Three invoices need portal review</h2>
-          <p>Prepare, validate, and track delivery to your customer’s AP portal.</p>
-        </div>
-        <div className="metric"><strong>2</strong><span>Ready</span></div>
-        <div className="metric attention"><strong>1</strong><span>Exception</span></div>
-      </section>
+export const dynamic = "force-dynamic";
 
-      <section className="panel" aria-labelledby="invoice-title">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Invoice queue</p>
-            <h2 id="invoice-title">Customer portal submissions</h2>
-          </div>
-          <span className="agent-ready">WebMCP ready</span>
-        </div>
+type ProfileRow = {
+  full_name: string;
+  organizations: { name: string } | { name: string }[];
+};
 
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Invoice</th><th>Amount</th><th>Purchase order</th><th>Status</th></tr></thead>
-            <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td><strong>{invoice.id}</strong></td>
-                  <td>{invoice.amount}</td>
-                  <td>{invoice.po}</td>
-                  <td><span className={invoice.status === "Ready" ? "badge ready" : "badge blocked"}>{invoice.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  );
+export default async function OpenFinanceHome() {
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  if (authError || !authData?.claims?.sub) redirect("/login");
+
+  const [{ data: profileData }, invoices] = await Promise.all([
+    supabase.from("profiles").select("full_name, organizations!inner(name)").single(),
+    listInvoiceQueue(supabase),
+  ]);
+
+  const profile = profileData as unknown as ProfileRow | null;
+  if (!profile) redirect("/login?error=profile_missing");
+  const organizationName = Array.isArray(profile.organizations)
+    ? profile.organizations[0]?.name ?? "Supplier"
+    : profile.organizations.name;
+
+  return <OpenFinanceWorkspace
+    initialInvoices={invoices}
+    fullName={profile.full_name}
+    organizationName={organizationName}
+    signOutAction={signOut}
+  />;
 }

@@ -2,57 +2,43 @@
 
 ## Trust boundaries
 
-OpenFinance AR, Acme AP, the browser agent, and the human user are separate parties. Data received from any other party is untrusted until authenticated, authorized, validated, and checked against the receiving application's business rules.
+- The OpenFinance and Acme origins, Supabase projects, users, and cookies are mutually untrusted.
+- WebMCP definitions, inputs, and outputs are untrusted data.
+- The browser agent may prepare data but does not gain permissions beyond the human's current site session.
+- Only each application's backend and database are authoritative for its business rules.
 
-## Authentication and session isolation
+## Authentication and authorization
 
-- OpenFinance and Acme use independent Supabase Auth projects and cookie-backed sessions.
-- A session from one application has no meaning in the other application.
-- Authenticated routes must not use shared public caching or ISR when session refresh can occur.
-- Demo credentials contain synthetic data only and receive the least privileges needed for the workflow.
+- Supabase SSR stores sessions in project-specific cookies and refreshes them through Next.js `proxy.ts`.
+- Protected pages and routes use `auth.getClaims()`, not an unverified cookie session object.
+- Every exposed table has RLS enabled and anonymous grants revoked.
+- Authenticated grants are read-only; writes are available only through explicitly granted RPC wrappers.
+- Tenant identity is derived from `auth.uid()` through a profile row. Caller-supplied organization, buyer, or supplier IDs are never trusted.
+- The runtime has only the publishable key. Service-role keys and database passwords are prohibited.
 
-## Authorization and tenant isolation
+## Consequential writes
 
-- Every table exposed through Supabase has RLS enabled.
-- Grants are revoked first and then restored at least privilege.
-- Every policy and backend use case scopes reads and writes to the authenticated tenant or supplier.
-- Negative tests prove that users cannot access another tenant's or supplier's rows by guessing identifiers.
-- Service-role credentials remain server-side and are avoided when a user-scoped client is sufficient.
-- Views, functions, and storage objects receive the same isolation review as tables.
+- AP submission is one atomic Postgres transaction and locks PO rows before checking and decrementing balances.
+- Idempotency is scoped by supplier and bound to a SHA-256 fingerprint. A repeated identical request returns its original response; a key reused for a different payload fails.
+- AR result and exception recording uses the same fingerprint-bound idempotency behavior.
+- Public RPC functions are security invokers. Privileged implementation functions live in the unexposed `private` schema, set an empty search path, schema-qualify every relation, and receive minimal execution grants.
 
-## Business invariants
+## Request and document safety
 
-- Invoice submission is idempotent per supplier, destination, and invoice identity.
-- PO balance validation happens on Acme's backend within the same transaction as submission.
-- Duplicate invoice numbers are rejected within the appropriate supplier/customer scope.
-- Submission results and OpenFinance status updates are auditable and immutable where appropriate.
-- Optimistic UI never reports a successful financial action before backend confirmation.
+- Mutating routes require `application/json` and an exact same-origin `Origin` header.
+- Zod and Postgres constraints independently enforce shape, length, enum, money, identifier, and batch limits.
+- Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
+- No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
+- APIs return stable public error codes and do not expose raw database errors.
 
-## WebMCP safety
+## Human control
 
-- Read-only tools use `readOnlyHint`.
-- Tools returning externally sourced text use `untrustedContentHint` where appropriate.
-- Tool descriptions state side effects accurately and concisely.
-- Consequential tools return an exact preview or validation result before execution.
-- ChatGPT's action-time confirmation is complemented by backend validation; it is not treated as authorization.
-- WebMCP tool outputs never contain secrets, tokens, internal error details, or unrestricted data dumps.
+Read tools are accurately annotated. The AP submission description marks it as a consequential write and requires the caller to present exact invoices, amounts, total, and exceptions before seeking explicit confirmation. The UI remains fully usable and shows receipts and balance changes for verification.
 
-## Secret handling
+## Known production hardening beyond the contest slice
 
-- Browser bundles receive only the relevant Supabase URL and publishable key.
-- Service-role keys, signing secrets, database passwords, and deployment tokens are stored only in provider-managed server environments.
-- `.env*` files are ignored except documented examples.
-- Logs redact authorization headers, cookies, document contents, and sensitive financial fields unless explicitly required and protected.
-
-## Security verification
-
-Required tests include:
-
-- anonymous denial;
-- wrong-tenant and wrong-supplier denial;
-- malformed and oversized inputs;
-- duplicate and concurrent submission attempts;
-- stale PO balance;
-- unauthorized status mutation;
-- prompt-injection-like text preserved as data rather than instructions;
-- safe error responses without internal leakage.
+- Add distributed rate limiting and abuse telemetry at the edge.
+- Use malware scanning and durable object storage for real invoice files.
+- Require MFA and step-up approval for configurable high-value thresholds.
+- Export immutable audits to a separate retention boundary.
+- Add automated Supabase database tests to CI against ephemeral branches.

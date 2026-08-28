@@ -1,50 +1,47 @@
-# WebMCP design
+# WebMCP site tools
 
-## Role in the architecture
+OpenFinance uses the imperative `document.modelContext.registerTool` API on authenticated top-level pages. ChatGPT's current built-in browser does not discover declarative form tools or iframe registrations, so neither is used.
 
-WebMCP is the applications' only cross-application interoperability surface. Each application registers tools in its own active, authenticated document. The browser agent discovers those tools and coordinates them under the user's direction.
+Every tool calls the site's existing same-origin backend. The browser agent receives no direct database credential and no permission beyond the current user session.
 
-## Design principles
+## OpenFinance AR
 
-- One non-overlapping purpose per tool.
-- Clear verb-based name, human-readable title, and concise positive description.
-- Explicit JSON Schema with bounded input sizes and meaningful identifiers.
-- Backend authorization and validation for every execution.
-- Structured, compact output that lets the agent and human verify the result.
-- Visible UI synchronization after mutations.
-- Correct `readOnlyHint` and `untrustedContentHint` annotations.
-- Idempotency for retryable consequential actions.
-- Registration only while the authenticated page context can support the tool.
-
-## Planned OpenFinance tools
-
-| Tool | Mode | Purpose |
+| Tool | Kind | Purpose |
 | --- | --- | --- |
-| `list_ready_invoices` | Read | Return a bounded summary of invoices currently eligible for portal preparation. |
-| `get_submission_package` | Read | Return the authorized fields and synthetic document required for one invoice. |
-| `record_portal_result` | Write | Idempotently record an AP portal reference and received status. |
-| `record_portal_exception` | Write | Record a structured portal validation exception for AR follow-up. |
+| `list_ready_invoices` | read | Lists Acme invoices locally ready for external validation. |
+| `get_submission_package` | read | Returns exact invoice fields and checksum-protected PDF payloads for selected ready invoices. |
+| `record_portal_result` | write, idempotent | Records portal references only after Acme actually returns them. |
+| `record_portal_exception` | write, idempotent | Records precise AP validation exceptions without claiming submission. |
 
-## Planned Acme tools
+## Acme AP
 
-| Tool | Mode | Purpose |
+| Tool | Kind | Purpose |
 | --- | --- | --- |
-| `get_invoice_requirements` | Read | Return Acme's current supplier invoice requirements. |
-| `find_purchase_order` | Read | Return an authorized supplier-scoped PO summary and remaining balance. |
-| `validate_invoice` | Read | Evaluate invoice fields against Acme's backend business rules without changing state. |
-| `submit_invoice` | Write | Submit one validated invoice idempotently and return its AP reference. |
-| `get_invoice_status` | Read | Return the current supplier-scoped status of a submitted invoice. |
+| `get_invoice_requirements` | read | Returns live media, PO, balance, and uniqueness rules. |
+| `find_purchase_order` | read | Returns one supplier-authorized PO and live balance. |
+| `validate_invoice` | read | Checks a complete package without reserving balance or writing data. |
+| `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts. |
+| `get_invoice_status` | read | Returns current receipt and status for one supplier invoice. |
 
-Names and schemas remain provisional until the first contract tests validate natural-language selection and non-overlap.
+## Contract principles
 
-## Testing standard
+- Names are verb-based, precise, and non-overlapping.
+- JSON Schemas disable additional properties and bound arrays and strings.
+- Monetary values use integer minor units and ISO currency codes.
+- Read annotations are truthful; write tools explicitly describe side effects.
+- Read outputs include live versions, balances, rules, checksums, and validation issues needed to verify decisions.
+- Write outputs include durable references and committed remaining balances.
+- Frontend schemas aid tool selection; Zod, RLS, constraints, and transaction code remain authoritative.
 
-Each tool requires:
+## Required orchestration
 
-- schema validation tests;
-- authenticated happy-path integration tests;
-- anonymous and cross-tenant denial tests;
-- domain-rule and error-contract tests;
-- UI synchronization verification for writes;
-- natural-language selection evaluations in the ChatGPT in-app browser;
-- end-to-end workflow tests from a clean seed state.
+1. Read locally ready invoices and packages.
+2. Read AP rules and preflight each invoice.
+3. Separate valid invoices from exceptions.
+4. Present the exact valid invoice numbers, amounts, total, and exclusions.
+5. Obtain explicit human confirmation.
+6. Submit the valid batch exactly once with a unique idempotency key.
+7. Verify returned references and visible AP state.
+8. Record verified results and exceptions in OpenFinance.
+
+The agent must never silently broaden the confirmed batch, treat a preflight as a reservation, or report submission before receiving a committed portal reference.

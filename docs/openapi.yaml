@@ -1,0 +1,384 @@
+openapi: 3.1.0
+info:
+  title: OpenFinance WebMCP demo HTTP APIs
+  version: 1.0.0
+  description: >-
+    Same-origin backend APIs used by the OpenFinance AR and independent Acme AP
+    WebMCP tools. All operations require the application's own Supabase cookie session.
+servers:
+  - url: https://openfinance-ar.vercel.app
+    description: OpenFinance AR
+  - url: https://openfinance-ap.vercel.app
+    description: Acme AP supplier portal
+security:
+  - cookieSession: []
+paths:
+  /api/agent/invoices:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    get:
+      operationId: listInvoiceQueue
+      summary: List tenant-authorized AR invoices
+      parameters:
+        - in: query
+          name: customerName
+          schema: { type: string, minLength: 1, maxLength: 160 }
+        - in: query
+          name: readyOnly
+          schema: { type: string, enum: ["true", "false"] }
+      responses:
+        "200":
+          description: Invoice queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, count]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/InvoiceQueueItem" } }
+                  count: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /api/agent/packages:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    post:
+      operationId: getSubmissionPackage
+      summary: Read complete packages for locally ready invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [invoiceNumbers]
+              properties:
+                invoiceNumbers:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  uniqueItems: true
+                  items: { $ref: "#/components/schemas/InvoiceNumber" }
+      responses:
+        "200":
+          description: Checksum-protected invoice packages
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, count]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/InvoicePackage" } }
+                  count: { type: integer, minimum: 1, maximum: 10 }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/agent/delivery-events:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    post:
+      operationId: recordDeliveryEvent
+      summary: Idempotently record verified portal results or exceptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/PortalResultRequest"
+                - $ref: "#/components/schemas/PortalExceptionRequest"
+              discriminator: { propertyName: eventType }
+      responses:
+        "200": { description: Recorded event }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/agent/requirements:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    get:
+      operationId: getInvoiceRequirements
+      summary: Read Acme's current supplier invoice policy
+      responses:
+        "200":
+          description: Submission requirements
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionRequirements" }
+  /api/agent/purchase-orders:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: findPurchaseOrder
+      summary: Find one supplier-authorized purchase order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [purchaseOrderNumber]
+              properties:
+                purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+      responses:
+        "200":
+          description: Purchase order lookup result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [found, purchaseOrder]
+                properties:
+                  found: { type: boolean }
+                  purchaseOrder:
+                    oneOf:
+                      - { $ref: "#/components/schemas/PurchaseOrder" }
+                      - { type: "null" }
+  /api/agent/validate:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: validateInvoice
+      summary: Preflight one invoice without reserving balance or writing data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceCandidate" }
+      responses:
+        "200":
+          description: Validation decision and precise issues
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationResult" }
+  /api/agent/submissions:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: submitInvoiceBatch
+      summary: Atomically submit a human-confirmed valid invoice batch
+      description: >-
+        Consequential operation. The WebMCP caller must show the exact valid batch and
+        exceptions to the user and obtain explicit confirmation before invoking it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [idempotencyKey, invoices]
+              properties:
+                idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+                invoices:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { $ref: "#/components/schemas/InvoiceCandidate" }
+      responses:
+        "200":
+          description: Stable portal references for the committed batch
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionBatchResult" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/agent/status:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: getInvoiceStatus
+      summary: Read the current portal status for one supplier invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [invoiceNumber]
+              properties:
+                invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+      responses:
+        "200": { description: Status lookup result }
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: sb-session
+      description: Logical Supabase SSR cookie session; actual cookie names are project-specific.
+  responses:
+    Unauthenticated:
+      description: Valid application session required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: Resource state or idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unprocessable:
+      description: Business validation rejected the request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+  schemas:
+    InvoiceNumber:
+      type: string
+      pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$"
+    PurchaseOrderNumber:
+      type: string
+      pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$"
+    IdempotencyKey:
+      type: string
+      minLength: 16
+      maxLength: 128
+    InvoiceQueueItem:
+      type: object
+      required: [invoiceNumber, customerName, amountMinor, currency, invoiceDate, purchaseOrderNumber, status, portalReference, portalStatus, exceptionCode, exceptionMessage, version]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        customerName: { type: string }
+        amountMinor: { type: integer, minimum: 1 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        invoiceDate: { type: string, format: date }
+        purchaseOrderNumber:
+          oneOf:
+            - { $ref: "#/components/schemas/PurchaseOrderNumber" }
+            - { type: "null" }
+        status: { type: string, enum: [ready, needs_attention, submitted, accepted, rejected] }
+        portalReference: { type: [string, "null"] }
+        portalStatus: { type: [string, "null"] }
+        exceptionCode: { type: [string, "null"] }
+        exceptionMessage: { type: [string, "null"] }
+        version: { type: integer, minimum: 1 }
+    InvoiceDocument:
+      type: object
+      additionalProperties: false
+      required: [fileName, mediaType, contentBase64, sha256]
+      properties:
+        fileName: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" }
+        mediaType: { type: string, const: application/pdf }
+        contentBase64: { type: string, minLength: 8, maxLength: 1400000 }
+        sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+    InvoicePackage:
+      allOf:
+        - { $ref: "#/components/schemas/InvoiceQueueItem" }
+        - type: object
+          required: [document]
+          properties:
+            document: { $ref: "#/components/schemas/InvoiceDocument" }
+    InvoiceCandidate:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, invoiceDate, amountMinor, currency, purchaseOrderNumber, document]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        invoiceDate: { type: string, format: date }
+        amountMinor: { type: integer, minimum: 1 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+        document: { $ref: "#/components/schemas/InvoiceDocument" }
+    PortalResultRequest:
+      type: object
+      additionalProperties: false
+      required: [eventType, idempotencyKey, items]
+      properties:
+        eventType: { type: string, const: portal_result }
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required: [invoiceNumber, portalReference, portalStatus]
+            properties:
+              invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+              portalReference: { type: string, minLength: 1, maxLength: 120 }
+              portalStatus: { type: string, enum: [received, under_review, accepted] }
+    PortalExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [eventType, idempotencyKey, items]
+      properties:
+        eventType: { type: string, const: portal_exception }
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required: [invoiceNumber, exceptionCode, message]
+            properties:
+              invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+              exceptionCode: { type: string, pattern: "^[a-z][a-z0-9_]{1,63}$" }
+              message: { type: string, minLength: 1, maxLength: 500 }
+    PurchaseOrder:
+      type: object
+      required: [purchaseOrderNumber, description, currency, authorizedAmountMinor, remainingAmountMinor, status, version]
+      properties:
+        purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+        description: { type: string }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        authorizedAmountMinor: { type: integer, minimum: 1 }
+        remainingAmountMinor: { type: integer, minimum: 0 }
+        status: { type: string, enum: [open, closed] }
+        version: { type: integer, minimum: 1 }
+    SubmissionRequirements:
+      type: object
+      required: [acceptedMediaTypes, maxDocumentBytes, requireOpenPurchaseOrder, enforceRemainingBalance, uniqueInvoiceNumberRequired]
+      properties:
+        acceptedMediaTypes: { type: array, items: { type: string } }
+        maxDocumentBytes: { type: integer, minimum: 1024 }
+        requireOpenPurchaseOrder: { type: boolean }
+        enforceRemainingBalance: { type: boolean }
+        uniqueInvoiceNumberRequired: { type: boolean }
+    ValidationResult:
+      type: object
+      required: [valid, invoiceNumber, purchaseOrder, issues]
+      properties:
+        valid: { type: boolean }
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        purchaseOrder:
+          oneOf:
+            - { $ref: "#/components/schemas/PurchaseOrder" }
+            - { type: "null" }
+        issues:
+          type: array
+          items:
+            type: object
+            required: [code, message]
+            properties:
+              code: { type: string }
+              message: { type: string }
+    SubmissionBatchResult:
+      type: object
+      required: [batchId, items, submittedAt]
+      properties:
+        batchId: { type: string, format: uuid }
+        submittedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            type: object
+            required: [invoiceNumber, portalReference, portalStatus, purchaseOrderNumber, remainingAmountMinor, currency]
+            properties:
+              invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+              portalReference: { type: string }
+              portalStatus: { type: string, enum: [received] }
+              purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+              remainingAmountMinor: { type: integer, minimum: 0 }
+              currency: { type: string, pattern: "^[A-Z]{3}$" }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }

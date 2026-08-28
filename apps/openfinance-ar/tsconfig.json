@@ -5,7 +5,9 @@
     "jsx": "preserve",
     "lib": ["dom", "dom.iterable", "esnext"],
     "plugins": [{ "name": "next" }],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["bun"],
+    "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
