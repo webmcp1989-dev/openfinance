@@ -125,7 +125,7 @@ export function AcmeSiteTools() {
     void Promise.allSettled(tools.map(async (tool) => {
       await context.registerTool(tool, { signal: registrationController.signal });
     })).then((results) => {
-      if (!disposed && results.some((result) => result.status === "rejected")) removeTools();
+      if (disposed || results.some((result) => result.status === "rejected")) removeTools();
     });
 
     return () => {

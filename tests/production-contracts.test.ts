@@ -184,6 +184,7 @@ describe("WebMCP safety contracts", () => {
       expect(source).toContain("const registrationController = new AbortController()");
       expect(source).toContain("{ signal: registrationController.signal }");
       expect(source).toContain("registrationController.abort()");
+      expect(source).toContain('if (disposed || results.some((result) => result.status === "rejected")) removeTools()');
       expect(types).toContain("options?: Readonly<{ signal?: AbortSignal }>");
     }
   });
