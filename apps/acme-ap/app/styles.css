@@ -74,6 +74,6 @@ nav a:hover { color: var(--blue); }
 @media (max-width: 620px) {
   .portal-shell { width: min(100% - 24px, 1240px); }
   .portal-header { grid-template-columns: 1fr; padding: 16px 0; }
-  .supplier { display: none; }
+  .supplier { justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
   .intro { align-items: flex-start; flex-direction: column; padding-top: 34px; }
 }

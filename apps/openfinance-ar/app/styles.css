@@ -78,8 +78,8 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 @media (max-width: 720px) {
   .shell { width: min(100% - 24px, 1240px); padding-top: 20px; }
-  .topbar { align-items: flex-start; }
-  .identity { display: none; }
+  .topbar { align-items: stretch; flex-direction: column; }
+  .identity { width: 100%; min-width: 0; justify-content: space-between; }
   .summary { padding: 22px; }
   .agent-guide { align-items: flex-start; flex-wrap: wrap; }
   .agent-guide > div { min-width: calc(100% - 32px); }

@@ -25,6 +25,17 @@ describe("production security headers", () => {
   }
 });
 
+describe("responsive authentication controls", () => {
+  test("both mobile workspaces keep identity and sign-out controls visible", async () => {
+    const arStyles = await readFile(join(root, "apps/openfinance-ar/app/styles.css"), "utf8");
+    const apStyles = await readFile(join(root, "apps/acme-ap/app/styles.css"), "utf8");
+    expect(arStyles).not.toContain(".identity { display: none; }");
+    expect(arStyles).toContain(".identity { width: 100%; min-width: 0; justify-content: space-between; }");
+    expect(apStyles).not.toContain(".supplier { display: none; }");
+    expect(apStyles).toContain(".supplier { justify-content: space-between;");
+  });
+});
+
 describe("authentication recovery messages", () => {
   for (const loginPage of [
     "apps/openfinance-ar/app/login/page.tsx",
