@@ -54,10 +54,13 @@ ChatGPT's in-app browser using only the tools exposed by the two live sites.
 After the second run, both scoped administrative reset scripts succeeded. The
 public judge state is now three ready AR invoices, one local missing-PO
 exception, full AP purchase-order balances, and empty receipt and audit trails.
+Both synthetic judge passwords were then rotated to unique strong values and
+verified through fresh, independent live sign-ins. The credentials remain
+private and are not stored in this repository.
 
 ## Submission-only tasks
 
-Technical delivery is complete. The entrant must still provide the two private
-judge passwords in Devpost, record and publish the narrated demo video described
-in [SUBMISSION.md](SUBMISSION.md), accept Devpost's entrant declarations, and
-submit before September 3, 2026 at 1:00 p.m. PDT.
+Technical delivery is complete. The entrant must still enter the two verified
+private judge passwords in Devpost, record and publish the narrated demo video
+described in [SUBMISSION.md](SUBMISSION.md), accept Devpost's entrant
+declarations, and submit before September 3, 2026 at 1:00 p.m. PDT.
