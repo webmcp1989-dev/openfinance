@@ -50,6 +50,10 @@ Include both live URLs and state that the sessions are intentionally independent
 
 The final video must be public on YouTube, include clear audio, and remain under three minutes.
 
+Use the reviewed title, description, tags, visibility settings, and publication
+checks in [`docs/YOUTUBE.md`](YOUTUBE.md). The generated 16:9 upload thumbnail
+is `scripts/demo-video/assets/youtube-thumbnail.png`.
+
 A reproducible local renderer is available in `scripts/demo-video`. The current
 owner-review artifact is `artifacts/demo-video/openfinance-demo.webm`: 1600×900,
 VP9 + Opus, 167.145 seconds, and 54.16 MB. The WebM remains untracked; follow the

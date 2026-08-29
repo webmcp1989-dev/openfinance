@@ -19,9 +19,11 @@ C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe `
 bun run demo:video
 ```
 
-Open `http://127.0.0.1:4178`, select **Render demo**, and wait for the success
-message. The server writes `artifacts/demo-video/openfinance-demo.webm` and the
-same page exposes a native video preview for metadata and playback checks.
+Open `http://127.0.0.1:4178`; the page writes the 1600×900 YouTube thumbnail on
+load. Select **Render demo** and wait for the success message. The server writes
+`scripts/demo-video/assets/youtube-thumbnail.png` and
+`artifacts/demo-video/openfinance-demo.webm`; the same page exposes a native
+video preview for metadata and playback checks.
 
 The video is a prepared submission artifact, not a substitute for the final
 entrant review. Confirm its duration, audio, readability, and public YouTube

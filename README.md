@@ -55,6 +55,7 @@ Copy `.env.example` to each app's `.env.local` and use only that app's Supabase 
 - [Demo runbook](docs/DEMO.md)
 - [Verification record](docs/VERIFICATION.md)
 - [Challenge submission package](docs/SUBMISSION.md)
+- [YouTube publication package](docs/YOUTUBE.md)
 - [OpenAPI contract](docs/openapi.yaml)
 - [Architecture decisions](docs/decisions/0001-independent-applications.md)
 

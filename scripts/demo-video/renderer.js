@@ -128,6 +128,18 @@ function supportedMimeType() {
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
 }
 
+async function saveThumbnail() {
+  const thumbnail = await new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Unable to encode thumbnail.")), "image/png");
+  });
+  const response = await fetch("/thumbnail", {
+    method: "POST",
+    headers: { "content-type": "image/png" },
+    body: thumbnail,
+  });
+  if (!response.ok) throw new Error(await response.text());
+}
+
 async function render() {
   button.disabled = true;
   output.textContent = "Loading narration and deployed-app frames…";
@@ -185,7 +197,8 @@ async function render() {
   button.disabled = false;
 }
 
-drawSlide(manifest.slides[0], null, 0.01);
+drawSlide(manifest.slides[0], null, 1);
+saveThumbnail().catch((error) => console.error("Thumbnail generation failed", error));
 document.querySelectorAll("button[data-seek]").forEach((seekButton) => {
   seekButton.addEventListener("click", () => {
     preview.currentTime = Number(seekButton.dataset.seek);

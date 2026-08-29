@@ -1,12 +1,12 @@
 # Verification record
 
-This record captures the final technical verification performed against commit
-`77e0cbe` on August 29, 2026. The synthetic demo databases were restored to the
-documented starting state after testing.
+This record captures the final technical verification performed against the
+August 29, 2026 release candidate. The synthetic demo databases were restored
+to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 59 tests passed with 223 expectations.
+- `bun test`: 61 tests passed with 237 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -71,10 +71,13 @@ through the exact 167.145-second end without a media error. The file is 1600×90
 The source renderer, narration manifest, and deployed-app screenshots are
 tracked under `scripts/demo-video`; generated WAV and WebM files remain ignored
 so private review artifacts are not added to the public repository.
+The same renderer produces the tracked 1600×900 judge-facing thumbnail at
+`scripts/demo-video/assets/youtube-thumbnail.png`; tests verify its dimensions,
+bounded size, and public-safe YouTube copy.
 
 ## Submission-only tasks
 
 Technical delivery is complete. The entrant must still enter the two verified
-private judge passwords in Devpost, record and publish the narrated demo video
-described in [SUBMISSION.md](SUBMISSION.md), accept Devpost's entrant
-declarations, and submit before September 3, 2026 at 1:00 p.m. PDT.
+private judge passwords in Devpost, publish the reviewed narrated demo video
+using [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and
+submit before September 3, 2026 at 1:00 p.m. PDT.

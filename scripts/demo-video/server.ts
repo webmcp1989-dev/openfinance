@@ -4,6 +4,7 @@ const repositoryRoot = normalize(join(import.meta.dir, "..", ".."));
 const artifactDirectory = join(repositoryRoot, "artifacts", "demo-video");
 const rendererDirectory = import.meta.dir;
 const outputPath = join(artifactDirectory, "openfinance-demo.webm");
+const thumbnailPath = join(rendererDirectory, "assets", "youtube-thumbnail.png");
 
 const contentTypes: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -46,6 +47,21 @@ const server = Bun.serve({
 
       await Bun.write(outputPath, bytes);
       return Response.json({ bytes: bytes.byteLength, outputPath });
+    }
+
+    if (request.method === "POST" && url.pathname === "/thumbnail") {
+      const contentType = request.headers.get("content-type") ?? "";
+      if (!contentType.startsWith("image/png")) {
+        return new Response("Expected image/png", { status: 415 });
+      }
+
+      const bytes = new Uint8Array(await request.arrayBuffer());
+      if (bytes.byteLength < 10_000 || bytes.byteLength > 2_000_000) {
+        return new Response("Unexpected thumbnail size", { status: 422 });
+      }
+
+      await Bun.write(thumbnailPath, bytes);
+      return Response.json({ bytes: bytes.byteLength, thumbnailPath });
     }
 
     let filePath: string | null = null;
