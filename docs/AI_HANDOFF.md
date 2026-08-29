@@ -16,6 +16,7 @@ This file records only non-obvious continuation context. Repository-wide rules a
 - `services/openfinance/supabase/demo/reset.sql` removes synthetic `ERP-*` imports and resets the next sync to two invoices.
 - AP's human workspace exposes requirements, PO/status lookup, PDF validation, explicit batch review, and confirmed atomic submission. AR exposes scoped queue filtering, package review, result/exception recording, and ERP sync.
 - AR invoice packages include a human download link backed by an authenticated no-store route that revalidates the stored PDF and checksum before release. The existing AP human workflow accepts that file and applies the same backend preflight and atomic submission rules as WebMCP.
+- AR migration `202608290007_repair_renderable_invoice_pdfs.sql` owns complete synthetic PDF generation. It repairs the four core fixtures and existing ERP imports, then uses a private insert trigger for future `ERP-*` invoices. Do not reintroduce header/EOF-only placeholders; Adobe and standards-aware parsers reject them.
 - AP migration `202608290007_simulate_payment_settlement.sql` adds a serialized per-supplier sequence and schedules every second committed invoice for a synthetic payment signal after 10 seconds. A public invoker/private scoped-read function provides the same effective status to UI and `get_invoice_status`; base settlement data has no direct application grant, reads do not mutate state, and a single scheduled browser refresh replaces polling.
 - Human UI controls are convenience and presentation only. The same route, service, RLS, public wrapper, and private transaction boundaries remain authoritative.
 - Both Next.js configs set `agentRules: false` so `next dev` does not generate duplicate app-level `AGENTS.md`/`CLAUDE.md` files; the reviewed root `AGENTS.md` remains authoritative.
@@ -23,6 +24,7 @@ This file records only non-obvious continuation context. Repository-wide rules a
 ## Migration and environment status
 
 - AR migration `202608290006_simulate_erp_invoice_sync.sql` was applied to the live AR project and its 17-assertion rollback-only suite passed. Any new environment must apply it before deploying code that calls `/api/agent/erp-sync`.
+- AR migration `202608290007_repair_renderable_invoice_pdfs.sql` is applied to the live AR project and its 12-assertion rollback-only suite passed. A repaired live download also passed strict `pypdf`, Poppler metadata/text checks, SHA-256 verification, and page rendering.
 - AP migration `202608290007_simulate_payment_settlement.sql` is applied to the live AP project and its 15-assertion rollback-only pgTAP suite passed. Any new environment must apply it before deploying the payment-aware AP code.
 - No dependency or environment-variable change was introduced. Each app still requires only its own `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - Never store demo/judge passwords, database credentials, Vercel tokens, or Supabase service-role keys in Git.

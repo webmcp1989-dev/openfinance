@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 73 tests passed with 300 expectations.
+- `bun test`: 75 tests passed with 309 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -34,6 +34,9 @@ mapping, idempotency, and documentation coverage.
 - The OpenFinance ERP sync suite passed 17 assertions in the live AR project,
   covering internal-table isolation, privilege boundaries, `2 -> 0 -> 2`
   alternation, idempotent replay, unique inserts, and auditing.
+- The OpenFinance renderable-PDF suite passed 12 assertions in the live AR
+  project. The exact repaired download also passed strict `pypdf`, Poppler
+  `pdfinfo`, text extraction, SHA-256 comparison, and visual page rendering.
 - The Acme RLS suite passed 15 assertions and its submission transaction suite
   passed 13 assertions in the independent live AP project.
 - The Acme deterministic payment-settlement suite passed 15 assertions in the

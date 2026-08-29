@@ -98,6 +98,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290004_bound_json_money.sql");
     expect(setup).toContain("202608290005_canonicalize_delivery_requests.sql");
     expect(setup).toContain("202608290006_simulate_erp_invoice_sync.sql");
+    expect(setup).toContain("202608290007_repair_renderable_invoice_pdfs.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
     expect(setup).toContain("202608290003_bound_json_money.sql");
     expect(setup).toContain("202608290004_align_submission_policy.sql");
@@ -179,6 +180,19 @@ describe("database mutation boundaries", () => {
     expect(testSuite).toContain("second sync reports no new invoices");
     expect(testSuite).toContain("third sync imports the next two invoices");
     expect(testSuite).toContain("idempotent replay inserts nothing");
+  });
+
+  test("AR synthetic invoice documents have a complete renderable PDF structure", async () => {
+    const migration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290007_repair_renderable_invoice_pdfs.sql"), "utf8");
+    const testSuite = await readFile(join(root, "services/openfinance/supabase/tests/renderable-pdfs.test.sql"), "utf8");
+    const service = await readFile(join(root, "apps/openfinance-ar/lib/services/invoice-service.ts"), "utf8");
+    expect(migration).toContain("/Type /Catalog /Pages 2 0 R");
+    expect(migration).toContain("/Type /Page /Parent 2 0 R");
+    expect(migration).toContain("v_xref_offset := octet_length");
+    expect(migration).toContain("startxref");
+    expect(migration).toContain("ensure_renderable_erp_invoice_pdf_before_insert");
+    expect(testSuite).toContain("startxref points to the exact byte offset of the xref table");
+    expect(service).toContain("bytes.subarray(xrefOffset, xrefOffset + 4).equals(Buffer.from(\"xref\"))");
   });
 
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {

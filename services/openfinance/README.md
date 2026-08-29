@@ -8,9 +8,11 @@ This directory belongs only to the OpenFinance AR Supabase project.
 - `supabase/migrations/202608290004_bound_json_money.sql` prevents invoice amounts from exceeding JSON's exact-integer range.
 - `supabase/migrations/202608290005_canonicalize_delivery_requests.sql` makes PostgreSQL derive delivery-event request identity and compare exact stored retry content instead of trusting a caller-supplied fingerprint.
 - `supabase/migrations/202608290006_simulate_erp_invoice_sync.sql` adds a tenant-configured, idempotent demo ERP pull. Distinct calls deterministically alternate between importing two synthetic invoices and importing none; state changes and audit events are transactional.
+- `supabase/migrations/202608290007_repair_renderable_invoice_pdfs.sql` replaces header/footer-shaped placeholders with complete one-page PDFs, repairs existing challenge documents, and guarantees future ERP imports receive valid cross-reference tables and trailers.
 - `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign organization and proves its invoices cannot be read or mutated.
 - `supabase/tests/delivery-events.test.sql` exercises duplicate rejection, direct-RPC field validation, legal state transitions, database-derived idempotency identity, identical retry replay, single state mutation, and changed-payload rejection using the same caller fingerprint.
 - `supabase/tests/erp-sync.test.sql` proves the `2 → 0 → 2` sequence, idempotent replay, internal-state isolation, wrapper privilege boundaries, and audit creation.
+- `supabase/tests/renderable-pdfs.test.sql` verifies renderer isolation, document repair, ERP trigger installation, PDF object markers, and exact `startxref` byte offsets.
 - `supabase/demo/reset.sql` is a reviewed administrative reset for only the fixed synthetic challenge organization; it is never called by either application.
 
 Do not point these migrations at the Acme project. Runtime access uses only the OpenFinance publishable key and the authenticated OpenFinance user session.

@@ -41,6 +41,8 @@ The AR workspace includes a human-only **Sync invoices now** operation that mode
 
 Imported invoices use the organization's configured synthetic customer, valid synthetic PDF records, unique ERP invoice numbers, and auditable idempotent events. The operation never reads or writes the independent AP database and is not a hidden cross-site integration.
 
+Synthetic AR documents are complete one-page PDF 1.4 files with a catalog, page tree, content stream, font resource, cross-reference table, trailer, and byte-accurate `startxref`. A private database renderer repairs the core fixtures during migration, and a private insert trigger replaces future ERP placeholder bytes before storage. This keeps documents reproducible without a runtime PDF dependency.
+
 ## AP submission transaction
 
 `submit_invoice_batch` is a public security-invoker wrapper around a private security-definer function with `search_path = ''`. Execution is revoked from `public` and `anon` and granted only to `authenticated`.

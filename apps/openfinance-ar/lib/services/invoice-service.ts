@@ -92,6 +92,14 @@ function validatedStoredDocument(row: DocumentRow) {
   const bytes = Buffer.from(contentBase64, "base64");
   const tail = bytes.subarray(Math.max(0, bytes.length - 1_024));
   const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const documentText = bytes.toString("latin1");
+  const startXrefMatch = /startxref[\x00\t\n\f\r ]+(\d+)[\x00\t\n\f\r ]+%%EOF[\x00\t\n\f\r ]*$/.exec(documentText);
+  const xrefOffset = startXrefMatch ? Number(startXrefMatch[1]) : -1;
+  const hasCoherentStructure = Number.isSafeInteger(xrefOffset)
+    && xrefOffset >= 0
+    && bytes.subarray(xrefOffset, xrefOffset + 4).equals(Buffer.from("xref"))
+    && documentText.includes("/Type /Catalog")
+    && documentText.includes("/Type /Page");
   const validMetadata = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(row.document_name)
     && row.document_media_type === "application/pdf"
     && /^[a-f0-9]{64}$/.test(row.document_sha256);
@@ -101,6 +109,7 @@ function validatedStoredDocument(row: DocumentRow) {
     || bytes.length > MAX_DOCUMENT_BYTES
     || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))
     || tail.indexOf(Buffer.from("%%EOF")) === -1
+    || !hasCoherentStructure
     || sha256 !== row.document_sha256) {
     throw new HttpError(500, "package_document_invalid", "Stored invoice document is invalid");
   }

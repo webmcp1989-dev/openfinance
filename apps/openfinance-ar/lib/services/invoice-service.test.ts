@@ -4,7 +4,27 @@ import { createHash } from "node:crypto";
 mock.module("server-only", () => ({}));
 const { getInvoiceDocument, getSubmissionPackage, recordDeliveryEvent, syncInvoicesFromErp } = await import("./invoice-service");
 
-const validDocumentBytes = Buffer.from("%PDF-1.4\nOpenFinance invoice\n%%EOF", "utf8");
+function renderTestPdf(label: string) {
+  const stream = `BT\n/F1 12 Tf\n72 720 Td\n(${label}) Tj\nET\n`;
+  let pdf = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  const object = (content: string) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += content;
+  };
+  object("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+  object("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+  object("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n");
+  object(`4 0 obj\n<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream\nendobj\n`);
+  object("5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
+  const xrefOffset = Buffer.byteLength(pdf);
+  pdf += "xref\n0 6\n0000000000 65535 f \n";
+  pdf += offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("");
+  pdf += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.from(pdf, "utf8");
+}
+
+const validDocumentBytes = renderTestPdf("OpenFinance invoice");
 const validDocumentBase64 = validDocumentBytes.toString("base64");
 const validDocumentSha256 = createHash("sha256").update(validDocumentBytes).digest("hex");
 
@@ -71,6 +91,17 @@ describe("OpenFinance submission packages", () => {
 
   test("fails closed when the stored checksum does not match the PDF", async () => {
     await expect(getSubmissionPackage(packageClient(validDocumentBase64, "0".repeat(64)) as never, ["INV-10482"]))
+      .rejects.toMatchObject({ status: 500, code: "package_document_invalid" });
+  });
+
+  test("fails closed when stored bytes only imitate a PDF header and EOF marker", async () => {
+    const pseudoPdf = Buffer.from("%PDF-1.4\nOpenFinance invoice\n%%EOF", "utf8");
+    const client = packageClient(
+      pseudoPdf.toString("base64"),
+      createHash("sha256").update(pseudoPdf).digest("hex"),
+    );
+
+    await expect(getSubmissionPackage(client as never, ["INV-10482"]))
       .rejects.toMatchObject({ status: 500, code: "package_document_invalid" });
   });
 });
