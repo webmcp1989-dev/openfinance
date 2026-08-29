@@ -178,6 +178,7 @@ describe("WebMCP safety contracts", () => {
     expect(openApi).toContain("OpenFinanceWorkspaceState");
     expect(openApi).toContain("AcmeWorkspaceState");
     expect(openApi.match(/auditEvents:/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(openApi.match(/auditAvailable:/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   test("the demo runbook requires separate transfer and submission confirmations", async () => {

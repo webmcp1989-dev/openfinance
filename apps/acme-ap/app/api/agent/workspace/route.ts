@@ -1,17 +1,17 @@
 import { apiError, requireAuthenticatedClient } from "@/lib/http";
-import { listAuditEvents } from "@/lib/services/audit-service";
+import { loadAuditSnapshot } from "@/lib/services/audit-service";
 import { listPurchaseOrders, listSubmissions } from "@/lib/services/submission-service";
 
 export async function GET() {
   try {
     const supabase = await requireAuthenticatedClient();
-    const [purchaseOrders, submissions, auditEvents] = await Promise.all([
+    const [purchaseOrders, submissions, auditSnapshot] = await Promise.all([
       listPurchaseOrders(supabase),
       listSubmissions(supabase),
-      listAuditEvents(supabase),
+      loadAuditSnapshot(supabase),
     ]);
     return Response.json(
-      { purchaseOrders, submissions, auditEvents },
+      { purchaseOrders, submissions, ...auditSnapshot },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {

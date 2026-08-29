@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/login/actions";
 import { OpenFinanceWorkspace } from "@/components/openfinance-workspace";
-import { listAuditEvents } from "@/lib/services/audit-service";
+import { loadAuditSnapshot } from "@/lib/services/audit-service";
 import { listInvoiceQueue } from "@/lib/services/invoice-service";
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,14 +23,14 @@ export default async function OpenFinanceHome() {
   const userId = authData?.claims?.sub;
   if (authError || typeof userId !== "string") redirect("/login");
 
-  const [{ data: profileData, error: profileError }, invoices, auditEvents] = await Promise.all([
+  const [{ data: profileData, error: profileError }, invoices, auditSnapshot] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, organization_id")
       .eq("user_id", userId)
       .single(),
     listInvoiceQueue(supabase),
-    listAuditEvents(supabase),
+    loadAuditSnapshot(supabase),
   ]);
 
   const profile = profileData as ProfileRow | null;
@@ -46,7 +46,8 @@ export default async function OpenFinanceHome() {
 
   return <OpenFinanceWorkspace
     initialInvoices={invoices}
-    initialAuditEvents={auditEvents}
+    initialAuditEvents={auditSnapshot.auditEvents}
+    initialAuditAvailable={auditSnapshot.auditAvailable}
     fullName={profile.full_name}
     organizationName={organization.name}
     signOutAction={signOut}

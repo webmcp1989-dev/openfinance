@@ -23,21 +23,28 @@ function auditSummary(event: AuditEvent) {
   return `${eventType} · ${itemCount} invoice${itemCount === 1 ? "" : "s"}`;
 }
 
-export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, fullName, organizationName, signOutAction }: {
+export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, initialAuditAvailable, fullName, organizationName, signOutAction }: {
   initialInvoices: InvoiceQueueItem[];
   initialAuditEvents: AuditEvent[];
+  initialAuditAvailable: boolean;
   fullName: string;
   organizationName: string;
   signOutAction: () => Promise<void>;
 }) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
+  const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const refresh = useCallback(async () => {
     const response = await fetch("/api/agent/workspace", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) return;
-    const body = await response.json() as { invoices: InvoiceQueueItem[]; auditEvents: AuditEvent[] };
+    const body = await response.json() as {
+      invoices: InvoiceQueueItem[];
+      auditEvents: AuditEvent[];
+      auditAvailable: boolean;
+    };
     setInvoices(body.invoices);
     setAuditEvents(body.auditEvents);
+    setAuditAvailable(body.auditAvailable);
   }, []);
 
   useEffect(() => {
@@ -92,8 +99,8 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, full
       </section>
 
       <section className="panel" aria-labelledby="activity-title">
-        <div className="panel-heading"><div><p className="eyebrow">Audit trail</p><h2 id="activity-title">Recent delivery activity</h2></div><span>{auditEvents.length} events</span></div>
-        {auditEvents.length === 0 ? <p>No portal activity recorded yet.</p> : <ol className="audit-list">
+        <div className="panel-heading"><div><p className="eyebrow">Audit trail</p><h2 id="activity-title">Recent delivery activity</h2></div><span>{auditAvailable ? `${auditEvents.length} events` : "Unavailable"}</span></div>
+        {!auditAvailable ? <p role="status">Recent activity is temporarily unavailable. Reload to try again.</p> : auditEvents.length === 0 ? <p>No portal activity recorded yet.</p> : <ol className="audit-list">
           {auditEvents.map((event) => <li key={event.id}>
             <strong>{event.action.replaceAll("_", " ")}</strong>
             <span>{auditSummary(event)}</span>

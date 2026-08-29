@@ -16,11 +16,12 @@ function auditSummary(event: AuditEvent) {
 }
 
 export function AcmeWorkspace({
-  initialPurchaseOrders, initialSubmissions, initialAuditEvents, supplierName, supplierCode, signOutAction,
+  initialPurchaseOrders, initialSubmissions, initialAuditEvents, initialAuditAvailable, supplierName, supplierCode, signOutAction,
 }: {
   initialPurchaseOrders: PurchaseOrder[];
   initialSubmissions: SubmissionRow[];
   initialAuditEvents: AuditEvent[];
+  initialAuditAvailable: boolean;
   supplierName: string;
   supplierCode: string;
   signOutAction: () => Promise<void>;
@@ -28,6 +29,7 @@ export function AcmeWorkspace({
   const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
+  const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const refresh = useCallback(async () => {
     const response = await fetch("/api/agent/workspace", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) return;
@@ -35,10 +37,12 @@ export function AcmeWorkspace({
       purchaseOrders: PurchaseOrder[];
       submissions: SubmissionRow[];
       auditEvents: AuditEvent[];
+      auditAvailable: boolean;
     };
     setPurchaseOrders(body.purchaseOrders);
     setSubmissions(body.submissions);
     setAuditEvents(body.auditEvents);
+    setAuditAvailable(body.auditAvailable);
   }, []);
 
   useEffect(() => {
@@ -94,8 +98,8 @@ export function AcmeWorkspace({
       </section>
 
       <section className="submissions" aria-labelledby="audit-title">
-        <div className="section-heading"><div><p className="kicker">Audit trail</p><h2 id="audit-title">Recent portal activity</h2></div><span>{auditEvents.length} events</span></div>
-        {auditEvents.length === 0 ? <div className="empty-state"><strong>No committed activity yet</strong><p>Confirmed submissions create immutable audit events here.</p></div> : <ol className="audit-log">
+        <div className="section-heading"><div><p className="kicker">Audit trail</p><h2 id="audit-title">Recent portal activity</h2></div><span>{auditAvailable ? `${auditEvents.length} events` : "Unavailable"}</span></div>
+        {!auditAvailable ? <div className="empty-state" role="status"><strong>Recent activity is temporarily unavailable</strong><p>Reload to try again. Invoice and purchase-order data remain live.</p></div> : auditEvents.length === 0 ? <div className="empty-state"><strong>No committed activity yet</strong><p>Confirmed submissions create immutable audit events here.</p></div> : <ol className="audit-log">
           {auditEvents.map((event) => <li key={event.id}>
             <strong>{event.action.replaceAll("_", " ")}</strong>
             <span>{auditSummary(event)}</span>

@@ -36,6 +36,7 @@
 - Cross-site package reads and AP submission requests are limited to three invoices, keeping their worst-case JSON payload below the deployment platform's 4.5 MB function request/response boundary.
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.
+- Recent-audit reads are optional display data. If one fails, the workspace explicitly marks the audit panel unavailable instead of misreporting zero events or taking down the core tenant-scoped financial view.
 - Production responses set a restrictive CSP, deny framing and MIME sniffing, disable unused browser capabilities, isolate cross-origin resources, and suppress referrer data.
 - Login failures do not reveal whether an email exists. A separately authenticated account whose tenant profile is missing receives an actionable workspace-assignment message instead of a misleading credential error.
 

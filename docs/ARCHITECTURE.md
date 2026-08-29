@@ -55,6 +55,7 @@ The OpenFinance package tool returns a small challenge PDF as base64 plus its me
 
 - Server Components load identity and workspace data concurrently.
 - Workspace refreshes use one same-origin endpoint after writes.
+- A transient recent-audit read failure degrades only that panel: each workspace returns `auditAvailable: false`, renders an actionable retry message, and continues to show authoritative invoice, PO, and receipt state.
 - Query indexes match tenant, status, PO, uniqueness, and recent-audit access paths.
 - Validation queries PO and duplicate state concurrently.
 - No caching is allowed for authenticated financial state.
