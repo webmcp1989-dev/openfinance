@@ -85,6 +85,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290004_bound_json_money.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
     expect(setup).toContain("202608290003_bound_json_money.sql");
+    expect(setup).toContain("202608290004_align_submission_policy.sql");
   });
 
   test("money stays within JSON's exact-integer range at every boundary", async () => {
@@ -96,6 +97,17 @@ describe("database mutation boundaries", () => {
     expect(openApi).toContain("maximum: 9007199254740991");
     expect(arMigration).toContain("amount_minor <= 9007199254740991");
     expect(apMigration.match(/<= 9007199254740991/g)).toHaveLength(2);
+  });
+
+  test("Acme's stored policy cannot diverge from its deployed document contract", async () => {
+    const migration = await readFile(join(root, "services/acme/supabase/migrations/202608290004_align_submission_policy.sql"), "utf8");
+    const openApi = await readFile(join(root, "docs/openapi.yaml"), "utf8");
+    expect(migration).toContain("accepted_media_types = array['application/pdf']::text[]");
+    expect(migration).toContain("max_document_bytes = 1048576");
+    expect(migration).toContain("require_open_purchase_order");
+    expect(migration).toContain("enforce_remaining_balance");
+    expect(openApi).toContain("items: { type: string, const: application/pdf }");
+    expect(openApi).toContain("maxDocumentBytes: { type: integer, const: 1048576 }");
   });
 
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {

@@ -36,6 +36,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 - Read annotations are truthful; externally sourced business data is marked untrusted, and write tools explicitly describe side effects.
 - Tool execution supports browser cancellation through the standard `AbortSignal`.
 - Read outputs include live versions, balances, rules, checksums, and validation issues needed to verify decisions.
+- Acme's stored requirements are database-constrained to the same PDF, size, open-PO, and balance contract advertised by its tools and enforced during submission.
 - Write outputs include durable references and committed remaining balances.
 - Frontend schemas aid tool selection; Zod, RLS, constraints, and transaction code remain authoritative.
 

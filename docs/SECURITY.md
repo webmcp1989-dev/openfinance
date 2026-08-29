@@ -31,6 +31,7 @@
 - Zod and Postgres constraints independently enforce shape, length, enum, money, identifier, and batch limits.
 - Money integers are capped at `9007199254740991` in WebMCP, HTTP, and Postgres contracts so JSON/JavaScript transport cannot silently lose precision.
 - Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
+- The stored AP requirements row is constrained to the same PDF, 1 MB, open-PO, and remaining-balance policy exposed by WebMCP and enforced by the transaction, so configuration cannot silently contradict runtime behavior.
 - Cross-site package reads and AP submission requests are limited to three invoices, keeping their worst-case JSON payload below the deployment platform's 4.5 MB function request/response boundary.
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.

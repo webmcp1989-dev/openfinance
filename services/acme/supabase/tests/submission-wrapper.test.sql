@@ -7,9 +7,48 @@ select set_config(
   (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
   true
 );
-set local role authenticated;
+select plan(10);
 
-select plan(6);
+select ok(
+  exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.submission_requirements'::regclass
+      and conname = 'submission_requirements_web_contract'
+  ),
+  'submission policy has one database-enforced WebMCP contract'
+);
+
+select throws_ok(
+  $$
+    update public.submission_requirements
+    set max_document_bytes = 1048577
+  $$,
+  '23514',
+  'new row for relation "submission_requirements" violates check constraint "submission_requirements_web_contract"',
+  'submission policy cannot advertise files larger than the WebMCP contract'
+);
+
+select throws_ok(
+  $$
+    update public.submission_requirements
+    set accepted_media_types = array['image/png']
+  $$,
+  '23514',
+  'new row for relation "submission_requirements" violates check constraint "submission_requirements_web_contract"',
+  'submission policy cannot advertise an unsupported media type'
+);
+
+select throws_ok(
+  $$
+    update public.submission_requirements
+    set enforce_remaining_balance = false
+  $$,
+  '23514',
+  'new row for relation "submission_requirements" violates check constraint "submission_requirements_web_contract"',
+  'submission policy cannot disable an invariant enforced by the transaction'
+);
+
+set local role authenticated;
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.submit_invoice_batch(text,text,jsonb)'::regprocedure),
