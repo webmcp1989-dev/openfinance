@@ -56,8 +56,9 @@ export function OpenFinanceSiteTools() {
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: (input, options) => {
-          const customerName = (input as { customerName: string }).customerName;
-          const query = new URLSearchParams({ customerName, readyOnly: "true" });
+          const customerName = (input as { customerName?: unknown }).customerName;
+          const query = new URLSearchParams({ readyOnly: "true" });
+          if (typeof customerName === "string") query.set("customerName", customerName);
           return api(`/api/agent/invoices?${query}`, { signal: options?.signal });
         },
       },

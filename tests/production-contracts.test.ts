@@ -219,7 +219,8 @@ describe("WebMCP safety contracts", () => {
     const openApi = await readFile(join(root, "docs/openapi.yaml"), "utf8");
     expect(ar).not.toContain("customerName=Acme%20Manufacturing");
     expect(ar).toContain('required: ["customerName"]');
-    expect(ar).toContain('new URLSearchParams({ customerName, readyOnly: "true" })');
+    expect(ar).toContain('new URLSearchParams({ readyOnly: "true" })');
+    expect(ar).toContain('if (typeof customerName === "string") query.set("customerName", customerName)');
     expect(route).toContain("customerName: z.string().min(1).max(160),");
     expect(route).not.toContain("customerName: z.string().min(1).max(160).optional()");
     const document = Bun.YAML.parse(openApi) as {
