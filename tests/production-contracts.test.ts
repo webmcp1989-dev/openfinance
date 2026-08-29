@@ -88,6 +88,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290003_bound_json_money.sql");
     expect(setup).toContain("202608290004_align_submission_policy.sql");
     expect(setup).toContain("202608290005_canonicalize_submission_requests.sql");
+    expect(setup).toContain("202608290006_validate_pdf_structure.sql");
   });
 
   test("money stays within JSON's exact-integer range at every boundary", async () => {
@@ -119,6 +120,13 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("Invalid document fields");
     expect(migration).toContain("Document is not canonical base64");
     expect(migration).toContain("extensions.digest(pg_catalog.convert_to(p_invoices::text");
+  });
+
+  test("AP verifies PDF structure and checksum before the submission transaction", async () => {
+    const migration = await readFile(join(root, "services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql"), "utf8");
+    expect(migration).toContain("pg_catalog.convert_to('%PDF-', 'UTF8')");
+    expect(migration).toContain("pg_catalog.convert_to('%%EOF', 'UTF8')");
+    expect(migration).toContain("Document checksum mismatch");
   });
 
   test("AR derives idempotency identity and compares canonical retry content in Postgres", async () => {

@@ -95,6 +95,24 @@ describe("Acme invoice validation", () => {
     expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_document" }));
   });
 
+  test("rejects a PDF signature without an end-of-file marker", async () => {
+    const { client } = fakeSupabase();
+    const incompleteBytes = Buffer.from("%PDF-1.4\nincomplete", "utf8");
+    const candidate = invoice({
+      document: {
+        fileName: "INV-10482.pdf",
+        mediaType: "application/pdf",
+        contentBase64: incompleteBytes.toString("base64"),
+        sha256: createHash("sha256").update(incompleteBytes).digest("hex"),
+      },
+    });
+
+    const result = await validateInvoice(client as never, candidate);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_document" }));
+  });
+
   test("submits a fully valid batch through one transactional RPC", async () => {
     const { client, calls } = fakeSupabase();
     const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()]);

@@ -100,7 +100,11 @@ function inspectDocument(invoice: InvoiceCandidate): ValidationIssue | null {
     return { code: "invalid_document", message: "The invoice document is not valid base64." };
   }
   const canonical = bytes.toString("base64");
-  if (canonical !== invoice.document.contentBase64 || bytes.length > 1_048_576 || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+  const tail = bytes.subarray(Math.max(0, bytes.length - 1_024));
+  if (canonical !== invoice.document.contentBase64
+    || bytes.length > 1_048_576
+    || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))
+    || tail.indexOf(Buffer.from("%%EOF")) === -1) {
     return { code: "invalid_document", message: "The invoice document must be a valid PDF no larger than 1 MB." };
   }
   const actualHash = createHash("sha256").update(bytes).digest("hex");

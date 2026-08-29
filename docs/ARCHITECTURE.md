@@ -42,7 +42,7 @@ Within one database transaction it:
 1. verifies the caller has a submitter role and derives its supplier and buyer IDs;
 2. resolves or creates the supplier-scoped idempotency record;
 3. locks every referenced PO row;
-4. revalidates ownership, open status, currency, remaining balance, uniqueness, PDF signature, size, and SHA-256;
+4. revalidates ownership, open status, currency, remaining balance, uniqueness, canonical encoding, PDF signature and tail marker, size, and SHA-256;
 5. inserts receipt records and decrements balances;
 6. writes one audit event and stores the immutable response;
 7. commits all invoices or none.
@@ -51,7 +51,7 @@ Application preflight improves the human-agent experience but the transaction is
 
 ## Data transfer
 
-The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, identifies, and hashes them. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
+The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, checks the PDF signature and final 1,024-byte window for `%%EOF`, and verifies the hash. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
 
 ## Performance choices
 

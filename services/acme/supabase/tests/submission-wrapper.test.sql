@@ -7,7 +7,7 @@ select set_config(
   (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
   true
 );
-select plan(12);
+select plan(13);
 
 select ok(
   exists (
@@ -126,6 +126,31 @@ select throws_ok(
   'database rejects an alternate base64 representation of the same PDF'
 );
 
+select throws_ok(
+  $$
+    select public.submit_invoice_batch(
+      'missing-eof-test-20260829',
+      repeat('c', 64),
+      jsonb_build_array(jsonb_build_object(
+        'invoiceNumber', 'INV-MISSING-EOF-01',
+        'invoiceDate', '2026-08-29',
+        'amountMinor', 1000,
+        'currency', 'USD',
+        'purchaseOrderNumber', 'PO-8821',
+        'document', jsonb_build_object(
+          'fileName', 'INV-MISSING-EOF-01.pdf',
+          'mediaType', 'application/pdf',
+          'contentBase64', encode(convert_to('%PDF-incomplete', 'UTF8'), 'base64'),
+          'sha256', encode(extensions.digest(convert_to('%PDF-incomplete', 'UTF8'), 'sha256'), 'hex')
+        )
+      ))
+    )
+  $$,
+  '22023',
+  'Document is not a valid permitted PDF',
+  'database rejects a PDF signature without an end-of-file marker'
+);
+
 create temporary table retry_probe (
   response jsonb not null
 ) on commit drop;
@@ -143,8 +168,8 @@ select public.submit_invoice_batch(
     'document', jsonb_build_object(
       'fileName', 'INV-RETRY-01.pdf',
       'mediaType', 'application/pdf',
-      'contentBase64', encode(convert_to('%PDF-retry-test', 'UTF8'), 'base64'),
-      'sha256', encode(extensions.digest(convert_to('%PDF-retry-test', 'UTF8'), 'sha256'), 'hex')
+      'contentBase64', encode(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'base64'),
+      'sha256', encode(extensions.digest(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'sha256'), 'hex')
     )
   ))
 );
@@ -162,8 +187,8 @@ select is(
       'document', jsonb_build_object(
         'fileName', 'INV-RETRY-01.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(convert_to('%PDF-retry-test', 'UTF8'), 'base64'),
-        'sha256', encode(extensions.digest(convert_to('%PDF-retry-test', 'UTF8'), 'sha256'), 'hex')
+        'contentBase64', encode(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'base64'),
+        'sha256', encode(extensions.digest(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'sha256'), 'hex')
       )
     ))
   ),
@@ -191,8 +216,8 @@ select throws_ok(
         'document', jsonb_build_object(
           'fileName', 'INV-RETRY-01.pdf',
           'mediaType', 'application/pdf',
-          'contentBase64', encode(convert_to('%PDF-retry-test', 'UTF8'), 'base64'),
-          'sha256', encode(extensions.digest(convert_to('%PDF-retry-test', 'UTF8'), 'sha256'), 'hex')
+          'contentBase64', encode(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'base64'),
+          'sha256', encode(extensions.digest(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'sha256'), 'hex')
         )
       ))
     )
