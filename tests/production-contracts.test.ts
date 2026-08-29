@@ -80,7 +80,20 @@ describe("database mutation boundaries", () => {
   test("setup documentation includes every ordered hardening migration", async () => {
     const setup = await readFile(join(root, "docs/SETUP.md"), "utf8");
     expect(setup).toContain("202608290003_enforce_delivery_event_contract.sql");
+    expect(setup).toContain("202608290004_bound_json_money.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
+    expect(setup).toContain("202608290003_bound_json_money.sql");
+  });
+
+  test("money stays within JSON's exact-integer range at every boundary", async () => {
+    const webmcp = await readFile(join(root, "apps/acme-ap/components/acme-site-tools.tsx"), "utf8");
+    const openApi = await readFile(join(root, "docs/openapi.yaml"), "utf8");
+    const arMigration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290004_bound_json_money.sql"), "utf8");
+    const apMigration = await readFile(join(root, "services/acme/supabase/migrations/202608290003_bound_json_money.sql"), "utf8");
+    expect(webmcp).toContain("maximum: Number.MAX_SAFE_INTEGER");
+    expect(openApi).toContain("maximum: 9007199254740991");
+    expect(arMigration).toContain("amount_minor <= 9007199254740991");
+    expect(apMigration.match(/<= 9007199254740991/g)).toHaveLength(2);
   });
 
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {

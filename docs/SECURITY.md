@@ -29,6 +29,7 @@
 
 - Mutating routes require `application/json` and an exact same-origin `Origin` header.
 - Zod and Postgres constraints independently enforce shape, length, enum, money, identifier, and batch limits.
+- Money integers are capped at `9007199254740991` in WebMCP, HTTP, and Postgres contracts so JSON/JavaScript transport cannot silently lose precision.
 - Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.

@@ -4,6 +4,8 @@ OpenFinance uses the imperative `document.modelContext.registerTool` API on auth
 
 Every tool calls the site's existing same-origin backend. The browser agent receives no direct database credential and no permission beyond the current user session. Read tools that return invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`; every tool has a human-readable title and forwards the WebMCP abort signal to its request. OpenFinance removes PostgreSQL's base64 line wrapping before returning a package, so AP receives canonical RFC 4648 content that matches the declared WebMCP schema. Acme independently requires that exact canonical encoding before checking the PDF signature, decoded size, and SHA-256.
 
+All monetary values use integer minor units and are capped at JSON's exact-integer maximum (`9007199254740991`) in the WebMCP, HTTP, and database contracts.
+
 ## OpenFinance AR
 
 | Tool | Kind | Purpose |

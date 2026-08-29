@@ -20,7 +20,7 @@ const invoiceSchema = {
   properties: {
     invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" },
     invoiceDate: { type: "string", format: "date" },
-    amountMinor: { type: "integer", minimum: 1 },
+    amountMinor: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER },
     currency: { type: "string", pattern: "^[A-Z]{3}$" },
     purchaseOrderNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" },
     document: {
