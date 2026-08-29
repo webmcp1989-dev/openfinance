@@ -41,6 +41,7 @@ paths:
                   items: { type: array, items: { $ref: "#/components/schemas/InvoiceQueueItem" } }
                   count: { type: integer, minimum: 0 }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /api/agent/packages:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -74,7 +75,10 @@ paths:
                   items: { type: array, items: { $ref: "#/components/schemas/InvoicePackage" } }
                   count: { type: integer, minimum: 1, maximum: 10 }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
   /api/agent/delivery-events:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -91,9 +95,17 @@ paths:
                 - $ref: "#/components/schemas/PortalExceptionRequest"
               discriminator: { propertyName: eventType }
       responses:
-        "200": { description: Recorded event }
+        "200":
+          description: Recorded delivery result or exception
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeliveryEventResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /api/agent/workspace:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -157,7 +169,10 @@ paths:
                     oneOf:
                       - { $ref: "#/components/schemas/PurchaseOrder" }
                       - { type: "null" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
   /api/agent/validate:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -175,7 +190,10 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ValidationResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
   /api/agent/submissions:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -206,8 +224,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SubmissionBatchResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/agent/status:
     servers:
@@ -226,8 +247,15 @@ paths:
               properties:
                 invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
       responses:
-        "200": { description: Status lookup result }
+        "200":
+          description: Status lookup result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceStatusResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
 components:
   securitySchemes:
     cookieSession:
@@ -236,8 +264,18 @@ components:
       name: sb-session
       description: Logical Supabase SSR cookie session; actual cookie names are project-specific.
   responses:
+    BadRequest:
+      description: Request fields or query parameters are invalid
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
     Unauthenticated:
       description: Valid application session required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: A same-origin write request is required
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
@@ -248,6 +286,11 @@ components:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
     Unprocessable:
       description: Business validation rejected the request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    UnsupportedMediaType:
+      description: Content-Type must be application/json
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
@@ -348,6 +391,24 @@ components:
               invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
               exceptionCode: { type: string, pattern: "^[a-z][a-z0-9_]{1,63}$" }
               message: { type: string, minLength: 1, maxLength: 500 }
+    DeliveryEventResult:
+      type: object
+      additionalProperties: false
+      required: [eventType, items, recordedAt]
+      properties:
+        eventType: { type: string, enum: [portal_result, portal_exception] }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required: [invoiceNumber, recorded]
+            properties:
+              invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+              recorded: { type: boolean, const: true }
+        recordedAt: { type: string, format: date-time }
     PurchaseOrder:
       type: object
       required: [purchaseOrderNumber, description, currency, authorizedAmountMinor, remainingAmountMinor, status, version]
@@ -425,6 +486,16 @@ components:
         currency: { type: string, pattern: "^[A-Z]{3}$" }
         status: { type: string, enum: [received, under_review, accepted, rejected] }
         createdAt: { type: string, format: date-time }
+    InvoiceStatusResult:
+      type: object
+      additionalProperties: false
+      required: [found, submission]
+      properties:
+        found: { type: boolean }
+        submission:
+          oneOf:
+            - { $ref: "#/components/schemas/SubmissionReceipt" }
+            - { type: "null" }
     OpenFinanceWorkspaceState:
       type: object
       required: [invoices, auditEvents]

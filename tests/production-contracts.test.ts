@@ -90,3 +90,39 @@ describe("WebMCP safety contracts", () => {
     expect(openApi.match(/auditEvents:/g)?.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("OpenAPI contract coverage", () => {
+  test("documents every same-origin write rejection and structured result", async () => {
+    const source = await readFile(join(root, "docs/openapi.yaml"), "utf8");
+    const document = Bun.YAML.parse(source) as {
+      paths: Record<string, {
+        get?: { responses: Record<string, unknown> };
+        post?: { responses: Record<string, unknown> };
+      }>;
+      components: { schemas: Record<string, unknown>; responses: Record<string, unknown> };
+    };
+    const writePaths = [
+      "/api/agent/packages",
+      "/api/agent/delivery-events",
+      "/api/agent/purchase-orders",
+      "/api/agent/validate",
+      "/api/agent/submissions",
+      "/api/agent/status",
+    ];
+
+    for (const path of writePaths) {
+      const responses = document.paths[path]?.post?.responses;
+      expect(responses).toBeDefined();
+      expect(responses).toHaveProperty("400");
+      expect(responses).toHaveProperty("401");
+      expect(responses).toHaveProperty("403");
+      expect(responses).toHaveProperty("415");
+    }
+
+    expect(document.paths["/api/agent/invoices"]?.get?.responses).toHaveProperty("400");
+    expect(document.components.responses).toHaveProperty("Forbidden");
+    expect(document.components.responses).toHaveProperty("UnsupportedMediaType");
+    expect(document.components.schemas).toHaveProperty("DeliveryEventResult");
+    expect(document.components.schemas).toHaveProperty("InvoiceStatusResult");
+  });
+});
