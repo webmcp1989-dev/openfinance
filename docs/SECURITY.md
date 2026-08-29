@@ -23,6 +23,7 @@
 - AP submission is one atomic Postgres transaction and locks PO rows before checking and decrementing balances.
 - Idempotency is scoped by tenant or supplier and bound to a SHA-256 fingerprint. The AP public wrapper derives its fingerprint from the canonical Postgres JSON payload rather than trusting the caller's digest. Transaction-scoped advisory locks serialize concurrent retries for the same scoped key; a repeated identical request reaches the transaction and returns its original response without a duplicate preflight blocking it, while a key reused for a different payload fails.
 - AR result and exception recording enforces exact payload fields, legal portal statuses, field bounds, purchase-order presence, and allowed invoice state transitions inside Postgres—not only in the HTTP layer.
+- AR ERP sync derives the organization and authorized operator from `auth.uid()`, serializes a tenant-scoped idempotency key, row-locks the alternating sync state, and records the exact stored response and audit event in the same transaction. Its state and event tables have RLS enabled and no direct authenticated grants.
 - Public RPC functions are security invokers. Privileged implementation functions live in the unexposed `private` schema, set an empty search path, schema-qualify every relation, and receive minimal execution grants.
 
 ## Request and document safety
@@ -46,6 +47,8 @@
 ## Human control
 
 Read tools are accurately annotated. Before an invoice PDF crosses from OpenFinance to Acme for read-only validation, the caller must show the destination and exact candidate invoices, POs, and amounts and obtain informed transfer approval. The AP submission description marks it as a consequential write and requires a separate preview of the exact valid invoices, amounts, total, and exceptions immediately before submission confirmation. The UI remains fully usable and shows receipts, balance changes, and recent tenant-scoped database audit events for verification. WebMCP reads containing invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`, and tool requests honor browser cancellation. AP document validation rejects non-canonical base64 encodings before checking the PDF signature, an end-of-file marker within the final 1,024 bytes, byte limit, and SHA-256 so the same bytes cannot have multiple accepted wire representations.
+
+All nine WebMCP capabilities also have human UI controls backed by the same authenticated routes and authoritative services. Client-side validation and confirmation improve usability; they do not establish authorization, isolation, or business correctness.
 
 ## Known production hardening beyond the contest slice
 

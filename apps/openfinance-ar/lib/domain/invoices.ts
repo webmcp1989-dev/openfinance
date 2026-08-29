@@ -5,6 +5,10 @@ import { MAX_TRANSFER_INVOICE_COUNT } from "./transfer-limits";
 const invoiceNumberSchema = z.string().regex(/^[A-Z0-9][A-Z0-9-]{1,39}$/);
 const idempotencyKeySchema = z.string().min(16).max(128);
 
+export const erpSyncRequestSchema = z.object({
+  idempotencyKey: idempotencyKeySchema,
+}).strict();
+
 export const packageRequestSchema = z.object({
   invoiceNumbers: z.array(invoiceNumberSchema).min(1).max(MAX_TRANSFER_INVOICE_COUNT).refine(
     (numbers) => new Set(numbers).size === numbers.length,
@@ -48,6 +52,19 @@ export const deliveryEventRequestSchema = z.discriminatedUnion("eventType", [
 ]);
 
 export type DeliveryEventRequest = z.infer<typeof deliveryEventRequestSchema>;
+export type ErpSyncRequest = z.infer<typeof erpSyncRequestSchema>;
+
+export type ErpSyncResult = Readonly<{
+  importedCount: number;
+  items: ReadonlyArray<Readonly<{
+    invoiceNumber: string;
+    customerName: string;
+    amountMinor: number;
+    currency: string;
+    purchaseOrderNumber: string | null;
+  }>>;
+  syncedAt: string;
+}>;
 
 export type InvoiceQueueItem = Readonly<{
   invoiceNumber: string;

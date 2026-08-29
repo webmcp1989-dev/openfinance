@@ -2,18 +2,8 @@
 
 import { useEffect } from "react";
 
+import { apiRequest } from "@/lib/browser-api";
 import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
-
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    credentials: "same-origin",
-    headers: init?.body ? { "Content-Type": "application/json", ...init.headers } : init?.headers,
-  });
-  const body = await response.json() as T & { error?: { message?: string } };
-  if (!response.ok) throw new Error(body.error?.message ?? "OpenFinance request failed");
-  return body;
-}
 
 const invoiceNumberArray = {
   type: "array", minItems: 1, maxItems: MAX_TRANSFER_INVOICE_COUNT, uniqueItems: true,
@@ -59,7 +49,7 @@ export function OpenFinanceSiteTools() {
           const customerName = (input as { customerName?: unknown }).customerName;
           const query = new URLSearchParams({ readyOnly: "true" });
           if (typeof customerName === "string") query.set("customerName", customerName);
-          return api(`/api/agent/invoices?${query}`, { signal: options?.signal });
+          return apiRequest(`/api/agent/invoices?${query}`, { signal: options?.signal });
         },
       },
       {
@@ -71,7 +61,7 @@ export function OpenFinanceSiteTools() {
           properties: { invoiceNumbers: invoiceNumberArray },
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => api("/api/agent/packages", {
+        execute: (input, options) => apiRequest("/api/agent/packages", {
           method: "POST", body: JSON.stringify(input), signal: options?.signal,
         }),
       },
@@ -88,7 +78,7 @@ export function OpenFinanceSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await api("/api/agent/delivery-events", {
+          const result = await apiRequest("/api/agent/delivery-events", {
             method: "POST",
             body: JSON.stringify({ eventType: "portal_result", ...(input as object) }),
             signal: options?.signal,
@@ -110,7 +100,7 @@ export function OpenFinanceSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await api("/api/agent/delivery-events", {
+          const result = await apiRequest("/api/agent/delivery-events", {
             method: "POST",
             body: JSON.stringify({ eventType: "portal_exception", ...(input as object) }),
             signal: options?.signal,

@@ -33,6 +33,14 @@ Both public mutation wrappers serialize tenant-scoped idempotency keys and deriv
 The browser never receives a service-role key. The frontend is not an authorization or business-rule boundary.
 Shared hashing and typed-error primitives live in framework-free `http-core` modules, so domain services and their tests do not initialize Next.js or Supabase infrastructure.
 
+Every one of the nine WebMCP operations also has a first-class human UI path. Those controls call the same same-origin routes and services as the tools; the UI adds guidance and informed confirmation but never replaces backend authorization or validation.
+
+## AR ERP sync simulation
+
+The AR workspace includes a human-only **Sync invoices now** operation that models an inbound ERP connector without expanding the fixed nine-tool challenge contract. Its same-origin route accepts only an idempotency key. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
+
+Imported invoices use the organization's configured synthetic customer, valid synthetic PDF records, unique ERP invoice numbers, and auditable idempotent events. The operation never reads or writes the independent AP database and is not a hidden cross-site integration.
+
 ## AP submission transaction
 
 `submit_invoice_batch` is a public security-invoker wrapper around a private security-definer function with `search_path = ''`. Execution is revoked from `public` and `anon` and granted only to `authenticated`.

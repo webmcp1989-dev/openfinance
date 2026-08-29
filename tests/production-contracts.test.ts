@@ -54,6 +54,7 @@ describe("API authorization ordering", () => {
   const writeRoutes = [
     "apps/openfinance-ar/app/api/agent/packages/route.ts",
     "apps/openfinance-ar/app/api/agent/delivery-events/route.ts",
+    "apps/openfinance-ar/app/api/agent/erp-sync/route.ts",
     "apps/acme-ap/app/api/agent/purchase-orders/route.ts",
     "apps/acme-ap/app/api/agent/validate/route.ts",
     "apps/acme-ap/app/api/agent/submissions/route.ts",
@@ -95,6 +96,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290003_enforce_delivery_event_contract.sql");
     expect(setup).toContain("202608290004_bound_json_money.sql");
     expect(setup).toContain("202608290005_canonicalize_delivery_requests.sql");
+    expect(setup).toContain("202608290006_simulate_erp_invoice_sync.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
     expect(setup).toContain("202608290003_bound_json_money.sql");
     expect(setup).toContain("202608290004_align_submission_policy.sql");
@@ -146,6 +148,21 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("v_existing_event_type is distinct from p_event_type");
     expect(migration).toContain("extensions.digest(");
     expect(migration).toContain("v_existing_fingerprint");
+  });
+
+  test("AR ERP sync is tenant-scoped, serialized, idempotent, and deterministic", async () => {
+    const migration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql"), "utf8");
+    const testSuite = await readFile(join(root, "services/openfinance/supabase/tests/erp-sync.test.sql"), "utf8");
+    expect(migration).toContain("p.role in ('admin', 'operator')");
+    expect(migration).toContain("pg_advisory_xact_lock");
+    expect(migration).toContain("for update");
+    expect(migration).toContain("next_sync_has_invoices = not v_state.next_sync_has_invoices");
+    expect(migration).toContain("unique (organization_id, idempotency_key)");
+    expect(migration).toContain("erp_invoice_sync_completed");
+    expect(testSuite).toContain("first sync imports two invoices");
+    expect(testSuite).toContain("second sync reports no new invoices");
+    expect(testSuite).toContain("third sync imports the next two invoices");
+    expect(testSuite).toContain("idempotent replay inserts nothing");
   });
 
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {
@@ -243,6 +260,23 @@ describe("WebMCP safety contracts", () => {
     expect(openApi.match(/auditAvailable:/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
+  test("every WebMCP capability has an equivalent human UI path", async () => {
+    const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8");
+    const ap = await readFile(join(root, "apps/acme-ap/components/acme-workspace.tsx"), "utf8");
+    const apPage = await readFile(join(root, "apps/acme-ap/app/page.tsx"), "utf8");
+
+    expect(ar).toContain("statusFilter");
+    expect(ar).toContain('"/api/agent/packages"');
+    expect(ar.match(/"\/api\/agent\/delivery-events"/g)).toHaveLength(1);
+    expect(ar).toContain("Record portal outcome");
+    expect(apPage).toContain("getRequirements(supabase)");
+    expect(ap).toContain('"/api/agent/purchase-orders"');
+    expect(ap).toContain('"/api/agent/validate"');
+    expect(ap).toContain('"/api/agent/submissions"');
+    expect(ap).toContain('"/api/agent/status"');
+    expect(ap).toContain("approve submission to Acme AP");
+  });
+
   test("the demo runbook requires separate transfer and submission confirmations", async () => {
     const demo = await readFile(join(root, "docs/DEMO.md"), "utf8");
     expect(demo).toContain("informed transfer confirmation");
@@ -263,6 +297,7 @@ describe("OpenAPI contract coverage", () => {
     const writePaths = [
       "/api/agent/packages",
       "/api/agent/delivery-events",
+      "/api/agent/erp-sync",
       "/api/agent/purchase-orders",
       "/api/agent/validate",
       "/api/agent/submissions",

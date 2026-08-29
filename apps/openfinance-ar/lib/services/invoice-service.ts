@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   DeliveryEventRequest,
+  ErpSyncResult,
   InvoiceQueueItem,
   SubmissionPackageItem,
 } from "@/lib/domain/invoices";
@@ -145,4 +146,28 @@ export async function recordDeliveryEvent(
     throw new HttpError(422, "delivery_event_rejected", "Delivery result could not be recorded");
   }
   return data;
+}
+
+export async function syncInvoicesFromErp(
+  supabase: SupabaseClient,
+  idempotencyKey: string,
+): Promise<ErpSyncResult> {
+  const { data, error } = await supabase.rpc("sync_invoices_from_erp", {
+    p_idempotency_key: idempotencyKey,
+  });
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new HttpError(409, "idempotency_conflict", "Sync key conflicts with an earlier request");
+    }
+    if (error.code === "P0002") {
+      throw new HttpError(409, "erp_sync_not_configured", "ERP sync is not configured for this organization");
+    }
+    if (error.code === "42501") {
+      throw new HttpError(403, "operator_access_required", "Operator access is required to sync invoices");
+    }
+    throw new HttpError(422, "erp_sync_failed", "Invoices could not be synchronized from the ERP");
+  }
+
+  return data as ErpSyncResult;
 }

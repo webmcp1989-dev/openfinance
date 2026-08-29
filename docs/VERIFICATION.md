@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 61 tests passed with 237 expectations.
+- `bun test`: 67 tests passed with 271 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -22,6 +22,9 @@ lifecycle and annotations, idempotency, and documentation coverage.
 
 - The OpenFinance RLS suite passed 13 assertions and its delivery transaction
   suite passed 11 assertions in the live AR project.
+- The OpenFinance ERP sync suite passed 17 assertions in the live AR project,
+  covering internal-table isolation, privilege boundaries, `2 -> 0 -> 2`
+  alternation, idempotent replay, unique inserts, and auditing.
 - The Acme RLS suite passed 15 assertions and its submission transaction suite
   passed 13 assertions in the independent live AP project.
 - Unauthenticated workspace reads returned `401`, forged-origin writes returned
@@ -57,6 +60,16 @@ exception, full AP purchase-order balances, and empty receipt and audit trails.
 Both synthetic judge passwords were then rotated to unique strong values and
 verified through fresh, independent live sign-ins. The credentials remain
 private and are not stored in this repository.
+
+## Human workspace coverage
+
+- Both applications expose every WebMCP capability through accessible human UI
+  controls backed by the same authenticated routes and authoritative services.
+- AR adds a human-only ERP sync control; the backend and database tests prove
+  its tenant-scoped alternating behavior without changing the four-tool AR
+  WebMCP surface.
+- AP provides requirements, PO and receipt lookup, exact PDF preflight, a
+  three-invoice review batch, and an explicit final submission confirmation.
 
 ## Demo video artifact
 

@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 
 mock.module("server-only", () => ({}));
-const { getSubmissionPackage, recordDeliveryEvent } = await import("./invoice-service");
+const { getSubmissionPackage, recordDeliveryEvent, syncInvoicesFromErp } = await import("./invoice-service");
 
 function packageClient(contentBase64: string) {
   const row = {
@@ -68,6 +68,46 @@ describe("OpenFinance delivery service errors", () => {
       status: 409,
       code: "invoice_state_conflict",
       message: "Invoice state changed; reload the queue before recording the portal outcome",
+    });
+  });
+});
+
+describe("OpenFinance ERP synchronization", () => {
+  test("returns the database-authored alternating sync result", async () => {
+    const expected = {
+      importedCount: 2,
+      items: [{
+        invoiceNumber: "ERP-000001",
+        customerName: "Acme Manufacturing",
+        amountMinor: 125_000,
+        currency: "USD",
+        purchaseOrderNumber: "PO-8821",
+      }],
+      syncedAt: "2026-08-29T17:00:00.000Z",
+    };
+    const calls: unknown[] = [];
+    const client = {
+      rpc(name: string, input: unknown) {
+        calls.push({ name, input });
+        return Promise.resolve({ data: expected, error: null });
+      },
+    };
+
+    await expect(syncInvoicesFromErp(client as never, "erp-sync-request-20260829")).resolves.toEqual(expected);
+    expect(calls).toEqual([{
+      name: "sync_invoices_from_erp",
+      input: { p_idempotency_key: "erp-sync-request-20260829" },
+    }]);
+  });
+
+  test("does not leak database errors when sync is not configured", async () => {
+    const client = {
+      rpc() { return Promise.resolve({ data: null, error: { code: "P0002", message: "internal detail" } }); },
+    };
+    await expect(syncInvoicesFromErp(client as never, "erp-sync-request-20260829")).rejects.toMatchObject({
+      status: 409,
+      code: "erp_sync_not_configured",
+      message: "ERP sync is not configured for this organization",
     });
   });
 });

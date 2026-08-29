@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: OpenFinance WebMCP demo HTTP APIs
-  version: 1.3.4
+  version: 1.4.0
   license:
     name: MIT
     identifier: MIT
@@ -43,6 +43,29 @@ paths:
                   count: { type: integer, minimum: 0 }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "400": { $ref: "#/components/responses/BadRequest" }
+  /api/agent/erp-sync:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    post:
+      operationId: syncInvoicesFromErp
+      summary: Idempotently simulate an inbound ERP invoice sync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ErpSyncRequest" }
+      responses:
+        "200":
+          description: Two imported invoices or a successful no-new-invoices result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErpSyncResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /api/agent/packages:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -307,6 +330,36 @@ components:
       type: string
       minLength: 16
       maxLength: 128
+    ErpSyncRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey]
+      properties:
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+    ErpSyncItem:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, customerName, amountMinor, currency, purchaseOrderNumber]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        customerName: { type: string, minLength: 1, maxLength: 160 }
+        amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        purchaseOrderNumber:
+          oneOf:
+            - { $ref: "#/components/schemas/PurchaseOrderNumber" }
+            - { type: "null" }
+    ErpSyncResult:
+      type: object
+      additionalProperties: false
+      required: [importedCount, items, syncedAt]
+      properties:
+        importedCount: { type: integer, enum: [0, 2] }
+        items:
+          type: array
+          maxItems: 2
+          items: { $ref: "#/components/schemas/ErpSyncItem" }
+        syncedAt: { type: string, format: date-time }
     InvoiceQueueItem:
       type: object
       required: [invoiceNumber, customerName, amountMinor, currency, invoiceDate, purchaseOrderNumber, status, portalReference, portalStatus, exceptionCode, exceptionMessage, version]

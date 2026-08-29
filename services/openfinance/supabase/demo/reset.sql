@@ -13,6 +13,30 @@ where organization_id = '10000000-0000-4000-8000-000000000001';
 delete from public.delivery_events
 where organization_id = '10000000-0000-4000-8000-000000000001';
 
+delete from public.erp_sync_events
+where organization_id = '10000000-0000-4000-8000-000000000001';
+
+delete from public.invoices
+where organization_id = '10000000-0000-4000-8000-000000000001'
+  and invoice_number like 'ERP-%';
+
+do $$
+declare
+  v_updated integer;
+begin
+  update public.erp_sync_state
+  set next_invoice_sequence = 1,
+      next_sync_has_invoices = true,
+      updated_at = now()
+  where organization_id = '10000000-0000-4000-8000-000000000001';
+
+  get diagnostics v_updated = row_count;
+  if v_updated <> 1 then
+    raise exception 'OpenFinance demo reset expected 1 ERP sync state row but updated %', v_updated;
+  end if;
+end;
+$$;
+
 do $$
 declare
   v_updated integer;

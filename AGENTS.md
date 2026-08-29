@@ -1,135 +1,98 @@
-# OpenFinance project guidance
+# OpenFinance agent guide
 
-## Product north star
+This is the vendor-neutral source of truth for AI coding agents. Read it before changing the repository, then consult only the linked documentation relevant to the task.
 
-Build **OpenFinance**, an agent-native interoperability experience for B2B finance.
+## Product and non-negotiable boundary
 
-The challenge proof is one complete workflow: two independently authenticated business applications complete an invoice-delivery transaction through WebMCP without a point-to-point API integration or shared credentials.
+OpenFinance demonstrates agent-native B2B invoice interoperability:
 
 ```text
-OpenFinance AR <-> WebMCP <-> ChatGPT browser agent + human <-> WebMCP <-> Customer AP portal
+OpenFinance AR <-> WebMCP <-> browser agent + human <-> WebMCP <-> Acme AP
 ```
 
-The ChatGPT browser agent is the bridge. Do not introduce a hidden orchestration service that directly connects the two applications.
+The two applications are independently authenticated, deployed, and persisted. The browser agent is the only runtime bridge. Never add a shared database, shared credentials, server-to-server integration, queue, webhook, or hidden orchestration path between them. Use only synthetic data.
 
-## Human-agent experience
+The challenge prompt is **"Submit all Acme invoices that are ready for their AP portal."** Preserve the complete flow and its explicit human approvals described in [docs/NORTH_STAR.md](docs/NORTH_STAR.md).
 
-Every meaningful feature must clarify the division of work:
+## Stack and repository map
 
-- The human provides intent, business judgment, and approval for consequential actions.
-- The agent discovers capabilities, gathers data, reconciles the two systems, explains exceptions, and executes approved actions.
-- Both work from the same live application state. Tool calls must visibly update the relevant UI and leave a clear audit trail.
-- The agent must preview the exact invoices, amounts, purchase orders, and destination before submission.
-- Invoice submission and cross-site data transfer require explicit, informed human confirmation.
-- Failures must be understandable and actionable, not generic errors.
+- Bun 1.3.14 workspaces; TypeScript 6; Next.js 16 App Router; React 19.
+- Supabase Auth/Postgres with SSR clients, RLS, SQL migrations, and pgTAP tests.
+- Vercel hosts two projects with separate Supabase projects and sessions.
+- `apps/openfinance-ar`: seller AR app (port 3000).
+- `apps/acme-ap`: buyer supplier portal (port 3001).
+- In each app: `app/` owns pages and BFF route handlers, `components/` owns UI and WebMCP registration, `lib/domain/` owns validation/types, `lib/services/` owns use cases, and `lib/supabase/` owns provider access.
+- `services/openfinance/supabase` and `services/acme/supabase`: independent migrations, seeds, reset scripts, and database tests.
+- `docs/openapi.yaml`: both same-origin HTTP contracts. `tests/`: repository/production contracts.
+- `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/WEBMCP.md`, `docs/SETUP.md`: detailed technical sources.
+- `docs/AI_HANDOFF.md`: concise current state, limitations, and meaningful follow-up.
 
-The app should feel meaningfully better with an agent, while remaining understandable and useful to a human on its own.
+No nested agent file is currently needed. A future nested `AGENTS.md` should contain only rules unique to that subtree.
 
-## Challenge rubric
+## Setup and verified commands
 
-Evaluate every scope decision against all four official criteria:
+From the repository root:
 
-1. **WebMCP leverage**: non-trivial, skillful use of discoverable structured tools across both applications.
-2. **Execution**: a polished, coherent, runnable product experience rather than a protocol demo.
-3. **Potential impact**: a credible solution to a specific problem faced by supplier AR teams.
-4. **Creativity and ambition**: demonstrate browser-mediated interoperability between independent B2B applications.
+```bash
+bun install --frozen-lockfile
+bun run dev:openfinance      # http://localhost:3000
+bun run dev:acme             # http://localhost:3001
+bun run typecheck
+bun run lint
+bun test
+bun run build
+bun audit
+```
 
-If a feature does not strengthen at least one criterion without weakening execution, defer it.
+Run the two dev servers in separate terminals. Configure each app with credentials for its own Supabase project as documented in `docs/SETUP.md`.
 
-## Required challenge architecture
+## Architecture and responsibility rules
 
-- Seller-side OpenFinance AR application and customer-side AP portal must be genuinely independent.
-- Use separate authentication sessions, authorization boundaries, application state, and persistence.
-- Do not use a shared database or private server-to-server integration to move workflow data between them.
-- Use synthetic companies, users, invoices, purchase orders, and documents.
-- WebMCP is the only interoperability surface available to the browser agent.
-- Keep the challenge implementation focused on the native WebMCP path. APIs, learned browser skills, and legacy-portal automation belong to the future commercial story, not the core demo.
+- Frontends present state, collect intent/approval, provide accessible feedback, and register page-scoped tools. They are never authoritative.
+- Route handlers enforce method/content type/origin, authenticate before parsing untrusted bodies, validate with Zod, and return stable safe errors.
+- Services implement application use cases and map database/provider records to domain objects.
+- Postgres derives tenant/supplier identity, authorizes roles, locks concurrent state, validates invariants, and commits consequential changes atomically.
+- Keep UI, HTTP, service, domain, data-access, and integration concerns separate. Do not leak Next.js, Supabase, Vercel, or browser details into domain modules.
+- Reuse bounded helpers within one application. Do not create shared business schemas or code that secretly couples AR and AP.
+- All nine WebMCP capabilities also have human UI paths backed by the same services. Preserve exactly four AR and five AP challenge tools unless the documented demo contract is deliberately revised.
+- ERP invoice sync is a human UI/backend simulation, not a tenth WebMCP tool; see `docs/AI_HANDOFF.md`.
 
-## WebMCP tool design
+## Authentication, isolation, and security
 
-- Prefer the imperative API for application operations and stateful workflows.
-- Give each tool one clear, non-overlapping purpose.
-- Use precise verb-based names and concise positive descriptions.
-- Keep names, parameter descriptions, and outputs compact.
-- Use explicit JSON Schema types, enums, required fields, and human-readable identifiers.
-- Validate authentication, authorization, tenant/supplier scope, business rules, and input on the server. Never rely on the model for enforcement.
-- Mark read-only tools with `readOnlyHint`.
-- Mark externally sourced or user-authored results with `untrustedContentHint` when applicable.
-- Return structured, verifiable results with stable identifiers and useful recovery guidance.
-- Update visible application state after successful writes.
-- Register tools only when their page and session context make them valid; avoid redundant or overlapping tools.
-- Design idempotent write operations where practical, especially invoice submission and status recording.
+- Use Supabase `auth.getClaims()` for protected pages/routes. Never trust caller-supplied tenant, organization, buyer, supplier, or role identifiers.
+- Every exposed table requires RLS. Default deny, revoke anonymous access, and grant only the minimum authenticated privileges.
+- Browser code may receive only the Supabase URL and publishable key. Never expose or commit service-role keys, database passwords, access tokens, real customer data, or judge credentials.
+- Mutations require exact same-origin JSON requests. Validate every process boundary and return public error codes without raw database details.
+- Consequential/retryable writes must be tenant-scoped, idempotent, concurrency-safe, auditable, and transactionally correct.
+- Cross-site document transfer and AP submission require separate, informed human approvals. Preview destination, invoice numbers, POs, amounts, total, and exclusions.
+- Treat tool inputs/outputs and uploaded documents as untrusted. Preserve the bounded PDF, SHA-256, canonical base64, exact-integer money, and three-item batch controls.
+- Keep security headers, no-cache authenticated state, optional-audit degradation, and visible post-write refresh behavior.
 
-## Core demo contract
+## Database and migrations
 
-The primary prompt is: **"Submit all Acme invoices that are ready for their AP portal."**
+- Never edit an applied migration. Add a timestamped, forward-only SQL file in the owning service.
+- Keep AR and AP schemas, fixtures, and migrations independent. Synthetic demo constants belong in seeds/migrations, not reusable domain logic.
+- Use constraints and transactions to preserve invariants. Privileged implementations belong in `private`, use `security definer`, set `search_path = ''`, schema-qualify names, and expose a minimal public security-invoker wrapper.
+- Update the owning service README, `docs/SETUP.md`, reset script, pgTAP coverage, and handoff for meaningful schema changes.
+- Database tests are rollback-only SQL scripts run in the corresponding Supabase SQL editor; exact order is documented in `docs/SETUP.md`.
 
-The end-to-end result must demonstrate:
+## Environment, hosting, and deployment
 
-1. Reading portal-ready invoices from OpenFinance.
-2. Excluding an invoice that is not ready, such as one missing a PO.
-3. Discovering the AP portal's independent requirements and purchase-order data.
-4. Detecting a deliberate exception, such as an invoice exceeding the remaining PO balance.
-5. Presenting the valid batch and exceptions clearly to the human.
-6. Obtaining confirmation immediately before submission.
-7. Submitting only the approved valid invoices.
-8. Receiving AP references and statuses.
-9. Writing the results and exceptions back to OpenFinance.
-10. Showing the updated state and audit trail in both applications.
+- `.env`, `.env.*`, `.vercel`, and `.supabase` are ignored. Only `.env.example` is tracked, with empty placeholders.
+- Required variables per deployment: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, each scoped to that app's own project.
+- Never put secrets in `NEXT_PUBLIC_*`; do not add machine-specific paths to tracked files.
+- Continue using the existing Vercel and Supabase projects. Each Vercel project uses its app directory as the root. Do not introduce new infrastructure without a demonstrated requirement.
+- Apply and verify database migrations before deploying application code that depends on them. Confirm both public deployments and exact in-app-browser flow after release.
 
-## Messaging rules
+## Change, validation, and collaboration workflow
 
-Lead with the outcome, not the technology:
+1. Inspect code, tests, migrations, and relevant docs; document current behavior, not aspirations.
+2. Preserve unrelated user changes. Keep the implementation lean and provider-agnostic without weakening correctness or isolation.
+3. Add proportionate unit, route/service, contract, authorization-negative, database, and browser-flow coverage.
+4. Update `docs/openapi.yaml` and affected architecture/security/setup/WebMCP docs in the same change. Update this file only when repository-wide guidance changes.
+5. Record only meaningful continuation context in `docs/AI_HANDOFF.md`; omit trivial copy or visual edits.
+6. Run type-check, lint, tests, build, audit, secret/env tracking checks, and relevant live database/browser validation.
+7. Save every code/config/migration/doc change in Git. Commit and push a completed, verified change when permissions allow; GitHub is the shared source of truth.
+8. Leave a concise handoff: files, migrations, environment changes, commands/tests, deployment impact, verified limitations, and remaining work.
 
-> OpenFinance lets independently authenticated AR and AP applications complete financial workflows through WebMCP, without custom point-to-point integrations or shared credentials.
-
-Avoid reducing the product to "AI uploads invoices." The value is cross-application interoperability, exception handling, human control, and buyer-side payment intelligence.
-
-Be precise: the challenge demonstrates the WebMCP-native future. The commercial OpenFinance Network would later add API and learned-browser compatibility for legacy portals.
-
-## Delivery requirements
-
-- Working public deployment accessible in ChatGPT's in-app browser.
-- Public repository containing all required source, assets, setup instructions, and a visible open-source license.
-- Clear README that explains why WebMCP is necessary and how to reproduce the demo.
-- Public demo video under three minutes with audio.
-- Submission copy must explicitly explain the WebMCP fit, improved user experience, new human-agent capability, and implementation.
-- Test the exact natural-language demo flow repeatedly in the ChatGPT in-app browser; do not rely only on direct tool unit tests.
-
-See `docs/NORTH_STAR.md` for the research-backed rationale and detailed decision rubric.
-
-## Permanent engineering rules
-
-These rules apply to every implementation decision in this repository:
-
-- Prioritize correctness, security, reliability, and tenant isolation above optimization, convenience, token reduction, or implementation speed.
-- Keep business rules, authorization, validation, synchronization, integrations, and authoritative data processing on the backend.
-- Treat the frontend as presentation and user interaction. Client-side checks improve UX but never establish authorization or business correctness.
-- Prefer clean, lean, explicit code. Avoid unnecessary abstractions, infrastructure, dependencies, indirection, and duplication.
-- Simplicity must not weaken correctness, security, reliability, isolation, extensibility, or provider-agnostic boundaries.
-- Separate UI, service/API, application/business logic, integration adapters, and data access. Dependencies must point inward toward domain logic.
-- Do not leak Supabase-, Vercel-, browser-, framework-, or runtime-specific concerns into domain modules.
-- Do not hard-code tenants, customers, providers, workflows, or features in reusable business logic. Synthetic challenge data belongs in seeds and fixtures.
-- Enforce authentication and tenant/supplier authorization for every backend operation, including read-only queries.
-- Default to deny. Use least privilege, explicit data ownership, Row Level Security, safe error handling, and auditable mutations.
-- Validate all untrusted inputs at process boundaries. Use shared machine-readable schemas only within a bounded application; do not create hidden coupling between the independent AR and AP applications.
-- Design consequential and retryable operations for idempotency and concurrency safety.
-- Use database constraints and transactions to preserve invariants; do not depend on UI sequencing or agent behavior.
-- Avoid N+1 queries, unnecessary network round trips, excessive client bundles, and repeated processing, but never trade correctness or clarity for micro-optimization.
-- Add proportionate unit, integration, contract, authorization, and end-to-end tests. Security and tenant-isolation behavior require explicit negative tests.
-- Keep secrets server-side. Never expose Supabase service-role keys or equivalent privileged credentials to browser bundles.
-- Maintain accessible, semantic, responsive interfaces with clear loading, empty, success, partial-success, and error states.
-
-## Documentation is part of the implementation
-
-Every affected change must update the relevant documentation in the same change:
-
-- OpenAPI specification and request/response examples.
-- Human-readable architecture, setup, operations, and security guides.
-- WebMCP tool inventory, schemas, behavior, annotations, and examples.
-- Agent instructions in this file and related scoped `AGENTS.md` files.
-- Database schema, migrations, RLS policies, data ownership, and seed documentation.
-- Architecture decision records when boundaries or major technology choices change.
-- Deployment and environment-variable documentation.
-
-Code and documentation that disagree is an incomplete change.
+Correctness, security, reliability, tenant isolation, and informed human control outrank speed, convenience, optimization, token reduction, or implementation simplicity. Documentation that disagrees with code is an incomplete change.

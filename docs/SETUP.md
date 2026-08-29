@@ -15,7 +15,7 @@ Run each migration only in its named project:
 
 | Application | Supabase project ref | Migrations, in order |
 | --- | --- | --- |
-| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql`<br>`services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql`<br>`services/openfinance/supabase/migrations/202608290004_bound_json_money.sql`<br>`services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql` |
+| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql`<br>`services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql`<br>`services/openfinance/supabase/migrations/202608290004_bound_json_money.sql`<br>`services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql`<br>`services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql` |
 | Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql`<br>`services/acme/supabase/migrations/202608290002_harden_submission_wrapper.sql`<br>`services/acme/supabase/migrations/202608290003_bound_json_money.sql`<br>`services/acme/supabase/migrations/202608290004_align_submission_policy.sql`<br>`services/acme/supabase/migrations/202608290005_canonicalize_submission_requests.sql`<br>`services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql` |
 
 Apply every listed migration in filename order through the Supabase SQL editor or a reviewed migration pipeline. The migrations are transactional, enable RLS on every exposed table, revoke anonymous access, grant only required reads, and expose authenticated write wrappers around private transaction functions.
@@ -79,7 +79,7 @@ The applications intentionally expose no reset endpoint. Reset is an explicit ad
 2. In the **Acme AP** SQL editor, review and run `services/acme/supabase/demo/reset.sql`.
 3. Confirm it reports three open POs at their full seeded balances and zero batches, submissions, and audit events.
 4. In the **OpenFinance AR** SQL editor, review and run `services/openfinance/supabase/demo/reset.sql`.
-5. Confirm it reports three ready invoices, `INV-10503` as `needs_attention`, and zero delivery and audit events.
+5. Confirm it reports three ready invoices, `INV-10503` as `needs_attention`, zero delivery and audit events, and an ERP sync sequence reset to `2 new → 0 new`.
 6. Reload both applications and verify the [starting state](DEMO.md#starting-state) before recording or rerunning the test.
 
 Each script uses explicit synthetic IDs, an advisory transaction lock, exact affected-row assertions, and a transaction. Never run either script against a project containing real data, and never point a script at the other application's project.

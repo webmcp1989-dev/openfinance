@@ -47,6 +47,14 @@ export type PurchaseOrder = Readonly<{
   version: number;
 }>;
 
+export type SubmissionRequirements = Readonly<{
+  acceptedMediaTypes: string[];
+  maxDocumentBytes: number;
+  requireOpenPurchaseOrder: boolean;
+  enforceRemainingBalance: boolean;
+  uniqueInvoiceNumberRequired: boolean;
+}>;
+
 export type ValidationIssue = Readonly<{
   code: "purchase_order_not_found" | "purchase_order_closed" | "currency_mismatch" |
     "amount_exceeds_remaining_balance" | "duplicate_invoice" | "invalid_document";

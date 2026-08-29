@@ -56,4 +56,8 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 
 Both applications refresh their visible state after writes and show recent tenant-scoped database audit events alongside the invoice queue, PO balances, and portal receipts.
 
+The human workspaces provide equivalent paths for every tool capability through the same backend contracts: AR supports scoped queue filtering, package review, and portal result/exception recording; AP supports live requirements, PO lookup, invoice validation, confirmed batch submission, and status lookup. This keeps both applications useful without an agent while preserving identical authorization and business rules.
+
+AR's **Sync invoices now** ERP simulation is deliberately human-only. It alternates two imported invoices and no new invoices in a tenant-scoped, idempotent backend transaction; it is not a tenth challenge tool and does not create a hidden integration with AP.
+
 The agent must never transfer an unapproved package, silently broaden either approved set, treat a preflight as a reservation, or report submission before receiving a committed portal reference.

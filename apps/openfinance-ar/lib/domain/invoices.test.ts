@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { deliveryEventRequestSchema, packageRequestSchema } from "./invoices";
+import { deliveryEventRequestSchema, erpSyncRequestSchema, packageRequestSchema } from "./invoices";
 
 describe("OpenFinance agent request contracts", () => {
   test("accepts a unique bounded submission package", () => {
@@ -32,5 +32,16 @@ describe("OpenFinance agent request contracts", () => {
     });
     expect(valid.success).toBe(true);
     expect(invalid.success).toBe(false);
+  });
+
+  test("requires one bounded ERP sync idempotency key", () => {
+    expect(erpSyncRequestSchema.parse({ idempotencyKey: "erp-sync-request-20260829" })).toEqual({
+      idempotencyKey: "erp-sync-request-20260829",
+    });
+    expect(erpSyncRequestSchema.safeParse({ idempotencyKey: "short" }).success).toBe(false);
+    expect(erpSyncRequestSchema.safeParse({
+      idempotencyKey: "erp-sync-request-20260829",
+      organizationId: "untrusted",
+    }).success).toBe(false);
   });
 });

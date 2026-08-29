@@ -3,7 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { InvoiceCandidate, PurchaseOrder, ValidationIssue } from "@/lib/domain/submissions";
+import type { InvoiceCandidate, PurchaseOrder, SubmissionRequirements, ValidationIssue } from "@/lib/domain/submissions";
 import { fingerprint, HttpError } from "@/lib/http-core";
 
 type PurchaseOrderRow = {
@@ -78,7 +78,7 @@ export async function findPurchaseOrder(supabase: SupabaseClient, number: string
   return data ? mapPurchaseOrder(data as PurchaseOrderRow) : null;
 }
 
-export async function getRequirements(supabase: SupabaseClient) {
+export async function getRequirements(supabase: SupabaseClient): Promise<SubmissionRequirements> {
   const { data, error } = await supabase.from("submission_requirements")
     .select("accepted_media_types, max_document_bytes, require_open_purchase_order, enforce_remaining_balance")
     .single();

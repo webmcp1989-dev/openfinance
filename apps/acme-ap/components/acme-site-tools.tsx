@@ -2,18 +2,8 @@
 
 import { useEffect } from "react";
 
+import { apiRequest } from "@/lib/browser-api";
 import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
-
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    credentials: "same-origin",
-    headers: init?.body ? { "Content-Type": "application/json", ...init.headers } : init?.headers,
-  });
-  const body = await response.json() as T & { error?: { message?: string } };
-  if (!response.ok) throw new Error(body.error?.message ?? "Acme AP request failed");
-  return body;
-}
 
 const invoiceSchema = {
   type: "object",
@@ -53,7 +43,7 @@ export function AcmeSiteTools() {
         description: "Read Acme's current invoice submission policy for the signed-in supplier. This does not modify the portal.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true },
-        execute: (_input, options) => api("/api/agent/requirements", { signal: options?.signal }),
+        execute: (_input, options) => apiRequest("/api/agent/requirements", { signal: options?.signal }),
       },
       {
         name: "find_purchase_order",
@@ -64,7 +54,7 @@ export function AcmeSiteTools() {
           properties: { purchaseOrderNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => api("/api/agent/purchase-orders", {
+        execute: (input, options) => apiRequest("/api/agent/purchase-orders", {
           method: "POST", body: JSON.stringify(input), signal: options?.signal,
         }),
       },
@@ -74,7 +64,7 @@ export function AcmeSiteTools() {
         description: "Validate one complete invoice package against Acme's live PO balance, currency, uniqueness, and PDF rules. Call only after the human approves transferring that exact package to Acme. This read-only preflight does not reserve balance or submit the invoice.",
         inputSchema: invoiceSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => api("/api/agent/validate", {
+        execute: (input, options) => apiRequest("/api/agent/validate", {
           method: "POST", body: JSON.stringify(input), signal: options?.signal,
         }),
       },
@@ -91,7 +81,7 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await api("/api/agent/submissions", {
+          const result = await apiRequest("/api/agent/submissions", {
             method: "POST", body: JSON.stringify(input), signal: options?.signal,
           });
           window.dispatchEvent(new Event("acme:data-changed"));
@@ -107,7 +97,7 @@ export function AcmeSiteTools() {
           properties: { invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => api("/api/agent/status", {
+        execute: (input, options) => apiRequest("/api/agent/status", {
           method: "POST", body: JSON.stringify(input), signal: options?.signal,
         }),
       },
