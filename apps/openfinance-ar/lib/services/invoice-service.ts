@@ -7,7 +7,7 @@ import type {
   InvoiceQueueItem,
   SubmissionPackageItem,
 } from "@/lib/domain/invoices";
-import { HttpError, fingerprint } from "@/lib/http";
+import { HttpError, fingerprint } from "@/lib/http-core";
 
 type CustomerRelation = { name: string } | { name: string }[];
 

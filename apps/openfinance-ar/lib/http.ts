@@ -1,19 +1,11 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
 
+import { HttpError } from "@/lib/http-core";
 import { createClient } from "@/lib/supabase/server";
 
-export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { fingerprint, HttpError } from "@/lib/http-core";
 
 export async function requireAuthenticatedClient() {
   const supabase = await createClient();
@@ -33,19 +25,6 @@ export function requireSameOriginJson(request: NextRequest) {
   if (!origin || origin !== request.nextUrl.origin) {
     throw new HttpError(403, "cross_site_request_blocked", "A same-origin request is required");
   }
-}
-
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
-export function fingerprint(value: unknown) {
-  return createHash("sha256").update(stableJson(value)).digest("hex");
 }
 
 export function apiError(error: unknown) {

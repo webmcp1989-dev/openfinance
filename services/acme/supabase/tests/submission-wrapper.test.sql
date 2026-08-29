@@ -17,9 +17,9 @@ select is(
   'submission wrapper remains security invoker'
 );
 
-select like(
-  pg_get_functiondef('public.submit_invoice_batch(text,text,jsonb)'::regprocedure),
-  '%pg_advisory_xact_lock%',
+select ok(
+  pg_get_functiondef('public.submit_invoice_batch(text,text,jsonb)'::regprocedure)
+    like '%pg_advisory_xact_lock%',
   'submission wrapper serializes retries for one supplier idempotency key'
 );
 

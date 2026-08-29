@@ -29,6 +29,7 @@ There is no shared database, session cookie, service credential, server-to-serve
 6. Private Postgres functions perform consequential multi-row changes atomically and idempotently.
 
 The browser never receives a service-role key. The frontend is not an authorization or business-rule boundary.
+Shared hashing and typed-error primitives live in framework-free `http-core` modules, so domain services and their tests do not initialize Next.js or Supabase infrastructure.
 
 ## AP submission transaction
 

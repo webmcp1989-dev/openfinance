@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { InvoiceCandidate, PurchaseOrder, ValidationIssue } from "@/lib/domain/submissions";
-import { fingerprint, HttpError } from "@/lib/http";
+import { fingerprint, HttpError } from "@/lib/http-core";
 
 type PurchaseOrderRow = {
   purchase_order_number: string;
