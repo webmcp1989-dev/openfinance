@@ -99,8 +99,8 @@ function inspectDocument(invoice: InvoiceCandidate): ValidationIssue | null {
   } catch {
     return { code: "invalid_document", message: "The invoice document is not valid base64." };
   }
-  const canonical = bytes.toString("base64").replace(/=+$/, "");
-  if (canonical !== invoice.document.contentBase64.replace(/=+$/, "") || bytes.length > 1_048_576 || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+  const canonical = bytes.toString("base64");
+  if (canonical !== invoice.document.contentBase64 || bytes.length > 1_048_576 || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
     return { code: "invalid_document", message: "The invoice document must be a valid PDF no larger than 1 MB." };
   }
   const actualHash = createHash("sha256").update(bytes).digest("hex");

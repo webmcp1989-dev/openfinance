@@ -82,6 +82,19 @@ describe("Acme invoice validation", () => {
     expect(result.issues.map((issue) => issue.code).sort()).toEqual(["duplicate_invoice", "invalid_document"]);
   });
 
+  test("rejects non-canonical base64 even when it decodes to the same PDF", async () => {
+    const { client } = fakeSupabase();
+    const canonical = invoice().document.contentBase64;
+    const candidate = invoice({
+      document: { ...invoice().document, contentBase64: canonical.replace(/=+$/, "") },
+    });
+
+    const result = await validateInvoice(client as never, candidate);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_document" }));
+  });
+
   test("submits a fully valid batch through one transactional RPC", async () => {
     const { client, calls } = fakeSupabase();
     const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()]);
