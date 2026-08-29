@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MAX_TRANSFER_INVOICE_COUNT } from "./transfer-limits";
+
 const invoiceNumber = z.string().regex(/^[A-Z0-9][A-Z0-9-]{1,39}$/);
 const purchaseOrderNumber = z.string().regex(/^[A-Z0-9][A-Z0-9-]{1,39}$/);
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
@@ -24,7 +26,7 @@ export const validateInvoiceRequestSchema = invoiceCandidateSchema;
 
 export const submitBatchRequestSchema = z.object({
   idempotencyKey: z.string().min(16).max(128),
-  invoices: z.array(invoiceCandidateSchema).min(1).max(10).refine(
+  invoices: z.array(invoiceCandidateSchema).min(1).max(MAX_TRANSFER_INVOICE_COUNT).refine(
     (items) => new Set(items.map((item) => item.invoiceNumber)).size === items.length,
     "Invoice numbers must be unique",
   ),

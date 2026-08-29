@@ -34,4 +34,15 @@ describe("Acme submission request contracts", () => {
     const oversized = { ...candidate, document: { ...candidate.document, contentBase64: "A".repeat(1_400_001) } };
     expect(invoiceCandidateSchema.safeParse(oversized).success).toBe(false);
   });
+
+  test("bounds a submission request below the deployment payload limit", () => {
+    const invoices = [1, 2, 3, 4].map((index) => ({
+      ...candidate,
+      invoiceNumber: `INV-${index}`,
+    }));
+    expect(submitBatchRequestSchema.safeParse({
+      idempotencyKey: "batch-20260829-limit",
+      invoices,
+    }).success).toBe(false);
+  });
 });

@@ -5,6 +5,8 @@ import { describe, expect, test } from "bun:test";
 
 import acmeConfig from "../apps/acme-ap/next.config";
 import openFinanceConfig from "../apps/openfinance-ar/next.config";
+import { MAX_TRANSFER_INVOICE_COUNT as ACME_TRANSFER_LIMIT } from "../apps/acme-ap/lib/domain/transfer-limits";
+import { MAX_TRANSFER_INVOICE_COUNT as OPENFINANCE_TRANSFER_LIMIT } from "../apps/openfinance-ar/lib/domain/transfer-limits";
 
 const root = join(import.meta.dir, "..");
 
@@ -124,6 +126,17 @@ describe("database mutation boundaries", () => {
 });
 
 describe("WebMCP safety contracts", () => {
+  test("browser-facing package transfers stay below the deployed payload boundary", async () => {
+    const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
+    const ap = await readFile(join(root, "apps/acme-ap/components/acme-site-tools.tsx"), "utf8");
+    const openApi = await readFile(join(root, "docs/openapi.yaml"), "utf8");
+    expect(OPENFINANCE_TRANSFER_LIMIT).toBe(3);
+    expect(ACME_TRANSFER_LIMIT).toBe(3);
+    expect(ar).toContain("maxItems: MAX_TRANSFER_INVOICE_COUNT");
+    expect(ap).toContain("maxItems: MAX_TRANSFER_INVOICE_COUNT");
+    expect(openApi.match(/maxItems: 3/g)).toHaveLength(2);
+  });
+
   test("business-data reads are marked untrusted and all requests are cancellable", async () => {
     const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
     const ap = await readFile(join(root, "apps/acme-ap/components/acme-site-tools.tsx"), "utf8");

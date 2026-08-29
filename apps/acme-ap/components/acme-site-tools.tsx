@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -79,12 +81,12 @@ export function AcmeSiteTools() {
       {
         name: "submit_invoice_batch",
         title: "Submit confirmed invoice batch",
-        description: "CONSEQUENTIAL WRITE: atomically submit a previously validated batch, reserve each PO balance, and create portal references. Call only after showing the exact valid invoice numbers, amounts, and exceptions to the user and receiving explicit confirmation. Never include invalid invoices.",
+        description: "CONSEQUENTIAL WRITE: atomically submit up to three previously validated invoices, reserve each PO balance, and create portal references. Call only after showing the exact valid invoice numbers, amounts, and exceptions to the user and receiving explicit confirmation. Never include invalid invoices.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "invoices"],
           properties: {
             idempotencyKey: { type: "string", minLength: 16, maxLength: 128 },
-            invoices: { type: "array", minItems: 1, maxItems: 10, uniqueItems: true, items: invoiceSchema },
+            invoices: { type: "array", minItems: 1, maxItems: MAX_TRANSFER_INVOICE_COUNT, uniqueItems: true, items: invoiceSchema },
           },
         },
         annotations: { readOnlyHint: false },

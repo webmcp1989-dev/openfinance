@@ -13,6 +13,12 @@ describe("OpenFinance agent request contracts", () => {
     expect(packageRequestSchema.safeParse({ invoiceNumbers: ["INV-10482", "INV-10482"] }).success).toBe(false);
   });
 
+  test("bounds a package response below the deployment payload limit", () => {
+    expect(packageRequestSchema.safeParse({
+      invoiceNumbers: ["INV-1", "INV-2", "INV-3", "INV-4"],
+    }).success).toBe(false);
+  });
+
   test("keeps portal result and exception payloads distinct and strict", () => {
     const valid = deliveryEventRequestSchema.safeParse({
       eventType: "portal_result",

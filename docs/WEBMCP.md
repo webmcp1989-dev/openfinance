@@ -6,6 +6,8 @@ Every tool calls the site's existing same-origin backend. The browser agent rece
 
 All monetary values use integer minor units and are capped at JSON's exact-integer maximum (`9007199254740991`) in the WebMCP, HTTP, and database contracts.
 
+Cross-site package reads and AP submission writes accept at most three invoices per call. With the 1.4 MB encoded-document bound, the complete JSON request or response remains below [Vercel Functions' 4.5 MB payload limit](https://vercel.com/docs/functions/limitations#request-body-size). Larger commercial batches should use multiple explicitly reviewed chunks or direct authenticated object-storage transfer rather than route large files through an application function.
+
 ## OpenFinance AR
 
 | Tool | Kind | Purpose |
@@ -29,6 +31,7 @@ All monetary values use integer minor units and are capped at JSON's exact-integ
 
 - Names are verb-based, precise, and non-overlapping.
 - JSON Schemas disable additional properties and bound arrays and strings.
+- Package-transfer and submission batches are capped at three invoices so their worst-case encoded payload fits the deployed request and response boundary.
 - Monetary values use integer minor units and ISO currency codes.
 - Read annotations are truthful; externally sourced business data is marked untrusted, and write tools explicitly describe side effects.
 - Tool execution supports browser cancellation through the standard `AbortSignal`.

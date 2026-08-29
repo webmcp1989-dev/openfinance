@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -14,7 +16,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const invoiceNumberArray = {
-  type: "array", minItems: 1, maxItems: 10, uniqueItems: true,
+  type: "array", minItems: 1, maxItems: MAX_TRANSFER_INVOICE_COUNT, uniqueItems: true,
   items: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" },
 } as const;
 
@@ -55,7 +57,7 @@ export function OpenFinanceSiteTools() {
       {
         name: "get_submission_package",
         title: "Get submission package",
-        description: "Read complete, checksum-protected invoice packages for specific locally ready invoices. Returns only invoices authorized for the signed-in supplier and includes each PDF payload needed for AP validation.",
+        description: "Read up to three complete, checksum-protected invoice packages for specific locally ready invoices. Returns only invoices authorized for the signed-in supplier and includes each PDF payload needed for AP validation.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["invoiceNumbers"],
           properties: { invoiceNumbers: invoiceNumberArray },

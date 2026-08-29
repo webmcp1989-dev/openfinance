@@ -1,0 +1,1 @@
+export const MAX_TRANSFER_INVOICE_COUNT = 3;
