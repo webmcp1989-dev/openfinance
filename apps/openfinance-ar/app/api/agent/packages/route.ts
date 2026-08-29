@@ -8,8 +8,8 @@ import { getSubmissionPackage } from "@/lib/services/invoice-service";
 export async function POST(request: NextRequest) {
   try {
     requireSameOriginJson(request);
-    const body = packageRequestSchema.parse(await request.json());
     const supabase = await requireAuthenticatedClient();
+    const body = packageRequestSchema.parse(await request.json());
     const items = await getSubmissionPackage(supabase, body.invoiceNumbers);
     return Response.json({ items, count: items.length }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

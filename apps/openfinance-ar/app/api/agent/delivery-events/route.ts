@@ -8,8 +8,8 @@ import { recordDeliveryEvent } from "@/lib/services/invoice-service";
 export async function POST(request: NextRequest) {
   try {
     requireSameOriginJson(request);
-    const body = deliveryEventRequestSchema.parse(await request.json());
     const supabase = await requireAuthenticatedClient();
+    const body = deliveryEventRequestSchema.parse(await request.json());
     const result = await recordDeliveryEvent(supabase, body);
     return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

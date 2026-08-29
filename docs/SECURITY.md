@@ -11,6 +11,7 @@
 
 - Supabase SSR stores sessions in project-specific cookies and refreshes them through Next.js `proxy.ts`.
 - Protected pages and routes use `auth.getClaims()`, not an unverified cookie session object.
+- Mutating routes reject wrong-origin or wrong-content-type requests, then authenticate the caller before parsing the untrusted request body.
 - Every exposed table has RLS enabled and anonymous grants revoked.
 - Authenticated grants are read-only; writes are available only through explicitly granted RPC wrappers.
 - Tenant identity is derived from `auth.uid()` through a profile row. Caller-supplied organization, buyer, or supplier IDs are never trusted.

@@ -8,8 +8,8 @@ import { findPurchaseOrder } from "@/lib/services/submission-service";
 export async function POST(request: NextRequest) {
   try {
     requireSameOriginJson(request);
-    const body = purchaseOrderRequestSchema.parse(await request.json());
     const supabase = await requireAuthenticatedClient();
+    const body = purchaseOrderRequestSchema.parse(await request.json());
     const purchaseOrder = await findPurchaseOrder(supabase, body.purchaseOrderNumber);
     return Response.json({ found: purchaseOrder !== null, purchaseOrder }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

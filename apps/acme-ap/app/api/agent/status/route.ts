@@ -8,8 +8,8 @@ import { getInvoiceStatus } from "@/lib/services/submission-service";
 export async function POST(request: NextRequest) {
   try {
     requireSameOriginJson(request);
-    const body = statusRequestSchema.parse(await request.json());
     const supabase = await requireAuthenticatedClient();
+    const body = statusRequestSchema.parse(await request.json());
     const submission = await getInvoiceStatus(supabase, body.invoiceNumber);
     return Response.json({ found: submission !== null, submission }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

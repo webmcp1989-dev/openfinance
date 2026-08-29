@@ -8,8 +8,8 @@ import { validateInvoice } from "@/lib/services/submission-service";
 export async function POST(request: NextRequest) {
   try {
     requireSameOriginJson(request);
-    const body = validateInvoiceRequestSchema.parse(await request.json());
     const supabase = await requireAuthenticatedClient();
+    const body = validateInvoiceRequestSchema.parse(await request.json());
     const result = await validateInvoice(supabase, body);
     return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

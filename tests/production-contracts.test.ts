@@ -23,6 +23,27 @@ describe("production security headers", () => {
   }
 });
 
+describe("API authorization ordering", () => {
+  const writeRoutes = [
+    "apps/openfinance-ar/app/api/agent/packages/route.ts",
+    "apps/openfinance-ar/app/api/agent/delivery-events/route.ts",
+    "apps/acme-ap/app/api/agent/purchase-orders/route.ts",
+    "apps/acme-ap/app/api/agent/validate/route.ts",
+    "apps/acme-ap/app/api/agent/submissions/route.ts",
+    "apps/acme-ap/app/api/agent/status/route.ts",
+  ];
+
+  for (const route of writeRoutes) {
+    test(`${route} authenticates before parsing an untrusted body`, async () => {
+      const source = await readFile(join(root, route), "utf8");
+      const authentication = source.indexOf("await requireAuthenticatedClient()");
+      const bodyParsing = source.indexOf("await request.json()");
+      expect(authentication).toBeGreaterThan(-1);
+      expect(bodyParsing).toBeGreaterThan(authentication);
+    });
+  }
+});
+
 describe("WebMCP safety contracts", () => {
   test("business-data reads are marked untrusted and all requests are cancellable", async () => {
     const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");

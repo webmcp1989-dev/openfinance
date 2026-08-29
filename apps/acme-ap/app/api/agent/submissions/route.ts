@@ -8,8 +8,8 @@ import { submitInvoiceBatch } from "@/lib/services/submission-service";
 export async function POST(request: NextRequest) {
   try {
     requireSameOriginJson(request);
-    const body = submitBatchRequestSchema.parse(await request.json());
     const supabase = await requireAuthenticatedClient();
+    const body = submitBatchRequestSchema.parse(await request.json());
     const result = await submitInvoiceBatch(supabase, body.idempotencyKey, body.invoices);
     return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
