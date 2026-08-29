@@ -53,6 +53,7 @@ Copy `.env.example` to each app's `.env.local` and use only that app's Supabase 
 - [Security model](docs/SECURITY.md)
 - [WebMCP tool inventory](docs/WEBMCP.md)
 - [Demo runbook](docs/DEMO.md)
+- [Verification record](docs/VERIFICATION.md)
 - [Challenge submission package](docs/SUBMISSION.md)
 - [OpenAPI contract](docs/openapi.yaml)
 - [Architecture decisions](docs/decisions/0001-independent-applications.md)
