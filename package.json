@@ -6,6 +6,7 @@
   "scripts": {
     "dev:openfinance": "bun --cwd apps/openfinance-ar dev",
     "dev:acme": "bun --cwd apps/acme-ap dev",
+    "demo:video": "bun scripts/demo-video/server.ts",
     "build": "bun run build:openfinance && bun run build:acme",
     "build:openfinance": "bun --cwd apps/openfinance-ar build",
     "build:acme": "bun --cwd apps/acme-ap build",

@@ -6,7 +6,7 @@ documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 56 tests passed with 205 expectations.
+- `bun test`: 59 tests passed with 223 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -57,6 +57,20 @@ exception, full AP purchase-order balances, and empty receipt and audit trails.
 Both synthetic judge passwords were then rotated to unique strong values and
 verified through fresh, independent live sign-ins. The credentials remain
 private and are not stored in this repository.
+
+## Demo video artifact
+
+The local renderer produced
+`artifacts/demo-video/openfinance-demo.webm` from committed screenshots of the
+deployed applications and eight Windows-generated narration tracks. Native
+browser playback and seeking verified frames at 0:55, 1:45, and 2:35 and played
+through the exact 167.145-second end without a media error. The file is 1600×900,
+54.16 MB, and contains VP9 video plus Opus audio. Its SHA-256 digest is
+`3A405343C70A3F62B756B5A4B1F66B2F8CBB44ED7FFA00931111822CE26A725F`.
+
+The source renderer, narration manifest, and deployed-app screenshots are
+tracked under `scripts/demo-video`; generated WAV and WebM files remain ignored
+so private review artifacts are not added to the public repository.
 
 ## Submission-only tasks
 

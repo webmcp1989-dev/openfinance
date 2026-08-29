@@ -17,6 +17,10 @@ test-results/
 .vercel/
 .supabase/
 
+# Locally rendered contest media
+artifacts/demo-video/*.wav
+artifacts/demo-video/*.webm
+
 # Tooling
 *.tsbuildinfo
 .eslintcache

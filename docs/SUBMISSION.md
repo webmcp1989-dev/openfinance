@@ -46,9 +46,15 @@ Enter these in Devpost’s private credentials field after the final password re
 
 Include both live URLs and state that the sessions are intentionally independent. Never add the passwords to this file, the README, source control, screenshots, or narration.
 
-## Video plan — target 2:45
+## Video plan — target 2:47
 
 The final video must be public on YouTube, include clear audio, and remain under three minutes.
+
+A reproducible local renderer is available in `scripts/demo-video`. The current
+owner-review artifact is `artifacts/demo-video/openfinance-demo.webm`: 1600×900,
+VP9 + Opus, 167.145 seconds, and 54.16 MB. The WebM remains untracked; follow the
+renderer README to reproduce it from the committed deployed-app screenshots and
+narration manifest, then upload the reviewed file to YouTube.
 
 ### 0:00–0:18 — Problem and outcome
 
@@ -86,7 +92,7 @@ Show the Acme submission, two portal references, updated PO balances, then the O
 
 > Acme commits the approved batch atomically and returns verifiable references. The agent records those references and the rejected invoice’s actionable exception back in OpenFinance.
 
-### 2:20–2:45 — Visible proof and implication
+### 2:20–2:47 — Visible proof and implication
 
 Show both audit trails and final states side by side.
 
