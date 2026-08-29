@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 75 tests passed with 309 expectations.
+- `bun test`: 77 tests passed with 322 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -20,6 +20,8 @@ to the documented starting state after testing.
   audit found no vulnerabilities.
 - GitHub Actions completed successfully for final code commit `e82137c`. Both
   Vercel production projects reported that commit as a successful deployment.
+- Final recovery commit `e4bc4ae` is pushed to `main`; the deployed AP
+  missing-profile page visibly exposes the tested local account-switch action.
 
 The test suite covers strict request contracts, authentication ordering,
 security headers, responsive authentication controls, PDF structure and
@@ -49,7 +51,7 @@ mapping, idempotency, and documentation coverage.
 
 ## In-app browser WebMCP verification
 
-The canonical workflow was completed twice from a freshly reset state in
+The canonical workflow was completed three times from a freshly reset state in
 ChatGPT's in-app browser using only the tools exposed by the two live sites.
 
 - Authenticated OpenFinance exposed exactly four tools; authenticated Acme
@@ -68,6 +70,10 @@ ChatGPT's in-app browser using only the tools exposed by the two live sites.
   both applications immediately displayed matching state and audit trails.
 - Identical retries returned the original results without duplicate writes or
   balance changes. Reusing any idempotency key with a changed payload failed.
+- The final run also verified the buyer payment signal: `INV-10491` became
+  `paid` with a stable `PAY-*` reference after 10 seconds while `INV-10482`
+  remained `received`; the two subsequent status-tool reads left the AP audit
+  count unchanged at two events.
 
 After the second run, both scoped administrative reset scripts succeeded. The
 public judge state is now three ready AR invoices, one local missing-PO
@@ -80,6 +86,9 @@ private and are not stored in this repository.
 
 - Both applications expose every WebMCP capability through accessible human UI
   controls backed by the same authenticated routes and authoritative services.
+- Both deployed missing-profile login states provide a generic local-session
+  account-switch recovery action without weakening the mandatory tenant or
+  supplier membership check.
 - The deployed AR package-review path returned the selected invoice's filename
   and checksum verification. The deployed AP PO and status lookups returned the
   live authorized balance and the correct no-receipt state without mutation.
