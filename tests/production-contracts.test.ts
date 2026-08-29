@@ -44,6 +44,32 @@ describe("API authorization ordering", () => {
   }
 });
 
+describe("database mutation boundaries", () => {
+  test("AR and AP serialize retries at the tenant-scoped public wrappers", async () => {
+    const ar = await readFile(join(root, "services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql"), "utf8");
+    const ap = await readFile(join(root, "services/acme/supabase/migrations/202608290002_harden_submission_wrapper.sql"), "utf8");
+    expect(ar).toContain("pg_advisory_xact_lock");
+    expect(ar).toContain("v_organization_id::text");
+    expect(ap).toContain("pg_advisory_xact_lock");
+    expect(ap).toContain("v_supplier_id::text");
+  });
+
+  test("AR enforces direct-RPC fields and legal state transitions in Postgres", async () => {
+    const migration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql"), "utf8");
+    expect(migration).toContain("Invalid portal result fields");
+    expect(migration).toContain("Invalid portal exception fields");
+    expect(migration).toContain("A purchase order is required before recording a portal result");
+    expect(migration).toContain("Invoice state does not allow a portal result");
+    expect(migration).toContain("Portal status cannot move backwards");
+  });
+
+  test("setup documentation includes every ordered hardening migration", async () => {
+    const setup = await readFile(join(root, "docs/SETUP.md"), "utf8");
+    expect(setup).toContain("202608290003_enforce_delivery_event_contract.sql");
+    expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
+  });
+});
+
 describe("WebMCP safety contracts", () => {
   test("business-data reads are marked untrusted and all requests are cancellable", async () => {
     const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");

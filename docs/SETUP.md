@@ -13,12 +13,12 @@ The two applications must remain independently configured. Never reuse a Supabas
 
 Run each migration only in its named project:
 
-| Application | Supabase project ref | Migration |
+| Application | Supabase project ref | Migrations, in order |
 | --- | --- | --- |
-| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql` |
-| Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql` |
+| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql`<br>`services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql` |
+| Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql`<br>`services/acme/supabase/migrations/202608290002_harden_submission_wrapper.sql` |
 
-Apply every listed migration in filename order through the Supabase SQL editor or a reviewed migration pipeline. The migrations are transactional, enables RLS on every exposed table, revokes anonymous access, grants only required reads, and exposes authenticated write wrappers around private transaction functions.
+Apply every listed migration in filename order through the Supabase SQL editor or a reviewed migration pipeline. The migrations are transactional, enable RLS on every exposed table, revoke anonymous access, grant only required reads, and expose authenticated write wrappers around private transaction functions.
 
 Create one password user per project after the migration so its trigger can attach the correct tenant profile:
 
@@ -69,4 +69,4 @@ bun run build
 bun audit
 ```
 
-Then sign into both live applications in separate tabs, inspect Available site tools, and run the [demo checklist](DEMO.md).
+Run every SQL file under each service's `supabase/tests` directory in its corresponding project after applying all migrations. Then sign into both live applications in separate tabs, inspect Available site tools, and run the [demo checklist](DEMO.md).
