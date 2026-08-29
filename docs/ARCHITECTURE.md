@@ -49,7 +49,7 @@ Application preflight improves the human-agent experience but the transaction is
 
 ## Data transfer
 
-The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. The browser agent passes that explicit package to Acme. Acme independently decodes, bounds, identifies, and hashes it. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
+The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, identifies, and hashes them. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
 
 ## Performance choices
 

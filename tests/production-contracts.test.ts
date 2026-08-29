@@ -23,6 +23,20 @@ describe("production security headers", () => {
   }
 });
 
+describe("authentication recovery messages", () => {
+  for (const loginPage of [
+    "apps/openfinance-ar/app/login/page.tsx",
+    "apps/acme-ap/app/login/page.tsx",
+  ]) {
+    test(`${loginPage} distinguishes missing workspace access from invalid credentials`, async () => {
+      const source = await readFile(join(root, loginPage), "utf8");
+      expect(source).toContain('error === "profile_missing"');
+      expect(source).toContain("account is authenticated but is not assigned");
+      expect(source).toContain("The email or password is incorrect.");
+    });
+  }
+});
+
 describe("API authorization ordering", () => {
   const writeRoutes = [
     "apps/openfinance-ar/app/api/agent/packages/route.ts",
@@ -80,6 +94,8 @@ describe("WebMCP safety contracts", () => {
     expect(ap.match(/signal: options\?\.signal/g)).toHaveLength(5);
     expect(ar.match(/title: "/g)).toHaveLength(4);
     expect(ap.match(/title: "/g)).toHaveLength(5);
+    expect(ap).toContain('pattern: "^[A-Za-z0-9+/]+={0,2}$"');
+    expect(ap).toContain("human approves transferring that exact package to Acme");
   });
 
   test("both visible workspace endpoints are documented with audit events", async () => {
@@ -88,6 +104,12 @@ describe("WebMCP safety contracts", () => {
     expect(openApi).toContain("OpenFinanceWorkspaceState");
     expect(openApi).toContain("AcmeWorkspaceState");
     expect(openApi.match(/auditEvents:/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("the demo runbook requires separate transfer and submission confirmations", async () => {
+    const demo = await readFile(join(root, "docs/DEMO.md"), "utf8");
+    expect(demo).toContain("informed transfer confirmation");
+    expect(demo).toContain("separate submission confirmation");
   });
 });
 

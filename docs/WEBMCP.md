@@ -19,7 +19,7 @@ Every tool calls the site's existing same-origin backend. The browser agent rece
 | --- | --- | --- |
 | `get_invoice_requirements` | read | Returns live media, PO, balance, and uniqueness rules. |
 | `find_purchase_order` | read | Returns one supplier-authorized PO and live balance. |
-| `validate_invoice` | read | Checks a complete package without reserving balance or writing data. |
+| `validate_invoice` | read, transfer-approved | Checks a human-approved package without reserving balance or writing data. |
 | `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts. |
 | `get_invoice_status` | read | Returns current receipt and status for one supplier invoice. |
 
@@ -36,15 +36,16 @@ Every tool calls the site's existing same-origin backend. The browser agent rece
 
 ## Required orchestration
 
-1. Read locally ready invoices and packages.
-2. Read AP rules and preflight each invoice.
-3. Separate valid invoices from exceptions.
-4. Present the exact valid invoice numbers, amounts, total, and exclusions.
-5. Obtain explicit human confirmation.
-6. Submit the valid batch exactly once with a unique idempotency key.
-7. Verify returned references and visible AP state.
-8. Record verified results and exceptions in OpenFinance.
+1. Read locally ready invoices and packages inside OpenFinance.
+2. Present the destination and exact candidate invoice numbers, POs, and amounts, then obtain explicit approval to transfer those packages for read-only AP validation.
+3. Read AP rules and preflight only the transfer-approved invoices.
+4. Separate valid invoices from exceptions.
+5. Present the exact valid invoice numbers, POs, amounts, total, and exclusions.
+6. Obtain a separate explicit human confirmation immediately before submission.
+7. Submit the valid batch exactly once with a unique idempotency key.
+8. Verify returned references and visible AP state.
+9. Record verified results and exceptions in OpenFinance.
 
 Both applications refresh their visible state after writes and show recent tenant-scoped database audit events alongside the invoice queue, PO balances, and portal receipts.
 
-The agent must never silently broaden the confirmed batch, treat a preflight as a reservation, or report submission before receiving a committed portal reference.
+The agent must never transfer an unapproved package, silently broaden either approved set, treat a preflight as a reservation, or report submission before receiving a committed portal reference.

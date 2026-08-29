@@ -6,7 +6,7 @@ OpenFinance demonstrates agent-mediated interoperability between two independent
 OpenFinance AR  <-- site tools -->  ChatGPT + human  <-- site tools -->  Acme AP
 ```
 
-There is no shared database, credential, session, or point-to-point application integration. The browser agent works through each site's narrow, authenticated WebMCP tools. Read-only tools prepare and validate the work; the human must confirm the exact valid batch before the consequential AP submission tool runs.
+There is no shared database, credential, session, or point-to-point application integration. The browser agent works through each site's narrow, authenticated WebMCP tools. The human explicitly approves the destination and exact invoice packages before cross-site validation, then separately confirms the exact valid batch before the consequential AP submission tool runs.
 
 ## Demo workflow
 
@@ -17,11 +17,12 @@ Ask the agent:
 The intended result is deliberately non-trivial:
 
 1. OpenFinance exposes three locally ready invoice packages and one missing-PO exception.
-2. Acme validates each ready package against its independently stored PO data.
-3. Two invoices pass; `INV-10507` exceeds the remaining balance on `PO-8890`.
-4. The agent presents the exact valid batch and exception, then waits for human approval.
-5. Acme atomically submits only the confirmed valid invoices and returns portal references.
-6. OpenFinance records those references and the exception, updating the human-visible queue.
+2. The agent previews the three packages and Acme destination; the human approves their transfer for read-only validation.
+3. Acme validates each approved package against its independently stored PO data.
+4. Two invoices pass; `INV-10507` exceeds the remaining balance on `PO-8890`.
+5. The agent presents the exact valid batch and exception, then obtains a separate submission approval.
+6. Acme atomically submits only the confirmed valid invoices and returns portal references.
+7. OpenFinance records those references and the exception, updating the human-visible queue.
 
 ## Applications
 

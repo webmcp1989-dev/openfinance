@@ -32,10 +32,11 @@
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.
 - Production responses set a restrictive CSP, deny framing and MIME sniffing, disable unused browser capabilities, isolate cross-origin resources, and suppress referrer data.
+- Login failures do not reveal whether an email exists. A separately authenticated account whose tenant profile is missing receives an actionable workspace-assignment message instead of a misleading credential error.
 
 ## Human control
 
-Read tools are accurately annotated. The AP submission description marks it as a consequential write and requires the caller to present exact invoices, amounts, total, and exceptions before seeking explicit confirmation. The UI remains fully usable and shows receipts, balance changes, and recent tenant-scoped database audit events for verification. WebMCP reads containing invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`, and tool requests honor browser cancellation.
+Read tools are accurately annotated. Before an invoice PDF crosses from OpenFinance to Acme for read-only validation, the caller must show the destination and exact candidate invoices, POs, and amounts and obtain informed transfer approval. The AP submission description marks it as a consequential write and requires a separate preview of the exact valid invoices, amounts, total, and exceptions immediately before submission confirmation. The UI remains fully usable and shows receipts, balance changes, and recent tenant-scoped database audit events for verification. WebMCP reads containing invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`, and tool requests honor browser cancellation.
 
 ## Known production hardening beyond the contest slice
 

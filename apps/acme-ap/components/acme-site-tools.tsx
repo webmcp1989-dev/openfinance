@@ -29,7 +29,10 @@ const invoiceSchema = {
       properties: {
         fileName: { type: "string", pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" },
         mediaType: { type: "string", const: "application/pdf" },
-        contentBase64: { type: "string", minLength: 8, maxLength: 1400000 },
+        contentBase64: {
+          type: "string", minLength: 8, maxLength: 1400000,
+          pattern: "^[A-Za-z0-9+/]+={0,2}$",
+        },
         sha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
       },
     },
@@ -66,7 +69,7 @@ export function AcmeSiteTools() {
       {
         name: "validate_invoice",
         title: "Validate invoice",
-        description: "Validate one complete invoice package against Acme's live PO balance, currency, uniqueness, and PDF rules. This is a read-only preflight and does not reserve balance or submit the invoice.",
+        description: "Validate one complete invoice package against Acme's live PO balance, currency, uniqueness, and PDF rules. Call only after the human approves transferring that exact package to Acme. This read-only preflight does not reserve balance or submit the invoice.",
         inputSchema: invoiceSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: (input, options) => api("/api/agent/validate", {

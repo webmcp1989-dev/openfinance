@@ -21,7 +21,7 @@ There is no shared database, credential, private connector, or server-to-server 
 
 ### How it creates a better user experience
 
-One natural-language request replaces repetitive navigation and re-keying while improving—not reducing—control. The agent identifies three locally ready invoices, recognizes that a fourth is already missing a purchase order, validates each candidate against the independently stored AP rules, and explains a deliberate remaining-balance exception. Before any transfer or submission, it presents the exact destination, invoice numbers, purchase orders, individual amounts, valid-batch total, and exclusions. The human approves the consequential action only after reviewing that concrete preview.
+One natural-language request replaces repetitive navigation and re-keying while improving—not reducing—control. The agent identifies three locally ready invoices and recognizes that a fourth is already missing a purchase order. It first presents the Acme destination and exact candidate invoices, POs, and amounts; the human approves transferring only those packages for read-only validation. After Acme exposes the deliberate remaining-balance exception, the agent presents a second preview containing the exact valid batch, $25,670 total, and all exclusions. The human separately approves the consequential submission only after reviewing that concrete result.
 
 Successful tool calls immediately update both visible applications. Acme shows committed portal references and reduced PO balances; OpenFinance shows delivery outcomes, the unresolved exception, and a tenant-scoped audit trail. Failures return actionable business explanations rather than generic automation errors.
 
@@ -62,19 +62,25 @@ Briefly show both origins and signed-in identities.
 
 > These are separate applications, sessions, authorization boundaries, and databases. The browser agent is the bridge, using only the tools each page deliberately exposes.
 
-### 0:32–1:18 — Discovery and reconciliation
+### 0:32–0:55 — Discovery and transfer approval
 
-Enter the canonical prompt. Show tool discovery, the three ready packages, AP requirements, and PO validation.
+Enter the canonical prompt. Show tool discovery, the three ready packages, the excluded missing-PO invoice, and the informed Acme transfer preview. Confirm the exact three packages for read-only validation on camera.
 
-> One invoice was excluded in OpenFinance because it has no PO. The agent validates the remaining three against live Acme data. Two pass; INV-10507 exceeds PO-8890’s ten-thousand-dollar remaining balance.
+> One invoice is already excluded because it has no PO. Before any PDF crosses sites, I approve these exact three packages and the Acme destination for read-only validation.
 
-### 1:18–1:40 — Human approval
+### 0:55–1:20 — Reconciliation
+
+Show AP requirements, purchase orders, and the three validation results.
+
+> The agent validates only the transfer-approved packages against live Acme data. Two pass; INV-10507 exceeds PO-8890’s ten-thousand-dollar remaining balance.
+
+### 1:20–1:42 — Submission approval
 
 Hold on the confirmation preview long enough to read both valid invoices, POs, amounts, the $25,670 total, destination, and exceptions. Confirm on camera.
 
-> The agent prepares and explains; the human retains authority. No invoice crosses the site boundary and nothing is submitted until this exact batch is approved.
+> The agent prepares and explains; the human retains authority. The validation approval did not authorize submission. I separately approve only these two valid invoices now.
 
-### 1:40–2:20 — Execution and writeback
+### 1:42–2:20 — Execution and writeback
 
 Show the Acme submission, two portal references, updated PO balances, then the OpenFinance writeback.
 
@@ -90,7 +96,8 @@ Show both audit trails and final states side by side.
 
 - Run the complete flow from a freshly seeded state in ChatGPT’s in-app browser at least twice.
 - Verify all nine tools are discoverable and that their titles, schemas, annotations, and results match `docs/WEBMCP.md`.
-- Verify no write occurs before the recorded human confirmation.
+- Verify no invoice package crosses to Acme before the recorded transfer confirmation.
+- Verify no write occurs before the separate recorded submission confirmation.
 - Verify identical idempotent retries do not duplicate submissions or balance changes, and changed-payload key reuse fails.
 - Verify both live UIs and audit trails show the same portal references recorded in OpenFinance.
 - Reset both judge passwords and test them in clean independent sessions.

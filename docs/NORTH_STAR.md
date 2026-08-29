@@ -28,9 +28,9 @@ This is collaboration, not invisible automation.
 | Human | Agent | Applications |
 | --- | --- | --- |
 | States the business intent | Discovers available tools and relevant page state | Authenticate and authorize their own users |
-| Reviews proposed scope and exceptions | Collects and reconciles invoice, requirement, and PO data | Enforce business rules server-side |
+| Reviews and approves the exact cross-site transfer scope | Collects candidate invoice packages without transferring them | Enforce business rules server-side |
 | Resolves ambiguity and exercises judgment | Explains why each invoice is ready or blocked | Expose narrow structured capabilities |
-| Confirms consequential submissions | Executes only the approved batch | Update visible state and retain audit history |
+| Separately confirms consequential submissions | Validates and executes only the corresponding approved sets | Update visible state and retain audit history |
 | Can inspect and correct the result | Returns references, status, and recovery guidance | Remain usable through their normal human UI |
 
 The agent should save effort and handle cross-system complexity. The human should retain authority and understand what will happen before it happens.
@@ -69,13 +69,17 @@ An AR user has several invoices ready for a customer's portal. Normally, the use
 
 OpenFinance AR and the customer's AP portal are independent, separately authenticated applications. There is no connector and neither application knows the other's schema.
 
-**0:35-1:25 — Discovery and reasoning**
+**0:35-0:58 — Discovery and transfer approval**
 
-The user gives one intent. The agent reads the ready invoices from OpenFinance, discovers the AP portal's requirements, looks up POs, and produces a review. One invoice is missing a PO; another exceeds the remaining balance.
+The user gives one intent. The agent reads the ready invoices from OpenFinance, excludes the missing-PO invoice, and shows the exact candidate invoices and AP destination. The human approves only those packages for read-only validation.
 
-**1:25-1:45 — Human control**
+**0:58-1:25 — Discovery and reasoning**
 
-The agent shows the exact valid invoices, amounts, POs, destination, and exceptions. The human approves only the valid batch.
+The agent discovers the AP portal's requirements, looks up POs, and validates only the transfer-approved packages. One candidate exceeds the remaining balance.
+
+**1:25-1:45 — Submission control**
+
+The agent shows the exact valid invoices, amounts, POs, total, destination, and exceptions. The human separately approves only the valid batch for submission.
 
 **1:45-2:20 — Execution**
 
@@ -104,7 +108,7 @@ If the answer is no to most of these, it is outside challenge scope.
 ## Submission checklist
 
 - Live URL works in ChatGPT's in-app browser.
-- Demo credentials are simple and documented.
+- Demo credentials are tested and provided only through the submission platform's private credentials field.
 - Both applications are independently authenticated and authorized.
 - Repository is public and includes a visible open-source license.
 - README includes architecture, setup, tool inventory, security model, and exact demo prompt.

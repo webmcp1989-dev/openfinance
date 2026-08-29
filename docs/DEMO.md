@@ -17,18 +17,20 @@ An AR operator has several invoices ready in OpenFinance but Acme requires submi
 
 1. Open both deployed sites in the ChatGPT in-app browser and sign into each independent session.
 2. In the OpenFinance tab, ask: “Submit all Acme invoices that are ready for their AP portal.”
-3. The agent calls `list_ready_invoices` and `get_submission_package`.
-4. In the Acme tab, the agent reads requirements and validates all three packages.
-5. It reports two valid invoices and the exact `PO-8890` balance exception for `INV-10507`.
-6. It asks for explicit confirmation to submit only `INV-10482` and `INV-10491`, showing their amounts and total.
-7. After confirmation, it calls `submit_invoice_batch` once with a unique idempotency key.
-8. The Acme UI immediately shows two receipts and reduced PO balances.
-9. The agent records the two portal references and the exception back in OpenFinance with two idempotent tools.
-10. The OpenFinance UI shows the delivered and exception statuses.
+3. The agent calls `list_ready_invoices` and `get_submission_package` inside OpenFinance.
+4. Before any PDF crosses origins, it shows the Acme destination and the exact three candidate invoices, POs, and amounts. The human explicitly confirms transfer for read-only validation.
+5. In the Acme tab, the agent reads requirements and validates only those three approved packages.
+6. It reports two valid invoices and the exact `PO-8890` balance exception for `INV-10507`.
+7. It asks for a separate explicit confirmation to submit only `INV-10482` and `INV-10491`, showing each PO and amount, the $25,670 total, and all exclusions.
+8. After submission confirmation, it calls `submit_invoice_batch` once with a unique idempotency key.
+9. The Acme UI immediately shows two receipts and reduced PO balances.
+10. The agent records the two portal references and the exception back in OpenFinance with two idempotent tools.
+11. The OpenFinance UI shows the delivered and exception statuses.
 
 ## Pass criteria
 
-- No write occurs before confirmation.
+- No invoice package is transferred to Acme before the informed transfer confirmation.
+- No write occurs before the separate submission confirmation.
 - `INV-10507` is never included in the submitted batch.
 - Retrying the AP submit with the same key returns the original result and does not decrement balances twice.
 - Reusing an idempotency key with a different payload fails.
