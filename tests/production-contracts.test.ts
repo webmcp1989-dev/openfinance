@@ -212,6 +212,13 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain("human approves transferring that exact package to Acme");
   });
 
+  test("the AR discovery tool takes customer context from intent instead of executable demo constants", async () => {
+    const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
+    expect(ar).not.toContain("customerName=Acme%20Manufacturing");
+    expect(ar).toContain('required: ["customerName"]');
+    expect(ar).toContain('new URLSearchParams({ customerName, readyOnly: "true" })');
+  });
+
   test("both visible workspace endpoints are documented with audit events", async () => {
     const openApi = await readFile(join(root, "docs/openapi.yaml"), "utf8");
     expect(openApi).toContain("/api/agent/workspace:");

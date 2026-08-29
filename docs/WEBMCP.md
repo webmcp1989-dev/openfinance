@@ -14,7 +14,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 
 | Tool | Kind | Purpose |
 | --- | --- | --- |
-| `list_ready_invoices` | read | Lists Acme invoices locally ready for external validation. |
+| `list_ready_invoices` | read | Lists locally ready invoices for an explicitly named customer. |
 | `get_submission_package` | read | Returns exact invoice fields and checksum-protected PDF payloads for selected ready invoices. |
 | `record_portal_result` | write, idempotent | Records portal references only after Acme actually returns them. |
 | `record_portal_exception` | write, idempotent | Records precise AP validation exceptions without claiming submission. |
@@ -44,7 +44,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 
 ## Required orchestration
 
-1. Read locally ready invoices and packages inside OpenFinance.
+1. Read locally ready invoices for the customer named in the human's intent, then read the selected packages inside OpenFinance. For the challenge prompt, call `list_ready_invoices` with `{ "customerName": "Acme Manufacturing" }`.
 2. Present the destination and exact candidate invoice numbers, POs, and amounts, then obtain explicit approval to transfer those packages for read-only AP validation.
 3. Read AP rules and preflight only the transfer-approved invoices.
 4. Separate valid invoices from exceptions.

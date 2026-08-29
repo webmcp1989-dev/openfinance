@@ -19,7 +19,7 @@ Restore this state with the two reviewed administrative scripts in [setup](SETUP
 
 1. Open both deployed sites in the ChatGPT in-app browser and sign into each independent session.
 2. In the OpenFinance tab, ask: “Submit all Acme invoices that are ready for their AP portal.”
-3. The agent calls `list_ready_invoices` and `get_submission_package` inside OpenFinance.
+3. The agent calls `list_ready_invoices` with `{ "customerName": "Acme Manufacturing" }`, then calls `get_submission_package` for the returned ready invoices inside OpenFinance.
 4. Before any PDF crosses origins, it shows the Acme destination and the exact three candidate invoices, POs, and amounts. The human explicitly confirms transfer for read-only validation.
 5. In the Acme tab, the agent reads requirements and validates only those three approved packages.
 6. It reports two valid invoices and the exact `PO-8890` balance exception for `INV-10507`.

@@ -49,10 +49,17 @@ export function OpenFinanceSiteTools() {
       {
         name: "list_ready_invoices",
         title: "List ready invoices",
-        description: "List AR invoices for Acme Manufacturing that are locally ready for portal validation. This reads the signed-in supplier's live queue and does not submit or modify anything.",
-        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+        description: "List AR invoices for a named customer that are locally ready for portal validation. This reads the signed-in supplier's live queue and does not submit or modify anything.",
+        inputSchema: {
+          type: "object", additionalProperties: false, required: ["customerName"],
+          properties: { customerName: { type: "string", minLength: 1, maxLength: 160 } },
+        },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (_input, options) => api("/api/agent/invoices?customerName=Acme%20Manufacturing&readyOnly=true", { signal: options?.signal }),
+        execute: (input, options) => {
+          const customerName = (input as { customerName: string }).customerName;
+          const query = new URLSearchParams({ customerName, readyOnly: "true" });
+          return api(`/api/agent/invoices?${query}`, { signal: options?.signal });
+        },
       },
       {
         name: "get_submission_package",
