@@ -60,6 +60,18 @@ const queueColumns = `
   version, customers!inner(name)
 `;
 
+function canonicalDocumentBase64(value: string) {
+  const canonical = value.replace(/[\t\n\r ]/g, "");
+  const isCanonical = canonical.length >= 8
+    && canonical.length <= 1_400_000
+    && /^[A-Za-z0-9+/]+={0,2}$/.test(canonical)
+    && Buffer.from(canonical, "base64").toString("base64") === canonical;
+  if (!isCanonical) {
+    throw new HttpError(500, "package_document_invalid", "Stored invoice document is invalid");
+  }
+  return canonical;
+}
+
 export async function listInvoiceQueue(
   supabase: SupabaseClient,
   options: { customerName?: string; readyOnly?: boolean } = {},
@@ -102,7 +114,7 @@ export async function getSubmissionPackage(
     document: {
       fileName: row.document_name,
       mediaType: row.document_media_type,
-      contentBase64: row.document_content_base64,
+      contentBase64: canonicalDocumentBase64(row.document_content_base64),
       sha256: row.document_sha256,
     },
   }));

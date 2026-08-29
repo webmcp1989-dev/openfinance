@@ -2,7 +2,7 @@
 
 OpenFinance uses the imperative `document.modelContext.registerTool` API on authenticated top-level pages. ChatGPT's current built-in browser does not discover declarative form tools or iframe registrations, so neither is used.
 
-Every tool calls the site's existing same-origin backend. The browser agent receives no direct database credential and no permission beyond the current user session. Read tools that return invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`; every tool has a human-readable title and forwards the WebMCP abort signal to its request.
+Every tool calls the site's existing same-origin backend. The browser agent receives no direct database credential and no permission beyond the current user session. Read tools that return invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`; every tool has a human-readable title and forwards the WebMCP abort signal to its request. OpenFinance removes PostgreSQL's base64 line wrapping before returning a package, so AP receives canonical RFC 4648 content that matches the declared WebMCP schema.
 
 ## OpenFinance AR
 

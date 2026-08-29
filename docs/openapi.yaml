@@ -331,7 +331,12 @@ components:
       properties:
         fileName: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" }
         mediaType: { type: string, const: application/pdf }
-        contentBase64: { type: string, minLength: 8, maxLength: 1400000 }
+        contentBase64:
+          type: string
+          minLength: 8
+          maxLength: 1400000
+          pattern: "^[A-Za-z0-9+/]+={0,2}$"
+          description: Canonical RFC 4648 base64 without line wrapping or whitespace.
         sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
     InvoicePackage:
       allOf:
