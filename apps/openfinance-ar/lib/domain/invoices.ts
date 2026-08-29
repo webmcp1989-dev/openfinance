@@ -22,16 +22,26 @@ const portalExceptionItemSchema = z.object({
   message: z.string().min(1).max(500),
 }).strict();
 
+const portalResultItemsSchema = z.array(portalResultItemSchema).min(1).max(10).refine(
+  (items) => new Set(items.map((item) => item.invoiceNumber)).size === items.length,
+  "Invoice numbers must be unique",
+);
+
+const portalExceptionItemsSchema = z.array(portalExceptionItemSchema).min(1).max(10).refine(
+  (items) => new Set(items.map((item) => item.invoiceNumber)).size === items.length,
+  "Invoice numbers must be unique",
+);
+
 export const deliveryEventRequestSchema = z.discriminatedUnion("eventType", [
   z.object({
     eventType: z.literal("portal_result"),
     idempotencyKey: idempotencyKeySchema,
-    items: z.array(portalResultItemSchema).min(1).max(10),
+    items: portalResultItemsSchema,
   }).strict(),
   z.object({
     eventType: z.literal("portal_exception"),
     idempotencyKey: idempotencyKeySchema,
-    items: z.array(portalExceptionItemSchema).min(1).max(10),
+    items: portalExceptionItemsSchema,
   }).strict(),
 ]);
 

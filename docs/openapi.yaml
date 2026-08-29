@@ -1,7 +1,10 @@
 openapi: 3.1.0
 info:
   title: OpenFinance WebMCP demo HTTP APIs
-  version: 1.0.0
+  version: 1.1.0
+  license:
+    name: MIT
+    identifier: MIT
   description: >-
     Same-origin backend APIs used by the OpenFinance AR and independent Acme AP
     WebMCP tools. All operations require the application's own Supabase cookie session.
@@ -70,6 +73,7 @@ paths:
                 properties:
                   items: { type: array, items: { $ref: "#/components/schemas/InvoicePackage" } }
                   count: { type: integer, minimum: 1, maximum: 10 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
         "409": { $ref: "#/components/responses/Conflict" }
   /api/agent/delivery-events:
     servers:
@@ -88,7 +92,28 @@ paths:
               discriminator: { propertyName: eventType }
       responses:
         "200": { description: Recorded event }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /api/agent/workspace:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+      - url: https://openfinance-ap.vercel.app
+    get:
+      operationId: getVisibleWorkspaceState
+      summary: Read the signed-in application's visible state and recent audit trail
+      description: >-
+        The response shape is origin-specific. OpenFinance returns invoices and delivery
+        audit events; Acme returns purchase orders, submissions, and submission audit events.
+      responses:
+        "200":
+          description: Tenant-scoped workspace state
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/OpenFinanceWorkspaceState" }
+                  - { $ref: "#/components/schemas/AcmeWorkspaceState" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
   /api/agent/requirements:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -101,6 +126,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SubmissionRequirements" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
   /api/agent/purchase-orders:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -131,6 +157,7 @@ paths:
                     oneOf:
                       - { $ref: "#/components/schemas/PurchaseOrder" }
                       - { type: "null" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
   /api/agent/validate:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -148,6 +175,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ValidationResult" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
   /api/agent/submissions:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -178,6 +206,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SubmissionBatchResult" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/agent/status:
@@ -198,6 +227,7 @@ paths:
                 invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
       responses:
         "200": { description: Status lookup result }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
 components:
   securitySchemes:
     cookieSession:
@@ -289,6 +319,7 @@ components:
           type: array
           minItems: 1
           maxItems: 10
+          uniqueItems: true
           items:
             type: object
             additionalProperties: false
@@ -308,6 +339,7 @@ components:
           type: array
           minItems: 1
           maxItems: 10
+          uniqueItems: true
           items:
             type: object
             additionalProperties: false
@@ -372,6 +404,40 @@ components:
               purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
               remainingAmountMinor: { type: integer, minimum: 0 }
               currency: { type: string, pattern: "^[A-Z]{3}$" }
+    AuditEvent:
+      type: object
+      required: [id, action, entityType, entityId, details, createdAt]
+      properties:
+        id: { type: integer, minimum: 1 }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        details: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    SubmissionReceipt:
+      type: object
+      required: [invoiceNumber, portalReference, purchaseOrderNumber, amountMinor, currency, status, createdAt]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        portalReference: { type: string }
+        purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+        amountMinor: { type: integer, minimum: 1 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        status: { type: string, enum: [received, under_review, accepted, rejected] }
+        createdAt: { type: string, format: date-time }
+    OpenFinanceWorkspaceState:
+      type: object
+      required: [invoices, auditEvents]
+      properties:
+        invoices: { type: array, items: { $ref: "#/components/schemas/InvoiceQueueItem" } }
+        auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
+    AcmeWorkspaceState:
+      type: object
+      required: [purchaseOrders, submissions, auditEvents]
+      properties:
+        purchaseOrders: { type: array, items: { $ref: "#/components/schemas/PurchaseOrder" } }
+        submissions: { type: array, items: { $ref: "#/components/schemas/SubmissionReceipt" } }
+        auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
     ErrorResponse:
       type: object
       required: [error]

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { signOut } from "@/app/login/actions";
 import { AcmeWorkspace } from "@/components/acme-workspace";
+import { listAuditEvents } from "@/lib/services/audit-service";
 import { listPurchaseOrders, listSubmissions } from "@/lib/services/submission-service";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,7 +23,7 @@ export default async function AcmeHome() {
   const userId = authData?.claims?.sub;
   if (authError || typeof userId !== "string") redirect("/login");
 
-  const [{ data: profileData, error: profileError }, purchaseOrders, submissions] = await Promise.all([
+  const [{ data: profileData, error: profileError }, purchaseOrders, submissions, auditEvents] = await Promise.all([
     supabase
       .from("profiles")
       .select("supplier_id")
@@ -30,6 +31,7 @@ export default async function AcmeHome() {
       .single(),
     listPurchaseOrders(supabase),
     listSubmissions(supabase),
+    listAuditEvents(supabase),
   ]);
   const profile = profileData as ProfileRow | null;
   if (profileError || !profile) redirect("/login?error=profile_missing");
@@ -45,6 +47,7 @@ export default async function AcmeHome() {
   return <AcmeWorkspace
     initialPurchaseOrders={purchaseOrders}
     initialSubmissions={submissions}
+    initialAuditEvents={auditEvents}
     supplierName={supplier.name}
     supplierCode={supplier.supplier_code}
     signOutAction={signOut}

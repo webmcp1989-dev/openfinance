@@ -2,10 +2,14 @@ type WebMcpJsonSchema = Readonly<Record<string, unknown>>;
 
 type WebMcpTool = Readonly<{
   name: string;
+  title?: string;
   description: string;
   inputSchema: WebMcpJsonSchema;
-  annotations?: Readonly<{ readOnlyHint?: boolean }>;
-  execute: (input: unknown) => Promise<unknown> | unknown;
+  annotations?: Readonly<{ readOnlyHint?: boolean; untrustedContentHint?: boolean }>;
+  execute: (
+    input: unknown,
+    options?: Readonly<{ signal?: AbortSignal }>,
+  ) => Promise<unknown> | unknown;
 }>;
 
 interface DocumentModelContext {

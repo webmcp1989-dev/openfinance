@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { InvoiceQueueItem } from "@/lib/domain/invoices";
+import type { AuditEvent } from "@/lib/services/audit-service";
 import { OpenFinanceSiteTools } from "./openfinance-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const timestamp = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
 
 function statusLabel(invoice: InvoiceQueueItem) {
   const labels: Record<InvoiceQueueItem["status"], string> = {
@@ -15,18 +17,27 @@ function statusLabel(invoice: InvoiceQueueItem) {
   return labels[invoice.status];
 }
 
-export function OpenFinanceWorkspace({ initialInvoices, fullName, organizationName, signOutAction }: {
+function auditSummary(event: AuditEvent) {
+  const eventType = typeof event.details.eventType === "string" ? event.details.eventType.replaceAll("_", " ") : "delivery update";
+  const itemCount = typeof event.details.itemCount === "number" ? event.details.itemCount : 0;
+  return `${eventType} · ${itemCount} invoice${itemCount === 1 ? "" : "s"}`;
+}
+
+export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, fullName, organizationName, signOutAction }: {
   initialInvoices: InvoiceQueueItem[];
+  initialAuditEvents: AuditEvent[];
   fullName: string;
   organizationName: string;
   signOutAction: () => Promise<void>;
 }) {
   const [invoices, setInvoices] = useState(initialInvoices);
+  const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const refresh = useCallback(async () => {
-    const response = await fetch("/api/agent/invoices", { credentials: "same-origin", cache: "no-store" });
+    const response = await fetch("/api/agent/workspace", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) return;
-    const body = await response.json() as { items: InvoiceQueueItem[] };
-    setInvoices(body.items);
+    const body = await response.json() as { invoices: InvoiceQueueItem[]; auditEvents: AuditEvent[] };
+    setInvoices(body.invoices);
+    setAuditEvents(body.auditEvents);
   }, []);
 
   useEffect(() => {
@@ -78,6 +89,17 @@ export function OpenFinanceWorkspace({ initialInvoices, fullName, organizationNa
             </tr>
           ))}</tbody>
         </table></div>
+      </section>
+
+      <section className="panel" aria-labelledby="activity-title">
+        <div className="panel-heading"><div><p className="eyebrow">Audit trail</p><h2 id="activity-title">Recent delivery activity</h2></div><span>{auditEvents.length} events</span></div>
+        {auditEvents.length === 0 ? <p>No portal activity recorded yet.</p> : <ol className="audit-list">
+          {auditEvents.map((event) => <li key={event.id}>
+            <strong>{event.action.replaceAll("_", " ")}</strong>
+            <span>{auditSummary(event)}</span>
+            <time dateTime={event.createdAt}>{timestamp.format(new Date(event.createdAt))}</time>
+          </li>)}
+        </ol>}
       </section>
     </main>
   );

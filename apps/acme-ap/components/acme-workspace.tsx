@@ -3,28 +3,42 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { PurchaseOrder } from "@/lib/domain/submissions";
+import type { AuditEvent } from "@/lib/services/audit-service";
 import type { SubmissionRow } from "@/lib/services/submission-service";
 import { AcmeSiteTools } from "./acme-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const timestamp = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
+
+function auditSummary(event: AuditEvent) {
+  const itemCount = typeof event.details.itemCount === "number" ? event.details.itemCount : 0;
+  return `${itemCount} invoice${itemCount === 1 ? "" : "s"} · batch ${event.entityId.slice(0, 8)}`;
+}
 
 export function AcmeWorkspace({
-  initialPurchaseOrders, initialSubmissions, supplierName, supplierCode, signOutAction,
+  initialPurchaseOrders, initialSubmissions, initialAuditEvents, supplierName, supplierCode, signOutAction,
 }: {
   initialPurchaseOrders: PurchaseOrder[];
   initialSubmissions: SubmissionRow[];
+  initialAuditEvents: AuditEvent[];
   supplierName: string;
   supplierCode: string;
   signOutAction: () => Promise<void>;
 }) {
   const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
   const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const refresh = useCallback(async () => {
     const response = await fetch("/api/agent/workspace", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) return;
-    const body = await response.json() as { purchaseOrders: PurchaseOrder[]; submissions: SubmissionRow[] };
+    const body = await response.json() as {
+      purchaseOrders: PurchaseOrder[];
+      submissions: SubmissionRow[];
+      auditEvents: AuditEvent[];
+    };
     setPurchaseOrders(body.purchaseOrders);
     setSubmissions(body.submissions);
+    setAuditEvents(body.auditEvents);
   }, []);
 
   useEffect(() => {
@@ -77,6 +91,17 @@ export function AcmeWorkspace({
             </article>
           ))}</div>
         )}
+      </section>
+
+      <section className="submissions" aria-labelledby="audit-title">
+        <div className="section-heading"><div><p className="kicker">Audit trail</p><h2 id="audit-title">Recent portal activity</h2></div><span>{auditEvents.length} events</span></div>
+        {auditEvents.length === 0 ? <div className="empty-state"><strong>No committed activity yet</strong><p>Confirmed submissions create immutable audit events here.</p></div> : <ol className="audit-log">
+          {auditEvents.map((event) => <li key={event.id}>
+            <strong>{event.action.replaceAll("_", " ")}</strong>
+            <span>{auditSummary(event)}</span>
+            <time dateTime={event.createdAt}>{timestamp.format(new Date(event.createdAt))}</time>
+          </li>)}
+        </ol>}
       </section>
     </main>
   );

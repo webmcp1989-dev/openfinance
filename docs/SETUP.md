@@ -15,10 +15,10 @@ Run each migration only in its named project:
 
 | Application | Supabase project ref | Migration |
 | --- | --- | --- |
-| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql` |
+| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql` |
 | Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql` |
 
-Apply through the Supabase SQL editor or a reviewed migration pipeline. The migration is transactional, enables RLS on every exposed table, revokes anonymous access, grants only required reads, and exposes authenticated write wrappers around private transaction functions.
+Apply every listed migration in filename order through the Supabase SQL editor or a reviewed migration pipeline. The migrations are transactional, enables RLS on every exposed table, revokes anonymous access, grants only required reads, and exposes authenticated write wrappers around private transaction functions.
 
 Create one password user per project after the migration so its trigger can attach the correct tenant profile:
 
@@ -66,6 +66,7 @@ bun run typecheck
 bun run lint
 bun test
 bun run build
+bun audit
 ```
 
 Then sign into both live applications in separate tabs, inspect Available site tools, and run the [demo checklist](DEMO.md).

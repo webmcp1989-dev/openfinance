@@ -1,0 +1,6 @@
+.audit-log { display: grid; gap: .75rem; list-style: none; margin: 0; padding: 0; }
+.audit-log li { align-items: center; background: #fff; border: 1px solid #d8e0e8; border-radius: 10px; display: grid; gap: .25rem; grid-template-columns: minmax(0, 1fr) auto; padding: .9rem 1rem; }
+.audit-log strong { color: #17202a; }
+.audit-log span { color: #607080; font-size: .82rem; }
+.audit-log time { color: #607080; font-size: .78rem; grid-column: 2; grid-row: 1 / span 2; white-space: nowrap; }
+@media (max-width: 640px) { .audit-log li { grid-template-columns: 1fr; } .audit-log time { grid-column: 1; grid-row: auto; } }

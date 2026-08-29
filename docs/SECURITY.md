@@ -30,10 +30,11 @@
 - Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.
+- Production responses set a restrictive CSP, deny framing and MIME sniffing, disable unused browser capabilities, isolate cross-origin resources, and suppress referrer data.
 
 ## Human control
 
-Read tools are accurately annotated. The AP submission description marks it as a consequential write and requires the caller to present exact invoices, amounts, total, and exceptions before seeking explicit confirmation. The UI remains fully usable and shows receipts and balance changes for verification.
+Read tools are accurately annotated. The AP submission description marks it as a consequential write and requires the caller to present exact invoices, amounts, total, and exceptions before seeking explicit confirmation. The UI remains fully usable and shows receipts, balance changes, and recent tenant-scoped database audit events for verification. WebMCP reads containing invoice, document, purchase-order, validation, or receipt data set `untrustedContentHint`, and tool requests honor browser cancellation.
 
 ## Known production hardening beyond the contest slice
 
