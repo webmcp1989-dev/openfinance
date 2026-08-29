@@ -138,12 +138,6 @@ export async function validateInvoice(supabase: SupabaseClient, invoice: Invoice
 }
 
 export async function submitInvoiceBatch(supabase: SupabaseClient, idempotencyKey: string, invoices: InvoiceCandidate[]) {
-  const validations = await Promise.all(invoices.map((invoice) => validateInvoice(supabase, invoice)));
-  const invalid = validations.filter((validation) => !validation.valid);
-  if (invalid.length > 0) {
-    throw new HttpError(422, "batch_validation_failed", `Batch contains ${invalid.length} invalid invoice(s)`);
-  }
-
   const { data, error } = await supabase.rpc("submit_invoice_batch", {
     p_idempotency_key: idempotencyKey,
     p_request_fingerprint: fingerprint(invoices),

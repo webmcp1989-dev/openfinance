@@ -103,6 +103,29 @@ describe("Acme invoice validation", () => {
     expect(calls[0]).toEqual(expect.objectContaining({ name: "submit_invoice_batch" }));
   });
 
+  test("lets an identical retry reach the idempotent transaction without duplicate preflight", async () => {
+    const existing = {
+      batchId: "batch-existing",
+      items: [{ invoiceNumber: "INV-10482", portalReference: "ACME-20260829-ABCDEF12" }],
+    };
+    const calls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      from() {
+        throw new Error("Submission retries must not run a duplicate preflight query");
+      },
+      rpc(name: string, args: unknown) {
+        calls.push({ name, args });
+        return Promise.resolve({ data: existing, error: null });
+      },
+    };
+
+    const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()]);
+
+    expect(result).toEqual(existing);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual(expect.objectContaining({ name: "submit_invoice_batch" }));
+  });
+
   test("loads one invoice status with a scoped single-row query", async () => {
     const calls: string[] = [];
     const row = {

@@ -20,7 +20,7 @@ Every tool calls the site's existing same-origin backend. The browser agent rece
 | `get_invoice_requirements` | read | Returns live media, PO, balance, and uniqueness rules. |
 | `find_purchase_order` | read | Returns one supplier-authorized PO and live balance. |
 | `validate_invoice` | read, transfer-approved | Checks a human-approved package without reserving balance or writing data. |
-| `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts. |
+| `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts; identical retries return the original result. |
 | `get_invoice_status` | read | Returns current receipt and status for one supplier invoice. |
 
 ## Contract principles

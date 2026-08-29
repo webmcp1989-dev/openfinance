@@ -20,7 +20,7 @@
 ## Consequential writes
 
 - AP submission is one atomic Postgres transaction and locks PO rows before checking and decrementing balances.
-- Idempotency is scoped by tenant or supplier and bound to a SHA-256 fingerprint. Transaction-scoped advisory locks serialize concurrent retries for the same scoped key; a repeated identical request returns its original response, while a key reused for a different payload fails.
+- Idempotency is scoped by tenant or supplier and bound to a SHA-256 fingerprint. Transaction-scoped advisory locks serialize concurrent retries for the same scoped key; a repeated identical request reaches the transaction and returns its original response without a duplicate preflight blocking it, while a key reused for a different payload fails.
 - AR result and exception recording enforces exact payload fields, legal portal statuses, field bounds, purchase-order presence, and allowed invoice state transitions inside Postgres—not only in the HTTP layer.
 - Public RPC functions are security invokers. Privileged implementation functions live in the unexposed `private` schema, set an empty search path, schema-qualify every relation, and receive minimal execution grants.
 

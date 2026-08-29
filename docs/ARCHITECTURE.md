@@ -45,7 +45,7 @@ Within one database transaction it:
 6. writes one audit event and stores the immutable response;
 7. commits all invoices or none.
 
-Application preflight improves the human-agent experience but the transaction is authoritative, preventing time-of-check/time-of-use errors.
+Application preflight improves the human-agent experience but the transaction is authoritative, preventing time-of-check/time-of-use errors. The submission endpoint therefore calls the transaction directly instead of repeating the read-only preflight first: an identical retry reaches the stored idempotent response, while the transaction still revalidates every invariant before a first commit.
 
 ## Data transfer
 
