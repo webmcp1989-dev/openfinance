@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 97 tests passed with 379 expectations.
+- `bun test`: 108 tests passed with 464 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -58,6 +58,14 @@ mapping, idempotency, and documentation coverage.
   invariants: function presence, Auth schema and function privileges, application-user
   denial, exact OAuth MCP audience, and preserved normal portal audience. The
   rollback-only pgTAP suite contains six assertions covering the same boundary.
+- The expanded AR exception-to-cash suite passed 12 rollback-only assertions in
+  the live project. It verifies RLS, table and function privileges, serialized
+  remittance retries, PDF evidence structure, and that proof-of-delivery evidence
+  is a distinct document rather than a relabeled invoice.
+- The expanded AP exception-to-cash suite passed 16 rollback-only assertions in
+  the independent live project. It verifies supplier isolation, mutation
+  boundaries, serialized inquiry and exception-response retries, attachment PDF
+  integrity, and named PostgREST RPC arguments.
 
 ## Remote MCP and OAuth verification
 
@@ -71,8 +79,10 @@ mapping, idempotency, and documentation coverage.
   PKCE through the deployed OpenFinance consent screen. The issued ES256 JWT had
   the exact MCP audience, expected Supabase issuer, OAuth `client_id`,
   `authenticated` role, user subject, one-hour lifetime, and refresh token.
-- Streamable HTTP initialization negotiated MCP `2025-06-18`. `tools/list`
-  returned exactly eight schema-bearing AR tools and no reset capability.
+- Streamable HTTP initialization negotiated MCP `2025-06-18`. The earlier full
+  OAuth lifecycle rehearsal covered the original eight tools; the current
+  protocol inventory test returns exactly 11 schema-bearing AR tools and no
+  reset capability after the exception-to-cash expansion.
 - Live calls covered workspace, customer, invoice, PDF package, and audit reads;
   all three PDFs had valid signatures, EOF markers, and matching SHA-256 hashes.
   ERP sync imported two invoices, and an identical retry returned the same result.
@@ -90,8 +100,8 @@ mapping, idempotency, and documentation coverage.
 The canonical workflow was completed three times from a freshly reset state in
 ChatGPT's in-app browser using only the tools exposed by the two live sites.
 
-- Authenticated OpenFinance exposed exactly four tools; authenticated Acme
-  exposed exactly five. Login pages exposed none.
+- Authenticated OpenFinance exposed exactly seven tools; authenticated Acme
+  exposed exactly twelve. Login pages exposed none.
 - OpenFinance returned three locally ready Acme invoices while the invoice with
   a missing purchase order remained locally excluded.
 - All three transferred PDF packages had canonical base64, a valid `%PDF-`
@@ -110,6 +120,22 @@ ChatGPT's in-app browser using only the tools exposed by the two live sites.
   `paid` with a stable `PAY-*` reference after 10 seconds while `INV-10482`
   remained `received`; the two subsequent status-tool reads left the AP audit
   count unchanged at two events.
+- A separate post-expansion production run invoked all 19 current browser tools.
+  It read detailed PO lines, receipt and service-entry context; found the local
+  missing-PO follow-up; transferred a distinct checksum-verified proof of
+  delivery; submitted only the two valid invoices; and excluded `INV-10507`
+  with balance, receipt, and service-entry exceptions.
+- The AP payment signal for `INV-10491` was read as an exact ACH allocation and
+  reconciled into AR. Identical remittance retries replayed one result and a
+  changed retry failed closed.
+- A synthetic buyer-owned exception on `INV-10482` was discovered through
+  WebMCP, answered with the approved proof-of-delivery PDF, then resolved by an
+  atomic corrected revision. Inquiry, exception-response, and replacement
+  retries replayed exactly, while changed-payload reuse was rejected. The
+  current revision remained visible and PO balance was not double-consumed.
+- The same run verified every human action is present in the live workspaces.
+  Both human reset controls then restored three ready AR invoices, no AP
+  submissions, and canonical PO balances.
 
 After the final capability deployment, both independent two-step human reset
 controls succeeded. The public judge state is now three ready AR invoices, one

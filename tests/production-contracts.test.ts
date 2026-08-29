@@ -121,8 +121,10 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608300005_validate_supporting_document_pdfs.sql");
     expect(setup).toContain("202608300005_validate_attachment_pdfs.sql");
     expect(setup).toContain("202608300006_serialize_remittance_idempotency.sql");
+    expect(setup).toContain("202608300007_render_proof_of_delivery_fixture.sql");
     expect(setup).toContain("202608300006_serialize_invoice_inquiries.sql");
     expect(setup).toContain("202608300007_serialize_exception_responses.sql");
+    expect(setup).toContain("202608300008_name_postgrest_rpc_arguments.sql");
   });
 
   test("expanded exception-to-cash records remain tenant-scoped and database-enforced", async () => {
@@ -375,6 +377,7 @@ describe("WebMCP safety contracts", () => {
     expect(ar.match(/"\/api\/agent\/delivery-events"/g)).toHaveLength(1);
     expect(ar).toContain("Record portal outcome");
     expect(ar).toContain('"/api/agent/supporting-documents"');
+    expect(ar).toContain("View evidence");
     expect(ar).toContain('"/api/agent/remittances"');
     expect(ar).toContain("Portal follow-ups and remittance");
     expect(apPage).toContain("getRequirements(supabase)");

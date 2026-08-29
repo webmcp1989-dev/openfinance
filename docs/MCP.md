@@ -47,7 +47,7 @@ Demo reset is intentionally excluded and OAuth clients are denied at the databas
 
 Add the MCP URL as a remote or custom MCP connector in ChatGPT, the OpenAI API, Claude, or another OAuth-capable MCP client. Standards-compliant clients discover metadata, dynamically register, open the OpenFinance consent screen, and store the resulting grant. For an OpenAI Responses API request, configure an MCP tool with `server_url` equal to the URL above; if the host does not perform interactive OAuth discovery, provide a user-authorized Bearer token through its authorization field. Never use a portal cookie, publishable key, service-role key, or password as MCP authorization.
 
-After connecting, call `get_ar_workspace` first. Keep approvals enabled for the three write tools and for any action that transfers package data outside OpenFinance.
+After connecting, call `get_ar_workspace` first. Keep approvals enabled for the four write tools and for any action that transfers package data outside OpenFinance.
 
 ## Local development
 

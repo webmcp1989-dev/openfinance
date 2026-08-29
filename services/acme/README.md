@@ -17,6 +17,7 @@ This directory belongs only to the independent Acme AP Supabase project.
 - `supabase/migrations/202608300005_validate_attachment_pdfs.sql` enforces PDF signature and terminal-marker integrity for supplier evidence at the database boundary.
 - `supabase/migrations/202608300006_serialize_invoice_inquiries.sql` serializes supplier-scoped inquiry retries.
 - `supabase/migrations/202608300007_serialize_exception_responses.sql` serializes supplier-scoped exception-response retries and requires a complete PDF marker for every attached document.
+- `supabase/migrations/202608300008_name_postgrest_rpc_arguments.sql` gives every new public mutation wrapper stable named arguments for PostgREST RPC discovery.
 - `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign supplier and proves its purchase orders cannot be read or consumed.
 - `supabase/tests/submission-wrapper.test.sql` verifies policy alignment, exact request enforcement, PDF structure, wrapper execution mode, retry serialization, identical-response replay, single balance decrement, changed-payload rejection, and duplicate rejection.
 - `supabase/tests/payment-settlement.test.sql` verifies payment-state isolation, view security, deterministic pair behavior, paid-status maturity, references, and audit creation.

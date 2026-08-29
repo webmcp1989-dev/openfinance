@@ -17,6 +17,7 @@ This directory belongs only to the OpenFinance AR Supabase project.
 - `supabase/migrations/202608300004_track_portal_checks.sql` records when verified portal results were last observed without trusting the UI.
 - `supabase/migrations/202608300005_validate_supporting_document_pdfs.sql` enforces PDF signature and terminal-marker integrity for supporting evidence at the database boundary.
 - `supabase/migrations/202608300006_serialize_remittance_idempotency.sql` serializes organization-scoped remittance retries so concurrent identical calls replay one result and conflicting reuse fails closed.
+- `supabase/migrations/202608300007_render_proof_of_delivery_fixture.sql` replaces the initial evidence placeholder with a distinct, standards-compliant synthetic proof-of-delivery PDF.
 - `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign organization and proves its invoices cannot be read or mutated.
 - `supabase/tests/delivery-events.test.sql` exercises duplicate rejection, direct-RPC field validation, legal state transitions, database-derived idempotency identity, identical retry replay, single state mutation, and changed-payload rejection using the same caller fingerprint.
 - `supabase/tests/erp-sync.test.sql` proves the `2 → 0 → 2` sequence, idempotent replay, internal-state isolation, wrapper privilege boundaries, and audit creation.

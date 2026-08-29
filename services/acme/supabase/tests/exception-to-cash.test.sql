@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(15);
+select plan(16);
 select has_table('public', 'purchase_order_lines', 'purchase-order line context exists');
 select has_table('public', 'invoice_status_events', 'invoice status timeline exists');
 select has_table('public', 'invoice_exceptions', 'structured invoice exceptions exist');
@@ -23,6 +23,11 @@ select ok(exists (
     and conname = 'invoice_attachments_pdf_structure_check'
     and position('%%EOF' in pg_get_constraintdef(oid)) > 0
 ), 'supporting-evidence PDFs require a terminal marker');
+select is(
+  (select proargnames::text from pg_proc where oid = 'public.create_invoice_inquiry(text,text,jsonb)'::regprocedure),
+  '{p_idempotency_key,p_request_fingerprint,p_payload}',
+  'PostgREST can resolve named inquiry RPC arguments'
+);
 
 select * from finish();
 rollback;

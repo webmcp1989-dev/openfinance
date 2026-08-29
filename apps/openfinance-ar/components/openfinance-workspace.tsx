@@ -226,7 +226,10 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
         method: "POST", body: JSON.stringify({ invoiceNumber }),
       });
       setSupportingDocuments(result);
-      if (result.documents.length === 0) setNotice(`${invoiceNumber} has no supporting documents.`);
+      setNotice(result.documents.length === 0
+        ? `${invoiceNumber} has no supporting documents.`
+        : `${result.documents.length} supporting document${result.documents.length === 1 ? " is" : "s are"} ready below for ${invoiceNumber}.`);
+      document.querySelector("#followup-title")?.scrollIntoView({ behavior: "smooth" });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Supporting documents could not be loaded");
     } finally {
@@ -365,7 +368,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
           </div>}
         </div>
         <div className="table-wrap"><table>
-          <thead><tr><th className="select-column"><span className="sr-only">Select</span></th><th>Invoice</th><th>Customer</th><th>Amount</th><th>Purchase order</th><th>Status</th><th>Portal result</th></tr></thead>
+          <thead><tr><th className="select-column"><span className="sr-only">Select</span></th><th>Invoice</th><th>Customer</th><th>Amount</th><th>Purchase order</th><th>Status</th><th>Portal result</th><th>Evidence</th></tr></thead>
           <tbody>{filteredInvoices.map((invoice) => {
             const isSelected = selected.includes(invoice.invoiceNumber);
             const selectionDisabled = invoice.status !== "ready" || (!isSelected && selectedReady.length >= 3);
@@ -377,6 +380,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
               <td>{invoice.purchaseOrderNumber ?? "Missing"}</td>
               <td><span className={`badge ${invoice.status}`}>{statusLabel(invoice)}</span></td>
               <td className="result-cell">{invoice.portalReference ?? invoice.exceptionMessage ?? "Awaiting portal review"}</td>
+              <td><button className="text-button" type="button" onClick={() => void loadSupportingDocuments(invoice.invoiceNumber)} disabled={pendingAction !== null}>{pendingAction === `documents:${invoice.invoiceNumber}` ? "Loading…" : "View evidence"}</button></td>
             </tr>;
           })}</tbody>
         </table></div>

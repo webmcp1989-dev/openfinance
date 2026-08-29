@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(11);
+select plan(12);
 select has_table('public', 'invoice_supporting_documents', 'supporting documents exist');
 select has_table('public', 'payment_remittance_events', 'remittance events exist');
 select is((select relrowsecurity from pg_class where oid = 'public.invoice_supporting_documents'::regclass), true, 'supporting documents enforce RLS');
@@ -19,6 +19,13 @@ select ok(exists (
     and conname = 'invoice_supporting_documents_pdf_structure_check'
     and position('%%EOF' in pg_get_constraintdef(oid)) > 0
 ), 'supporting-document PDFs require a terminal marker');
+select ok(exists (
+  select 1
+  from public.invoice_supporting_documents as document
+  join public.invoices as invoice on invoice.id = document.invoice_id
+  where document.file_name = 'INV-10482-proof-of-delivery.pdf'
+    and document.sha256 <> invoice.document_sha256
+), 'proof-of-delivery evidence is distinct from the invoice PDF');
 
 select * from finish();
 rollback;
