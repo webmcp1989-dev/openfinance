@@ -254,6 +254,101 @@ export function AcmeWorkspace({
     }
   }
 
+  async function respondToException(formData: FormData) {
+    clearFeedback();
+    if (formData.get("confirmation") !== "approved") {
+      setError("Review and approve the exact response and evidence before sending it.");
+      return;
+    }
+    setPendingAction("exception-response");
+    try {
+      const file = formData.get("attachment");
+      const attachments = file instanceof File && file.size > 0 ? [{
+        ...(await fileDocument(file, requirements)),
+        documentKind: String(formData.get("documentKind") ?? "other"),
+      }] : [];
+      const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
+      await apiRequest("/api/agent/exception-responses", {
+        method: "POST",
+        body: JSON.stringify({
+          idempotencyKey: idempotencyKey("ui-exception-response"),
+          invoiceNumber,
+          exceptionCode: String(formData.get("exceptionCode") ?? ""),
+          message: String(formData.get("message") ?? ""),
+          attachments,
+        }),
+      });
+      await refresh();
+      setNotice(`${invoiceNumber} exception response was sent with ${attachments.length} supporting document${attachments.length === 1 ? "" : "s"}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Exception response could not be sent");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function replaceRejectedInvoice(formData: FormData) {
+    clearFeedback();
+    if (formData.get("confirmation") !== "approved") {
+      setError("Review and approve the exact corrected invoice before replacement.");
+      return;
+    }
+    setPendingAction("replacement");
+    try {
+      const file = formData.get("document");
+      if (!(file instanceof File) || file.size === 0) throw new Error("Choose the corrected invoice PDF.");
+      const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
+      await apiRequest("/api/agent/replacements", {
+        method: "POST",
+        body: JSON.stringify({
+          idempotencyKey: idempotencyKey("ui-invoice-replacement"),
+          invoice: {
+            invoiceNumber,
+            invoiceDate: String(formData.get("invoiceDate") ?? ""),
+            amountMinor: parseAmountMinor(String(formData.get("amount") ?? "")),
+            currency: String(formData.get("currency") ?? "USD").toUpperCase(),
+            purchaseOrderNumber: String(formData.get("purchaseOrderNumber") ?? "").toUpperCase(),
+            document: await fileDocument(file, requirements),
+          },
+        }),
+      });
+      await refresh();
+      setNotice(`${invoiceNumber} was replaced by a corrected, newly validated revision.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Rejected invoice could not be replaced");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function createInquiry(formData: FormData) {
+    clearFeedback();
+    if (formData.get("confirmation") !== "approved") {
+      setError("Review and approve the exact inquiry before opening the buyer case.");
+      return;
+    }
+    setPendingAction("inquiry");
+    try {
+      const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
+      const result = await apiRequest<{ caseReference: string }>("/api/agent/inquiries", {
+        method: "POST",
+        body: JSON.stringify({
+          idempotencyKey: idempotencyKey("ui-invoice-inquiry"),
+          invoiceNumber,
+          inquiryType: String(formData.get("inquiryType") ?? "invoice_inquiry"),
+          subject: String(formData.get("subject") ?? ""),
+          message: String(formData.get("message") ?? ""),
+        }),
+      });
+      await refresh();
+      setNotice(`${result.caseReference} was opened for ${invoiceNumber}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Invoice inquiry could not be created");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function restoreDemo() {
     clearFeedback();
     setPendingAction("reset");
@@ -290,7 +385,7 @@ export function AcmeWorkspace({
 
       <section className="intro">
         <div><p className="kicker">Accounts payable</p><h1>Supplier workspace</h1><p>Find purchase orders, validate invoices, submit approved batches, and track receipts.</p></div>
-        <span className="tool-status">5 authenticated site tools</span>
+        <span className="tool-status">12 authenticated site tools</span>
       </section>
 
       <section className="agent-guide" aria-label="Human and agent workflow">
@@ -335,7 +430,10 @@ export function AcmeWorkspace({
           <form className="lookup-card" action={(formData) => void findInvoiceStatus(formData)}>
             <div><span className="step-number neutral">4</span><div><strong>Track an invoice</strong><p>Retrieve its current receipt and status.</p></div></div>
             <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "status" ? "Checking…" : "Check status"}</button></div></label>
-            {statusLookup && <div className="lookup-result"><strong>{statusLookup.invoiceNumber}</strong><span className={`state ${statusLookup.status}`}>{statusLookup.status}</span><p>{statusLookup.paymentReference ?? statusLookup.portalReference}</p><b>{money.format(statusLookup.amountMinor / 100)}</b></div>}
+            {statusLookup && <div className="lookup-result"><strong>{statusLookup.invoiceNumber}</strong><span className={`state ${statusLookup.status}`}>{statusLookup.status}</span><p>{statusLookup.paymentReference ?? statusLookup.portalReference}</p><b>{money.format(statusLookup.amountMinor / 100)}</b>
+              {statusLookup.timeline && statusLookup.timeline.length > 0 && <ol>{statusLookup.timeline.map((event) => <li key={`${event.eventCode}-${event.createdAt}`}><small>{event.status.replaceAll("_", " ")} · {event.message}</small></li>)}</ol>}
+              {statusLookup.exceptions && statusLookup.exceptions.length > 0 && <ul>{statusLookup.exceptions.map((exception) => <li key={exception.exceptionCode}><small><strong>{exception.exceptionCode}</strong> · {exception.owner.replaceAll("_", " ")} · {exception.message}</small></li>)}</ul>}
+            </div>}
           </form>
         </div>
 
@@ -377,9 +475,55 @@ export function AcmeWorkspace({
           <article key={order.purchaseOrderNumber} className="order-card">
             <div><strong>{order.purchaseOrderNumber}</strong><span>{order.status}</span></div>
             <p>{order.description}</p><small>Remaining balance</small><h3>{money.format(order.remainingAmountMinor / 100)}</h3>
+            <dl><div><dt>Payment terms</dt><dd>{order.paymentTerms}</dd></div><div><dt>Received</dt><dd>{money.format(order.receivedAmountMinor / 100)}</dd></div><div><dt>Service entry</dt><dd>{order.serviceEntryStatus.replaceAll("_", " ")}</dd></div><div><dt>Lines</dt><dd>{order.lines.length}</dd></div></dl>
+            {order.requiredAttachmentKinds.length > 0 && <small>Required evidence: {order.requiredAttachmentKinds.join(", ")}</small>}
             <button type="button" onClick={() => { setCandidatePurchaseOrder(order.purchaseOrderNumber); document.querySelector("#operations")?.scrollIntoView({ behavior: "smooth" }); }}>Use for invoice</button>
           </article>
         ))}</div>
+      </section>
+
+      <section className="operations" id="resolution" aria-labelledby="resolution-title">
+        <div className="section-heading"><div><p className="kicker">Exception to cash</p><h2 id="resolution-title">Resolve, correct, or ask AP</h2></div><span>Human-approved writes</span></div>
+        <div className="submission-workbench">
+          <form className="candidate-form" action={(formData) => void respondToException(formData)}>
+            <div className="form-heading"><div><h3>Respond to an exception</h3><p>Add an exact response and optional supporting PDF.</p></div></div>
+            <div className="field-grid">
+              <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select invoice</option>{submissions.map((submission) => <option key={submission.invoiceNumber} value={submission.invoiceNumber}>{submission.invoiceNumber}</option>)}</select></label>
+              <label><span>Exception code</span><input name="exceptionCode" required pattern="[a-z][a-z0-9_]{1,63}" placeholder="missing_supporting_document" /></label>
+              <label><span>Document kind</span><select name="documentKind" defaultValue="proof_of_delivery"><option value="proof_of_delivery">Proof of delivery</option><option value="service_acceptance">Service acceptance</option><option value="timesheet">Timesheet</option><option value="tax_document">Tax document</option><option value="contract">Contract</option><option value="other">Other</option></select></label>
+              <label className="file-field"><span>Supporting PDF (optional)</span><input name="attachment" type="file" accept="application/pdf,.pdf" /></label>
+            </div>
+            <label><span>Response</span><textarea name="message" required minLength={1} maxLength={1000} placeholder="Explain the correction or attached evidence." /></label>
+            <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I reviewed this exact response and evidence and approve sending it to Acme AP.</span></label>
+            <button className="portal-button secondary" type="submit" disabled={pendingAction !== null}>{pendingAction === "exception-response" ? "Sending…" : "Send approved response"}</button>
+          </form>
+
+          <form className="candidate-form" action={(formData) => void replaceRejectedInvoice(formData)}>
+            <div className="form-heading"><div><h3>Replace rejected invoice</h3><p>Creates an audited revision only when the exception permits replacement.</p></div></div>
+            <div className="field-grid">
+              <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select rejected invoice</option>{submissions.filter((submission) => submission.status === "rejected" || submission.status === "disputed").map((submission) => <option key={submission.invoiceNumber} value={submission.invoiceNumber}>{submission.invoiceNumber}</option>)}</select></label>
+              <label><span>Invoice date</span><input name="invoiceDate" type="date" required /></label>
+              <label><span>Corrected amount</span><input name="amount" inputMode="decimal" required pattern="\d+(\.\d{1,2})?" /></label>
+              <label><span>Currency</span><input name="currency" defaultValue="USD" required pattern="[A-Z]{3}" maxLength={3} /></label>
+              <label><span>Purchase order</span><select name="purchaseOrderNumber" required defaultValue=""><option value="" disabled>Select PO</option>{purchaseOrders.filter((order) => order.status === "open").map((order) => <option key={order.purchaseOrderNumber} value={order.purchaseOrderNumber}>{order.purchaseOrderNumber}</option>)}</select></label>
+              <label className="file-field"><span>Corrected invoice PDF</span><input name="document" type="file" accept="application/pdf,.pdf" required /></label>
+            </div>
+            <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I reviewed the exact corrected invoice, PO, amount, and document and approve replacement.</span></label>
+            <button className="portal-button secondary" type="submit" disabled={pendingAction !== null}>{pendingAction === "replacement" ? "Replacing…" : "Replace rejected invoice"}</button>
+          </form>
+        </div>
+
+        <form className="candidate-form" action={(formData) => void createInquiry(formData)}>
+          <div className="form-heading"><div><h3>Open an AP inquiry</h3><p>Route buyer-owned blockers or payment questions into a tracked case.</p></div></div>
+          <div className="field-grid">
+            <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select invoice</option>{submissions.map((submission) => <option key={submission.invoiceNumber} value={submission.invoiceNumber}>{submission.invoiceNumber}</option>)}</select></label>
+            <label><span>Inquiry type</span><select name="inquiryType" defaultValue="payment_inquiry"><option value="payment_inquiry">Payment inquiry</option><option value="invoice_inquiry">Invoice inquiry</option><option value="expedite_payment">Expedite payment</option><option value="payment_terms">Payment terms</option><option value="invoice_entry_assistance">Invoice entry assistance</option></select></label>
+            <label><span>Subject</span><input name="subject" required minLength={1} maxLength={160} /></label>
+          </div>
+          <label><span>Message</span><textarea name="message" required minLength={1} maxLength={1000} /></label>
+          <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I reviewed the case type, subject, and message and approve opening this buyer case.</span></label>
+          <button className="portal-button primary" type="submit" disabled={pendingAction !== null}>{pendingAction === "inquiry" ? "Opening case…" : "Open approved inquiry"}</button>
+        </form>
       </section>
 
       <section className="submissions" id="submissions" aria-labelledby="submissions-title">

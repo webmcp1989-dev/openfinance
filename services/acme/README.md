@@ -10,9 +10,17 @@ This directory belongs only to the independent Acme AP Supabase project.
 - `supabase/migrations/202608290006_validate_pdf_structure.sql` requires the PDF signature and an end-of-file marker near the document tail, rechecks the one-megabyte bound, and verifies SHA-256 before entering the submission transaction.
 - `supabase/migrations/202608290007_simulate_payment_settlement.sql` assigns a serialized per-supplier invoice sequence, schedules every second committed invoice for synthetic settlement after 10 seconds, and exposes a session-scoped read function without direct settlement-table grants.
 - `supabase/migrations/202608290008_add_authorized_demo_reset.sql` adds the explicitly confirmed, submitter-scoped human reset used to make the synthetic challenge repeatable; it is audited and intentionally absent from WebMCP.
+- `supabase/migrations/202608300001_expand_exception_to_cash.sql` adds line/receipt/service-entry PO context, status events, structured exceptions, evidence-backed responses, tracked inquiries, revision support, and supplier-scoped RLS.
+- `supabase/migrations/202608300002_replace_rejected_invoice.sql` adds the transactional, idempotent corrected-invoice revision workflow with atomic PO balance reallocation.
+- `supabase/migrations/202608300003_align_simulator_and_reset.sql` keeps payment scheduling and the synthetic reset correct for the expanded schema.
+- `supabase/migrations/202608300004_current_invoice_statuses.sql` limits effective status reads to the current invoice revision.
+- `supabase/migrations/202608300005_validate_attachment_pdfs.sql` enforces PDF signature and terminal-marker integrity for supplier evidence at the database boundary.
+- `supabase/migrations/202608300006_serialize_invoice_inquiries.sql` serializes supplier-scoped inquiry retries.
+- `supabase/migrations/202608300007_serialize_exception_responses.sql` serializes supplier-scoped exception-response retries and requires a complete PDF marker for every attached document.
 - `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign supplier and proves its purchase orders cannot be read or consumed.
 - `supabase/tests/submission-wrapper.test.sql` verifies policy alignment, exact request enforcement, PDF structure, wrapper execution mode, retry serialization, identical-response replay, single balance decrement, changed-payload rejection, and duplicate rejection.
 - `supabase/tests/payment-settlement.test.sql` verifies payment-state isolation, view security, deterministic pair behavior, paid-status maturity, references, and audit creation.
+- `supabase/tests/exception-to-cash.test.sql` verifies exception/inquiry/revision data boundaries, idempotent serialization, and PDF evidence integrity.
 - `supabase/demo/reset.sql` is the reviewed administrative fallback for only the fixed synthetic challenge supplier.
 
 Do not point these migrations at the OpenFinance project. Runtime access uses only the Acme publishable key and the authenticated Acme supplier session.

@@ -1,0 +1,19 @@
+import type { NextRequest } from "next/server";
+import { z } from "zod";
+
+import { exceptionResponseRequestSchema } from "@/lib/domain/submissions";
+import { apiError, requireAuthenticatedClient, requireSameOriginJson } from "@/lib/http";
+import { respondToInvoiceException } from "@/lib/services/submission-service";
+
+export async function POST(request: NextRequest) {
+  try {
+    requireSameOriginJson(request);
+    const supabase = await requireAuthenticatedClient();
+    const body = exceptionResponseRequestSchema.parse(await request.json());
+    const result = await respondToInvoiceException(supabase, body);
+    return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    if (error instanceof z.ZodError) return Response.json({ error: { code: "invalid_request", message: "Exception response fields are invalid" } }, { status: 400 });
+    return apiError(error);
+  }
+}

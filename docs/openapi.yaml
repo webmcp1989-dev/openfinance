@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: OpenFinance WebMCP demo HTTP APIs
-  version: 1.6.0
+  version: 2.0.0
   license:
     name: MIT
     identifier: MIT
@@ -182,6 +182,76 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/agent/followups:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    get:
+      operationId: listPortalFollowups
+      summary: List tenant-authorized AR invoices requiring portal follow-up
+      parameters:
+        - in: query
+          name: customerName
+          schema: { type: string, minLength: 1, maxLength: 160 }
+      responses:
+        "200":
+          description: Actionable portal follow-ups
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, count]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/PortalFollowup" } }
+                  count: { type: integer, minimum: 0 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /api/agent/supporting-documents:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    post:
+      operationId: getInvoiceSupportingDocuments
+      summary: Read tenant-authorized supporting PDFs for one AR invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceNumberRequest" }
+      responses:
+        "200":
+          description: Checksum-protected supporting documents
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invoiceNumber, documents, count]
+                properties:
+                  invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+                  documents: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/SupportingDocument" } }
+                  count: { type: integer, minimum: 0 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+  /api/agent/remittances:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    post:
+      operationId: recordPaymentRemittance
+      summary: Idempotently record a verified customer payment allocation in AR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecordRemittanceRequest" }
+      responses:
+        "200": { description: Durable remittance reconciliation result }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
   /api/agent/workspace:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -218,9 +288,24 @@ paths:
   /api/agent/purchase-orders:
     servers:
       - url: https://openfinance-ap.vercel.app
+    get:
+      operationId: listOpenPurchaseOrders
+      summary: List supplier-authorized open purchase orders with line and receipt context
+      responses:
+        "200":
+          description: Open purchase orders
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [purchaseOrders, count]
+                properties:
+                  purchaseOrders: { type: array, items: { $ref: "#/components/schemas/PurchaseOrder" } }
+                  count: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
     post:
-      operationId: findPurchaseOrder
-      summary: Find one supplier-authorized purchase order
+      operationId: getPurchaseOrderDetails
+      summary: Get one supplier-authorized purchase order with line and receipt context
       requestBody:
         required: true
         content:
@@ -249,6 +334,32 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+  /api/agent/supplier-invoices:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    get:
+      operationId: listSupplierInvoices
+      summary: List supplier invoices with optional status or PO filter
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [received, under_review, accepted, rejected, disputed, voided, paid] }
+        - in: query
+          name: purchaseOrderNumber
+          schema: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+      responses:
+        "200":
+          description: Supplier invoice receipts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invoices, count]
+                properties:
+                  invoices: { type: array, items: { $ref: "#/components/schemas/SubmissionReceipt" } }
+                  count: { type: integer, minimum: 0 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
   /api/agent/validate:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -357,6 +468,106 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+  /api/agent/exceptions:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: getInvoiceException
+      summary: Read structured exceptions and permitted resolutions for one invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceNumberRequest" }
+      responses:
+        "200": { description: Invoice exception details }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+  /api/agent/exception-responses:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: respondToInvoiceException
+      summary: Idempotently send a human-approved exception response and evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExceptionResponseRequest" }
+      responses:
+        "200": { description: Durable exception response receipt }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/agent/replacements:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: replaceRejectedInvoice
+      summary: Transactionally supersede a rejected invoice with a corrected revision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [idempotencyKey, invoice]
+              properties:
+                idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+                invoice: { $ref: "#/components/schemas/InvoiceCandidate" }
+      responses:
+        "200": { description: Corrected revision receipt and superseded reference }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/agent/inquiries:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: createInvoiceInquiry
+      summary: Idempotently open a tracked buyer AP inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceInquiryRequest" }
+      responses:
+        "200": { description: AP case reference and status }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/agent/remittance:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: getPaymentRemittance
+      summary: Read the payment schedule and completed remittance for one invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceNumberRequest" }
+      responses:
+        "200": { description: Payment status, reference, method, amount, and allocations }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
   /api/demo/reset:
     servers:
@@ -490,7 +701,7 @@ components:
         syncedAt: { type: string, format: date-time }
     InvoiceQueueItem:
       type: object
-      required: [invoiceNumber, customerName, amountMinor, currency, invoiceDate, purchaseOrderNumber, status, portalReference, portalStatus, exceptionCode, exceptionMessage, version]
+      required: [invoiceNumber, customerName, amountMinor, currency, invoiceDate, purchaseOrderNumber, status, portalReference, portalStatus, exceptionCode, exceptionMessage, dueDate, lastPortalCheckedAt, paidAmountMinor, lastPaymentAt, lastPaymentReference, version]
       properties:
         invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
         customerName: { type: string }
@@ -506,6 +717,11 @@ components:
         portalStatus: { type: [string, "null"] }
         exceptionCode: { type: [string, "null"] }
         exceptionMessage: { type: [string, "null"] }
+        dueDate: { type: string, format: date }
+        lastPortalCheckedAt: { type: [string, "null"], format: date-time }
+        paidAmountMinor: { type: integer, minimum: 0, maximum: 9007199254740991 }
+        lastPaymentAt: { type: [string, "null"], format: date-time }
+        lastPaymentReference: { type: [string, "null"], maxLength: 120 }
         version: { type: integer, minimum: 1 }
     InvoiceDocument:
       type: object
@@ -539,6 +755,64 @@ components:
         currency: { type: string, pattern: "^[A-Z]{3}$" }
         purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
         document: { $ref: "#/components/schemas/InvoiceDocument" }
+    InvoiceNumberRequest:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+    SupportingDocument:
+      allOf:
+        - { $ref: "#/components/schemas/InvoiceDocument" }
+        - type: object
+          required: [documentKind, sizeBytes]
+          properties:
+            documentKind: { type: string, enum: [proof_of_delivery, service_acceptance, timesheet, tax_document, contract, other] }
+            sizeBytes: { type: integer, minimum: 1, maximum: 1048576 }
+    PortalFollowup:
+      allOf:
+        - { $ref: "#/components/schemas/InvoiceQueueItem" }
+        - type: object
+          required: [followupReason, suggestedAction, remainingDueMinor]
+          properties:
+            followupReason: { type: string, enum: [needs_attention, rejected, status_stale, overdue, partially_paid] }
+            suggestedAction: { type: string, minLength: 1, maxLength: 1000 }
+            remainingDueMinor: { type: integer, minimum: 0, maximum: 9007199254740991 }
+    RecordRemittanceRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, invoiceNumber, paymentReference, amountMinor, currency, paymentMethod, paidAt]
+      properties:
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        paymentReference: { type: string, minLength: 1, maxLength: 120 }
+        amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        paymentMethod: { type: string, enum: [ach, wire, check, card, other] }
+        paidAt: { type: string, format: date-time }
+    ExceptionResponseRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, invoiceNumber, exceptionCode, message, attachments]
+      properties:
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        exceptionCode: { type: string, pattern: "^[a-z][a-z0-9_]{1,63}$" }
+        message: { type: string, minLength: 1, maxLength: 1000 }
+        attachments:
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/SupportingDocument" }
+    InvoiceInquiryRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, invoiceNumber, inquiryType, subject, message]
+      properties:
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        inquiryType: { type: string, enum: [payment_inquiry, invoice_inquiry, expedite_payment, payment_terms, invoice_entry_assistance] }
+        subject: { type: string, minLength: 1, maxLength: 160 }
+        message: { type: string, minLength: 1, maxLength: 1000 }
     PortalResultRequest:
       type: object
       additionalProperties: false
@@ -599,7 +873,7 @@ components:
         recordedAt: { type: string, format: date-time }
     PurchaseOrder:
       type: object
-      required: [purchaseOrderNumber, description, currency, authorizedAmountMinor, remainingAmountMinor, status, version]
+      required: [purchaseOrderNumber, description, currency, authorizedAmountMinor, remainingAmountMinor, status, orderDate, paymentTerms, receiptRequired, receivedAmountMinor, serviceEntryRequired, serviceEntryStatus, priceToleranceBasisPoints, amountToleranceMinor, requiredAttachmentKinds, lines, version]
       properties:
         purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
         description: { type: string }
@@ -607,6 +881,29 @@ components:
         authorizedAmountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
         remainingAmountMinor: { type: integer, minimum: 0, maximum: 9007199254740991 }
         status: { type: string, enum: [open, closed] }
+        orderDate: { type: string, format: date }
+        paymentTerms: { type: string, minLength: 1, maxLength: 80 }
+        receiptRequired: { type: boolean }
+        receivedAmountMinor: { type: integer, minimum: 0, maximum: 9007199254740991 }
+        serviceEntryRequired: { type: boolean }
+        serviceEntryStatus: { type: string, enum: [not_required, missing, pending, accepted, rejected] }
+        priceToleranceBasisPoints: { type: integer, minimum: 0, maximum: 10000 }
+        amountToleranceMinor: { type: integer, minimum: 0, maximum: 9007199254740991 }
+        requiredAttachmentKinds: { type: array, uniqueItems: true, items: { type: string } }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [lineNumber, description, unitOfMeasure, orderedQuantity, receivedQuantity, unitPriceMinor, lineAmountMinor, invoicedAmountMinor]
+            properties:
+              lineNumber: { type: integer, minimum: 1 }
+              description: { type: string }
+              unitOfMeasure: { type: string }
+              orderedQuantity: { type: number, exclusiveMinimum: 0 }
+              receivedQuantity: { type: number, minimum: 0 }
+              unitPriceMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+              lineAmountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+              invoicedAmountMinor: { type: integer, minimum: 0, maximum: 9007199254740991 }
         version: { type: integer, minimum: 1 }
     SubmissionRequirements:
       type: object
@@ -677,7 +974,7 @@ components:
         purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
         amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
         currency: { type: string, pattern: "^[A-Z]{3}$" }
-        status: { type: string, enum: [received, under_review, accepted, rejected, paid] }
+        status: { type: string, enum: [received, under_review, accepted, rejected, disputed, voided, paid] }
         createdAt: { type: string, format: date-time }
         settlementExpectedAt:
           type: [string, "null"]
@@ -685,6 +982,20 @@ components:
           description: Synthetic buyer settlement time for each eligible second committed invoice.
         paidAt: { type: [string, "null"], format: date-time }
         paymentReference: { type: [string, "null"], pattern: "^PAY-[0-9]{8}-[A-F0-9]{8}$" }
+        revision: { type: integer, minimum: 1 }
+        timeline:
+          type: array
+          items:
+            type: object
+            required: [status, eventCode, message, actorKind, createdAt]
+            properties:
+              status: { type: string }
+              eventCode: { type: string }
+              message: { type: string }
+              actorKind: { type: string, enum: [supplier, buyer, system] }
+              createdAt: { type: string, format: date-time }
+        exceptions: { type: array, items: { type: object, additionalProperties: true } }
+        inquiries: { type: array, items: { type: object, additionalProperties: true } }
     InvoiceStatusResult:
       type: object
       additionalProperties: false
@@ -698,9 +1009,10 @@ components:
     OpenFinanceWorkspaceState:
       type: object
       additionalProperties: false
-      required: [invoices, auditEvents, auditAvailable]
+      required: [invoices, followups, auditEvents, auditAvailable]
       properties:
         invoices: { type: array, items: { $ref: "#/components/schemas/InvoiceQueueItem" } }
+        followups: { type: array, items: { $ref: "#/components/schemas/PortalFollowup" } }
         auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
         auditAvailable: { type: boolean, description: False when the optional recent-audit read failed; auditEvents is then empty. }
     AcmeWorkspaceState:
@@ -715,10 +1027,11 @@ components:
     OpenFinanceDemoResetResult:
       type: object
       additionalProperties: false
-      required: [restoredInvoiceCount, deletedDeliveryEventCount, deletedErpEventCount, deletedErpInvoiceCount, resetAt]
+      required: [restoredInvoiceCount, deletedDeliveryEventCount, deletedRemittanceEventCount, deletedErpEventCount, deletedErpInvoiceCount, resetAt]
       properties:
         restoredInvoiceCount: { type: integer, const: 4 }
         deletedDeliveryEventCount: { type: integer, minimum: 0 }
+        deletedRemittanceEventCount: { type: integer, minimum: 0 }
         deletedErpEventCount: { type: integer, minimum: 0 }
         deletedErpInvoiceCount: { type: integer, minimum: 0 }
         resetAt: { type: string, format: date-time }

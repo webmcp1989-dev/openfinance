@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import { OpenFinanceWorkspace } from "@/components/openfinance-workspace";
 import { loadAuditSnapshot } from "@/lib/services/audit-service";
-import { listInvoiceQueue } from "@/lib/services/invoice-service";
+import { listInvoiceQueue, listPortalFollowups } from "@/lib/services/invoice-service";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +23,14 @@ export default async function OpenFinanceHome() {
   const userId = authData?.claims?.sub;
   if (authError || typeof userId !== "string") redirect("/login");
 
-  const [{ data: profileData, error: profileError }, invoices, auditSnapshot] = await Promise.all([
+  const [{ data: profileData, error: profileError }, invoices, followups, auditSnapshot] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name, organization_id")
       .eq("user_id", userId)
       .single(),
     listInvoiceQueue(supabase),
+    listPortalFollowups(supabase),
     loadAuditSnapshot(supabase),
   ]);
 
@@ -46,6 +47,7 @@ export default async function OpenFinanceHome() {
 
   return <OpenFinanceWorkspace
     initialInvoices={invoices}
+    initialFollowups={followups}
     initialAuditEvents={auditSnapshot.auditEvents}
     initialAuditAvailable={auditSnapshot.auditAvailable}
     fullName={profile.full_name}

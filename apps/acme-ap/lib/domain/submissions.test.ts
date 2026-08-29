@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { invoiceCandidateSchema, submitBatchRequestSchema } from "./submissions";
+import {
+  exceptionResponseRequestSchema,
+  invoiceCandidateSchema,
+  invoiceInquiryRequestSchema,
+  replacementInvoiceRequestSchema,
+  submitBatchRequestSchema,
+} from "./submissions";
 
 const candidate = {
   invoiceNumber: "INV-10482",
@@ -43,6 +49,41 @@ describe("Acme submission request contracts", () => {
     expect(submitBatchRequestSchema.safeParse({
       idempotencyKey: "batch-20260829-limit",
       invoices,
+    }).success).toBe(false);
+  });
+});
+
+describe("Acme exception-to-cash request contracts", () => {
+  test("bounds evidence count and rejects caller-controlled fields", () => {
+    const attachment = { ...candidate.document, documentKind: "proof_of_delivery" };
+    expect(exceptionResponseRequestSchema.safeParse({
+      idempotencyKey: "exception-response-0001",
+      invoiceNumber: candidate.invoiceNumber,
+      exceptionCode: "missing_receipt",
+      message: "Receipt attached.",
+      attachments: [attachment, attachment, attachment, attachment],
+    }).success).toBe(false);
+    expect(exceptionResponseRequestSchema.safeParse({
+      idempotencyKey: "exception-response-0002",
+      invoiceNumber: candidate.invoiceNumber,
+      exceptionCode: "missing_receipt",
+      message: "Receipt attached.",
+      supplierId: "caller-controlled",
+    }).success).toBe(false);
+  });
+
+  test("requires a complete corrected invoice and a supported inquiry type", () => {
+    expect(replacementInvoiceRequestSchema.safeParse({
+      idempotencyKey: "replacement-request-0001",
+      originalInvoiceNumber: candidate.invoiceNumber,
+      invoice: { ...candidate, invoiceNumber: "../../replacement" },
+    }).success).toBe(false);
+    expect(invoiceInquiryRequestSchema.safeParse({
+      idempotencyKey: "inquiry-request-0001",
+      invoiceNumber: candidate.invoiceNumber,
+      inquiryType: "delete_invoice",
+      subject: "Question",
+      message: "Please review.",
     }).success).toBe(false);
   });
 });

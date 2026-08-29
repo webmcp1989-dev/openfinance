@@ -130,13 +130,12 @@ private and are not stored in this repository.
   and checksum verification. The deployed AP PO and status lookups returned the
   live authorized balance and the correct no-receipt state without mutation.
 - AR adds a human-only ERP sync control; the backend and database tests prove
-  its tenant-scoped alternating behavior without changing the four-tool AR
-  WebMCP surface.
+  its tenant-scoped alternating behavior without creating an AR-to-AP backend connection.
 - Both deployed workspaces expose a two-step human-only reset. Visual review
   confirmed the exact deletion warning, cancel path, responsive layout,
   successful state refresh, and reset audit event. The authenticated WebMCP
-  inventories remained exactly four AR tools and five AP tools, with no reset
-  tool.
+  inventories exclude reset; the current reviewed inventory is seven AR and
+  twelve AP browser tools.
 - AR provides a tenant-scoped, no-store invoice PDF download whose route and
   service tests verify exact bytes, safe headers, authorization ordering,
   structure, size, and checksum validation.

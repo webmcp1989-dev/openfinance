@@ -58,12 +58,18 @@ describe("API authorization ordering", () => {
   const writeRoutes = [
     "apps/openfinance-ar/app/api/agent/packages/route.ts",
     "apps/openfinance-ar/app/api/agent/delivery-events/route.ts",
+    "apps/openfinance-ar/app/api/agent/remittances/route.ts",
     "apps/openfinance-ar/app/api/agent/erp-sync/route.ts",
     "apps/openfinance-ar/app/api/demo/reset/route.ts",
     "apps/acme-ap/app/api/agent/purchase-orders/route.ts",
     "apps/acme-ap/app/api/agent/validate/route.ts",
     "apps/acme-ap/app/api/agent/submissions/route.ts",
     "apps/acme-ap/app/api/agent/status/route.ts",
+    "apps/acme-ap/app/api/agent/exceptions/route.ts",
+    "apps/acme-ap/app/api/agent/exception-responses/route.ts",
+    "apps/acme-ap/app/api/agent/replacements/route.ts",
+    "apps/acme-ap/app/api/agent/inquiries/route.ts",
+    "apps/acme-ap/app/api/agent/remittance/route.ts",
     "apps/acme-ap/app/api/demo/reset/route.ts",
   ];
 
@@ -112,6 +118,42 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290006_validate_pdf_structure.sql");
     expect(setup).toContain("202608290007_simulate_payment_settlement.sql");
     expect(setup).toContain("202608290008_add_authorized_demo_reset.sql");
+    expect(setup).toContain("202608300005_validate_supporting_document_pdfs.sql");
+    expect(setup).toContain("202608300005_validate_attachment_pdfs.sql");
+    expect(setup).toContain("202608300006_serialize_remittance_idempotency.sql");
+    expect(setup).toContain("202608300006_serialize_invoice_inquiries.sql");
+    expect(setup).toContain("202608300007_serialize_exception_responses.sql");
+  });
+
+  test("expanded exception-to-cash records remain tenant-scoped and database-enforced", async () => {
+    const ar = await readFile(join(root, "services/openfinance/supabase/migrations/202608300002_expand_exception_to_cash.sql"), "utf8");
+    const ap = await readFile(join(root, "services/acme/supabase/migrations/202608300001_expand_exception_to_cash.sql"), "utf8");
+    const replacement = await readFile(join(root, "services/acme/supabase/migrations/202608300002_replace_rejected_invoice.sql"), "utf8");
+    const arPdf = await readFile(join(root, "services/openfinance/supabase/migrations/202608300005_validate_supporting_document_pdfs.sql"), "utf8");
+    const apPdf = await readFile(join(root, "services/acme/supabase/migrations/202608300005_validate_attachment_pdfs.sql"), "utf8");
+    const arIdempotency = await readFile(join(root, "services/openfinance/supabase/migrations/202608300006_serialize_remittance_idempotency.sql"), "utf8");
+    const apInquiryIdempotency = await readFile(join(root, "services/acme/supabase/migrations/202608300006_serialize_invoice_inquiries.sql"), "utf8");
+    const apResponseIdempotency = await readFile(join(root, "services/acme/supabase/migrations/202608300007_serialize_exception_responses.sql"), "utf8");
+
+    for (const migration of [ar, ap]) {
+      expect(migration).toContain("enable row level security");
+      expect(migration).toContain("from public, anon, authenticated");
+      expect(migration).toContain("auth.uid()");
+    }
+    expect(ar).toContain("Payment exceeds invoice amount");
+    expect(replacement).toContain("Portal has not authorized invoice replacement");
+    expect(ap).toContain("unique (supplier_id, idempotency_key)");
+    expect(replacement).toContain("for update");
+    expect(replacement).toContain("Replacement exceeds purchase order balance");
+    expect(replacement).toContain("is_current = false");
+    for (const migration of [arPdf, apPdf]) {
+      expect(migration).toContain("convert_to('%PDF-', 'UTF8')");
+      expect(migration).toContain("convert_to('%%EOF', 'UTF8')");
+    }
+    for (const migration of [arIdempotency, apInquiryIdempotency, apResponseIdempotency]) {
+      expect(migration).toContain("pg_advisory_xact_lock");
+      expect(migration).toContain("Idempotency key reused with different payload");
+    }
   });
 
   test("money stays within JSON's exact-integer range at every boundary", async () => {
@@ -274,18 +316,18 @@ describe("WebMCP safety contracts", () => {
     expect(ACME_TRANSFER_LIMIT).toBe(3);
     expect(ar).toContain("maxItems: MAX_TRANSFER_INVOICE_COUNT");
     expect(ap).toContain("maxItems: MAX_TRANSFER_INVOICE_COUNT");
-    expect(openApi.match(/maxItems: 3/g)).toHaveLength(2);
+    expect(openApi.match(/maxItems: 3/g)).toHaveLength(3);
   });
 
   test("business-data reads are marked untrusted and all requests are cancellable", async () => {
     const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
     const ap = await readFile(join(root, "apps/acme-ap/components/acme-site-tools.tsx"), "utf8");
-    expect(ar.match(/untrustedContentHint: true/g)).toHaveLength(2);
-    expect(ap.match(/untrustedContentHint: true/g)).toHaveLength(3);
-    expect(ar.match(/signal: options\?\.signal/g)).toHaveLength(4);
-    expect(ap.match(/signal: options\?\.signal/g)).toHaveLength(5);
-    expect(ar.match(/title: "/g)).toHaveLength(4);
-    expect(ap.match(/title: "/g)).toHaveLength(5);
+    expect(ar.match(/untrustedContentHint: true/g)).toHaveLength(4);
+    expect(ap.match(/untrustedContentHint: true/g)).toHaveLength(7);
+    expect(ar.match(/signal: options\?\.signal/g)).toHaveLength(7);
+    expect(ap.match(/signal: options\?\.signal/g)).toHaveLength(12);
+    expect(ar.match(/title: "/g)).toHaveLength(7);
+    expect(ap.match(/title: "/g)).toHaveLength(12);
     expect(ap).toContain('pattern: "^[A-Za-z0-9+/]+={0,2}$"');
     expect(ap).toContain("human approves transferring that exact package to Acme");
   });
@@ -332,11 +374,20 @@ describe("WebMCP safety contracts", () => {
     expect(ar).toContain("/api/agent/invoices/${encodeURIComponent(invoiceNumber)}/document");
     expect(ar.match(/"\/api\/agent\/delivery-events"/g)).toHaveLength(1);
     expect(ar).toContain("Record portal outcome");
+    expect(ar).toContain('"/api/agent/supporting-documents"');
+    expect(ar).toContain('"/api/agent/remittances"');
+    expect(ar).toContain("Portal follow-ups and remittance");
     expect(apPage).toContain("getRequirements(supabase)");
     expect(ap).toContain('"/api/agent/purchase-orders"');
     expect(ap).toContain('"/api/agent/validate"');
     expect(ap).toContain('"/api/agent/submissions"');
     expect(ap).toContain('"/api/agent/status"');
+    expect(ap).toContain("statusLookup.exceptions");
+    expect(ap).toContain('"/api/agent/exception-responses"');
+    expect(ap).toContain('"/api/agent/replacements"');
+    expect(ap).toContain('"/api/agent/inquiries"');
+    expect(ap).toContain("submission.paymentReference");
+    expect(ap).toContain("Resolve, correct, or ask AP");
     expect(ap).toContain("approve submission to Acme AP");
   });
 
@@ -360,11 +411,15 @@ describe("OpenAPI contract coverage", () => {
     const writePaths = [
       "/api/agent/packages",
       "/api/agent/delivery-events",
+      "/api/agent/remittances",
       "/api/agent/erp-sync",
       "/api/agent/purchase-orders",
       "/api/agent/validate",
       "/api/agent/submissions",
       "/api/agent/status",
+      "/api/agent/exception-responses",
+      "/api/agent/replacements",
+      "/api/agent/inquiries",
       "/api/demo/reset",
     ];
 
@@ -374,6 +429,14 @@ describe("OpenAPI contract coverage", () => {
       expect(responses).toHaveProperty("400");
       expect(responses).toHaveProperty("401");
       expect(responses).toHaveProperty("403");
+      expect(responses).toHaveProperty("415");
+    }
+
+    for (const path of ["/api/agent/exceptions", "/api/agent/remittance"]) {
+      const responses = document.paths[path]?.post?.responses;
+      expect(responses).toBeDefined();
+      expect(responses).toHaveProperty("400");
+      expect(responses).toHaveProperty("401");
       expect(responses).toHaveProperty("415");
     }
 

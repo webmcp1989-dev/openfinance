@@ -40,9 +40,12 @@ function dependencies(overrides: Record<string, unknown> = {}) {
     listCustomers: async () => [],
     listInvoiceQueue: async () => [],
     getSubmissionPackage: async () => [],
+    listPortalFollowups: async () => [],
+    getInvoiceSupportingDocuments: async () => [],
     listAuditEvents: async () => [],
     syncInvoicesFromErp: async () => ({ importedCount: 0, items: [], syncedAt: "2026-08-29T12:00:00.000Z" }),
     recordDeliveryEvent: async () => ({}),
+    recordPaymentRemittance: async () => ({}),
     ...overrides,
   };
 }
@@ -84,10 +87,13 @@ describe("OpenFinance AR remote MCP tools", () => {
       "list_customers",
       "list_invoices",
       "get_submission_package",
+      "list_portal_followups",
+      "get_invoice_supporting_documents",
       "list_audit_events",
       "sync_invoices_from_erp",
       "record_portal_result",
       "record_portal_exception",
+      "record_payment_remittance",
     ]);
     expect(tools.some((tool) => tool.name.includes("reset"))).toBe(false);
     expect(tools.find((tool) => tool.name === "list_invoices")?.annotations?.readOnlyHint).toBe(true);

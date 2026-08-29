@@ -1,0 +1,28 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set search_path = public, extensions;
+
+select plan(15);
+select has_table('public', 'purchase_order_lines', 'purchase-order line context exists');
+select has_table('public', 'invoice_status_events', 'invoice status timeline exists');
+select has_table('public', 'invoice_exceptions', 'structured invoice exceptions exist');
+select has_table('public', 'invoice_exception_responses', 'supplier exception responses exist');
+select has_table('public', 'invoice_inquiries', 'supplier inquiries exist');
+select has_table('public', 'invoice_replacement_requests', 'replacement request ledger exists');
+select is((select relrowsecurity from pg_class where oid = 'public.invoice_exceptions'::regclass), true, 'invoice exceptions enforce RLS');
+select is((select relrowsecurity from pg_class where oid = 'public.invoice_inquiries'::regclass), true, 'invoice inquiries enforce RLS');
+select ok(not has_table_privilege('authenticated', 'public.invoice_exceptions', 'insert'), 'authenticated callers cannot forge buyer exceptions');
+select ok(not has_table_privilege('authenticated', 'public.invoice_status_events', 'insert'), 'authenticated callers cannot forge status events');
+select ok(not (select prosecdef from pg_proc where oid = 'public.respond_to_invoice_exception(text,text,jsonb)'::regprocedure), 'public exception-response wrapper uses caller privileges');
+select ok(not (select prosecdef from pg_proc where oid = 'public.replace_rejected_invoice(text,text,jsonb)'::regprocedure), 'public replacement wrapper uses caller privileges');
+select ok(position('pg_advisory_xact_lock' in pg_get_functiondef('private.create_invoice_inquiry(text,text,jsonb)'::regprocedure)) > 0, 'concurrent inquiry retries are serialized');
+select ok(position('pg_advisory_xact_lock' in pg_get_functiondef('private.respond_to_invoice_exception(text,text,jsonb)'::regprocedure)) > 0, 'concurrent exception-response retries are serialized');
+select ok(exists (
+  select 1 from pg_constraint
+  where conrelid = 'public.invoice_attachments'::regclass
+    and conname = 'invoice_attachments_pdf_structure_check'
+    and position('%%EOF' in pg_get_constraintdef(oid)) > 0
+), 'supporting-evidence PDFs require a terminal marker');
+
+select * from finish();
+rollback;

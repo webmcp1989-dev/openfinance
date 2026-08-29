@@ -2,7 +2,13 @@ import { describe, expect, mock, test } from "bun:test";
 import { createHash } from "node:crypto";
 
 mock.module("server-only", () => ({}));
-const { getInvoiceDocument, getSubmissionPackage, recordDeliveryEvent, syncInvoicesFromErp } = await import("./invoice-service");
+const {
+  getInvoiceDocument,
+  getInvoiceSupportingDocuments,
+  getSubmissionPackage,
+  recordDeliveryEvent,
+  syncInvoicesFromErp,
+} = await import("./invoice-service");
 
 function renderTestPdf(label: string) {
   const stream = `BT\n/F1 12 Tf\n72 720 Td\n(${label}) Tj\nET\n`;
@@ -128,6 +134,53 @@ describe("OpenFinance human invoice downloads", () => {
         code: "invoice_document_not_found",
         message: "Invoice document was not found",
       });
+  });
+});
+
+describe("OpenFinance supporting documents", () => {
+  function supportingDocumentClient(overrides: Record<string, unknown> = {}) {
+    const invoiceLookup = {
+      select() { return invoiceLookup; },
+      eq() { return invoiceLookup; },
+      maybeSingle() { return Promise.resolve({ data: { id: "invoice-id" }, error: null }); },
+    };
+    const documentLookup = {
+      select() { return documentLookup; },
+      eq() { return documentLookup; },
+      order() {
+        return Promise.resolve({
+          data: [{
+            document_kind: "proof_of_delivery",
+            file_name: "INV-10482-proof.pdf",
+            media_type: "application/pdf",
+            content_base64: validDocumentBase64,
+            sha256: validDocumentSha256,
+            size_bytes: validDocumentBytes.length,
+            ...overrides,
+          }],
+          error: null,
+        });
+      },
+    };
+    return {
+      from(table: string) { return table === "invoices" ? invoiceLookup : documentLookup; },
+    };
+  }
+
+  test("returns only integrity-verified supporting PDFs", async () => {
+    const result = await getInvoiceSupportingDocuments(supportingDocumentClient() as never, "INV-10482");
+    expect(result[0]).toMatchObject({
+      documentKind: "proof_of_delivery",
+      sha256: validDocumentSha256,
+      sizeBytes: validDocumentBytes.length,
+    });
+  });
+
+  test("fails closed when stored supporting-document metadata is inconsistent", async () => {
+    await expect(getInvoiceSupportingDocuments(
+      supportingDocumentClient({ size_bytes: validDocumentBytes.length + 1 }) as never,
+      "INV-10482",
+    )).rejects.toMatchObject({ status: 500, code: "supporting_document_invalid" });
   });
 });
 

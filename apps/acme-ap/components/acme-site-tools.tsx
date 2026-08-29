@@ -31,6 +31,20 @@ const invoiceSchema = {
   },
 } as const;
 
+const invoiceNumberInputSchema = {
+  type: "object", additionalProperties: false, required: ["invoiceNumber"],
+  properties: { invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
+} as const;
+
+const supportingDocumentSchema = {
+  ...invoiceSchema.properties.document,
+  required: ["documentKind", "fileName", "mediaType", "contentBase64", "sha256"],
+  properties: {
+    documentKind: { type: "string", enum: ["proof_of_delivery", "service_acceptance", "timesheet", "tax_document", "contract", "other"] },
+    ...invoiceSchema.properties.document.properties,
+  },
+} as const;
+
 export function AcmeSiteTools() {
   useEffect(() => {
     const context = document.modelContext;
@@ -46,9 +60,17 @@ export function AcmeSiteTools() {
         execute: (_input, options) => apiRequest("/api/agent/requirements", { signal: options?.signal }),
       },
       {
-        name: "find_purchase_order",
-        title: "Find purchase order",
-        description: "Find one purchase order visible to the signed-in supplier and return its live status and remaining balance. This does not reserve funds or modify the order.",
+        name: "list_open_purchase_orders",
+        title: "List open purchase orders",
+        description: "List every open purchase order visible to the signed-in supplier, including line, receipt, service-entry, tolerance, attachment, and balance context. This does not reserve funds or modify an order.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: (_input, options) => apiRequest("/api/agent/purchase-orders", { signal: options?.signal }),
+      },
+      {
+        name: "get_purchase_order_details",
+        title: "Get purchase order details",
+        description: "Read one supplier-authorized purchase order with live line amounts, invoiced and received quantities, service-entry state, tolerances, payment terms, required evidence, and remaining balance. This does not reserve funds or modify the order.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["purchaseOrderNumber"],
           properties: { purchaseOrderNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
@@ -57,6 +79,26 @@ export function AcmeSiteTools() {
         execute: (input, options) => apiRequest("/api/agent/purchase-orders", {
           method: "POST", body: JSON.stringify(input), signal: options?.signal,
         }),
+      },
+      {
+        name: "list_supplier_invoices",
+        title: "List supplier invoices",
+        description: "List the signed-in supplier's portal invoices and effective statuses. Optionally filter by status or purchase order. This is read-only and supports batch follow-up without guessing invoice identifiers.",
+        inputSchema: {
+          type: "object", additionalProperties: false,
+          properties: {
+            status: { type: "string", enum: ["received", "under_review", "accepted", "rejected", "disputed", "voided", "paid"] },
+            purchaseOrderNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" },
+          },
+        },
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: (input, options) => {
+          const query = new URLSearchParams();
+          const filters = input as { status?: unknown; purchaseOrderNumber?: unknown };
+          if (typeof filters.status === "string") query.set("status", filters.status);
+          if (typeof filters.purchaseOrderNumber === "string") query.set("purchaseOrderNumber", filters.purchaseOrderNumber);
+          return apiRequest(`/api/agent/supplier-invoices?${query}`, { signal: options?.signal });
+        },
       },
       {
         name: "validate_invoice",
@@ -91,13 +133,98 @@ export function AcmeSiteTools() {
       {
         name: "get_invoice_status",
         title: "Get invoice status",
-        description: "Read Acme's receipt, current AP status, and any completed synthetic payment reference for one invoice belonging to the signed-in supplier. This is a read-only status check.",
-        inputSchema: {
-          type: "object", additionalProperties: false, required: ["invoiceNumber"],
-          properties: { invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
-        },
+        description: "Read one supplier invoice's current receipt, revision, complete timestamped AP timeline, structured exceptions, inquiries, and any completed synthetic payment reference. This is a read-only status check.",
+        inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: (input, options) => apiRequest("/api/agent/status", {
+          method: "POST", body: JSON.stringify(input), signal: options?.signal,
+        }),
+      },
+      {
+        name: "get_invoice_exception",
+        title: "Get invoice exception",
+        description: "Read structured exceptions for one supplier invoice, including code, category, responsible owner, resolution guidance, permitted actions, and required evidence. This does not change the exception.",
+        inputSchema: invoiceNumberInputSchema,
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: (input, options) => apiRequest("/api/agent/exceptions", {
+          method: "POST", body: JSON.stringify(input), signal: options?.signal,
+        }),
+      },
+      {
+        name: "respond_to_invoice_exception",
+        title: "Respond to invoice exception",
+        description: "CONSEQUENTIAL WRITE: add a supplier response and up to three verified supporting PDFs to one actionable portal exception. Show the exact message and attachments and obtain human approval before calling. This does not replace or resubmit the invoice.",
+        inputSchema: {
+          type: "object", additionalProperties: false,
+          required: ["idempotencyKey", "invoiceNumber", "exceptionCode", "message", "attachments"],
+          properties: {
+            idempotencyKey: { type: "string", minLength: 16, maxLength: 128 },
+            invoiceNumber: invoiceNumberInputSchema.properties.invoiceNumber,
+            exceptionCode: { type: "string", pattern: "^[a-z][a-z0-9_]{1,63}$" },
+            message: { type: "string", minLength: 1, maxLength: 1000 },
+            attachments: { type: "array", minItems: 0, maxItems: 3, items: supportingDocumentSchema },
+          },
+        },
+        annotations: { readOnlyHint: false },
+        execute: async (input, options) => {
+          const result = await apiRequest("/api/agent/exception-responses", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          });
+          window.dispatchEvent(new Event("acme:data-changed"));
+          return result;
+        },
+      },
+      {
+        name: "replace_rejected_invoice",
+        title: "Replace rejected invoice",
+        description: "CONSEQUENTIAL WRITE: atomically supersede the current rejected or disputed invoice with a corrected revision, revalidate its PDF and PO, and adjust PO balances. Call only when the portal exception explicitly permits replacement and after the human approves the exact corrected invoice.",
+        inputSchema: {
+          type: "object", additionalProperties: false, required: ["idempotencyKey", "invoice"],
+          properties: {
+            idempotencyKey: { type: "string", minLength: 16, maxLength: 128 },
+            invoice: invoiceSchema,
+          },
+        },
+        annotations: { readOnlyHint: false },
+        execute: async (input, options) => {
+          const result = await apiRequest("/api/agent/replacements", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          });
+          window.dispatchEvent(new Event("acme:data-changed"));
+          return result;
+        },
+      },
+      {
+        name: "create_invoice_inquiry",
+        title: "Create invoice inquiry",
+        description: "CONSEQUENTIAL WRITE: open a tracked buyer AP case for a payment question, invoice question, expedite request, payment-terms issue, or invoice-entry assistance. Show the exact case type, subject, and message and obtain human approval first.",
+        inputSchema: {
+          type: "object", additionalProperties: false,
+          required: ["idempotencyKey", "invoiceNumber", "inquiryType", "subject", "message"],
+          properties: {
+            idempotencyKey: { type: "string", minLength: 16, maxLength: 128 },
+            invoiceNumber: invoiceNumberInputSchema.properties.invoiceNumber,
+            inquiryType: { type: "string", enum: ["payment_inquiry", "invoice_inquiry", "expedite_payment", "payment_terms", "invoice_entry_assistance"] },
+            subject: { type: "string", minLength: 1, maxLength: 160 },
+            message: { type: "string", minLength: 1, maxLength: 1000 },
+          },
+        },
+        annotations: { readOnlyHint: false },
+        execute: async (input, options) => {
+          const result = await apiRequest("/api/agent/inquiries", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          });
+          window.dispatchEvent(new Event("acme:data-changed"));
+          return result;
+        },
+      },
+      {
+        name: "get_payment_remittance",
+        title: "Get payment remittance",
+        description: "Read the payment schedule and, once paid, the exact payment reference, method, amount, currency, and invoice allocation for one supplier invoice. This does not trigger or change payment.",
+        inputSchema: invoiceNumberInputSchema,
+        annotations: { readOnlyHint: true, untrustedContentHint: true },
+        execute: (input, options) => apiRequest("/api/agent/remittance", {
           method: "POST", body: JSON.stringify(input), signal: options?.signal,
         }),
       },

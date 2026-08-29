@@ -3,7 +3,17 @@ import { z } from "zod";
 
 import { purchaseOrderRequestSchema } from "@/lib/domain/submissions";
 import { apiError, requireAuthenticatedClient, requireSameOriginJson } from "@/lib/http";
-import { findPurchaseOrder } from "@/lib/services/submission-service";
+import { findPurchaseOrder, listPurchaseOrders } from "@/lib/services/submission-service";
+
+export async function GET() {
+  try {
+    const supabase = await requireAuthenticatedClient();
+    const purchaseOrders = (await listPurchaseOrders(supabase)).filter((order) => order.status === "open");
+    return Response.json({ purchaseOrders, count: purchaseOrders.length }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    return apiError(error);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

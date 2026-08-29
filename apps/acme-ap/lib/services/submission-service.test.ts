@@ -163,6 +163,19 @@ describe("Acme invoice validation", () => {
         calls.push(`rpc:${name}:${JSON.stringify(args)}`);
         return Promise.resolve({ data: [row], error: null });
       },
+      from(table: string) {
+        const response = table === "invoice_submissions"
+          ? { data: { id: "submission-1", revision: 1 }, error: null }
+          : { data: [], error: null };
+        const chain = {
+          select() { return chain; },
+          eq() { return chain; },
+          order() { return chain; },
+          maybeSingle() { return Promise.resolve(response); },
+          then(resolve: (value: typeof response) => unknown) { return Promise.resolve(response).then(resolve); },
+        };
+        return chain;
+      },
     };
 
     const result = await getInvoiceStatus(client as never, "INV-10482");
@@ -177,6 +190,16 @@ describe("Acme invoice validation", () => {
       settlementExpectedAt: "2026-08-29T07:00:10.000Z",
       paidAt: "2026-08-29T07:00:10.000Z",
       paymentReference: "PAY-20260829-1234ABCD",
+      revision: 1,
+      timeline: [{
+        status: "paid",
+        eventCode: "payment_completed",
+        message: "Payment completed with reference PAY-20260829-1234ABCD.",
+        actorKind: "system",
+        createdAt: "2026-08-29T07:00:10.000Z",
+      }],
+      exceptions: [],
+      inquiries: [],
     });
     expect(calls).toEqual([
       'rpc:get_invoice_submission_statuses:{"p_invoice_number":"INV-10482"}',

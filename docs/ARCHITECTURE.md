@@ -39,11 +39,11 @@ Both public mutation wrappers serialize tenant-scoped idempotency keys and deriv
 The browser never receives a service-role key. The frontend is not an authorization or business-rule boundary.
 Shared hashing and typed-error primitives live in framework-free `http-core` modules, so domain services and their tests do not initialize Next.js or Supabase infrastructure.
 
-Every one of the nine WebMCP operations also has a first-class human UI path. Those controls call the same same-origin routes and services as the tools; the UI adds guidance and informed confirmation but never replaces backend authorization or validation.
+Every one of the 19 browser WebMCP operations also has a first-class human UI path. Those controls call the same same-origin routes and services as the tools; the UI adds guidance and informed confirmation but never replaces backend authorization or validation.
 
 ## AR ERP sync simulation
 
-The AR workspace includes **Sync invoices now**, which models an inbound ERP connector without expanding the fixed nine-tool WebMCP challenge contract. It is available through the human UI and the separately authenticated AR remote MCP. Its same-origin UI route and MCP tool both reach the same authoritative service/RPC. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
+The AR workspace includes **Sync invoices now**, which models an inbound ERP connector without turning customer interoperability into a hidden integration. It is available through the human UI and the separately authenticated AR remote MCP, while browser WebMCP exposes only the AR/AP capabilities needed for the human-agent workflow. Its same-origin UI route and MCP tool both reach the same authoritative service/RPC. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
 
 Repeatable judging uses separate two-step human resets in AR and AP. These are not WebMCP tools and are not a cross-application integration: each app requires a same-origin confirmation, authorizes the fixed synthetic operator or submitter in its own database, restores only its own fixture rows in one serialized transaction, and writes one reset audit event. A reviewer must restore both applications independently.
 
@@ -72,6 +72,12 @@ Application preflight improves the human-agent experience but the transaction is
 After each committed submission, a private trigger assigns a serialized per-supplier sequence. Every second invoice receives one immutable synthetic payment schedule for 10 seconds later and a scheduling audit event in the same transaction. A public security-invoker wrapper delegates to a private function that derives supplier scope from the authenticated profile, computes the effective `paid` status from database time, and exposes the payment reference only after maturity. The settlement and sequence tables have no direct application read or write grants.
 
 The browser schedules a single refresh for the next known settlement time, avoiding polling. Status reads never mutate data, and idempotent submission retries cannot create another schedule. This is an explicit buyer-side challenge simulation inside Acme AP, not a payment processor or a hidden integration with OpenFinance AR.
+
+## Exception-to-cash records
+
+AP purchase orders expose supplier-scoped line, receipt, service-entry, tolerance, attachment, and payment-term context. AP status events, structured exceptions, supplier responses, verified evidence, corrected invoice revisions, tracked inquiries, and payment remittance remain durable tenant-owned records. Exception responses, inquiries, and replacements are idempotent database transactions; replacement is allowed only for a current rejected or disputed invoice whose open exception explicitly permits it, and PO balance release/reallocation is atomic.
+
+AR stores evidence independently and never reads AP records directly. Its follow-up service derives actionable status-stale, overdue, blocked, rejected, and partially paid work from AR state. Verified remittance writeback is an idempotent transaction that requires an existing portal receipt, enforces invoice currency and remaining balance, and supports partial allocations without accepting overpayment.
 
 ## Data transfer
 

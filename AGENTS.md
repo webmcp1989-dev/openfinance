@@ -54,8 +54,8 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - Postgres derives tenant/supplier identity, authorizes roles, locks concurrent state, validates invariants, and commits consequential changes atomically.
 - Keep UI, HTTP, service, domain, data-access, and integration concerns separate. Do not leak Next.js, Supabase, Vercel, or browser details into domain modules.
 - Reuse bounded helpers within one application. Do not create shared business schemas or code that secretly couples AR and AP.
-- All nine WebMCP capabilities also have human UI paths backed by the same services. Preserve exactly four AR and five AP challenge tools unless the documented demo contract is deliberately revised.
-- ERP invoice sync is available in the human UI and AR remote MCP, but is not a tenth browser WebMCP challenge tool; see `docs/MCP.md`.
+- All 19 browser WebMCP capabilities have human UI paths backed by the same services. Preserve the seven AR and twelve AP tools as clear non-overlapping business capabilities; reset remains human-only.
+- ERP invoice sync is available in the human UI and AR remote MCP, but remains outside the browser WebMCP inventory; see `docs/MCP.md`.
 - The AR remote MCP is an own-system access surface only. Preserve exact Supabase OAuth resource/audience validation, RLS-bound bearer access, consent/revocation, OAuth audit attribution, and the technical prohibition on OAuth demo reset. Never let it call AP directly.
 - Preserve the Custom Access Token hook: hosted Supabase currently does not map RFC 8707 `resource` into `aud`, so the hook binds OAuth tokens to the exact MCP URL while leaving portal sessions unchanged.
 - Synthetic invoice files must remain genuinely renderable, credible invoices, not signature/EOF placeholders. Preserve the private database renderer, authoritative supplier/customer/invoice/date/PO/amount fields, deterministic Net-30 due date, explicit synthetic-data label, exact cross-reference offsets, parser/render tests, and authenticated download validation.
@@ -69,6 +69,7 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - Mutations require exact same-origin JSON requests. Validate every process boundary and return public error codes without raw database details.
 - Consequential/retryable writes must be tenant-scoped, idempotent, concurrency-safe, auditable, and transactionally correct.
 - Cross-site document transfer and AP submission require separate, informed human approvals. Preview destination, invoice numbers, POs, amounts, total, and exclusions.
+- Exception responses, corrected invoice replacement, buyer inquiries, and AR remittance writeback also require an exact human preview and approval immediately before the consequential write.
 - Treat tool inputs/outputs and uploaded documents as untrusted. Preserve the bounded PDF, SHA-256, canonical base64, exact-integer money, and three-item batch controls.
 - Keep security headers, no-cache authenticated state, optional-audit degradation, and visible post-write refresh behavior.
 

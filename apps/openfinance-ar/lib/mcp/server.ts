@@ -8,6 +8,7 @@ import {
   deliveryEventRequestSchema,
   erpSyncRequestSchema,
   packageRequestSchema,
+  paymentRemittanceRequestSchema,
   type InvoiceQueueItem,
 } from "@/lib/domain/invoices";
 import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
@@ -16,7 +17,10 @@ import type { McpAuthExtra } from "@/lib/mcp/auth";
 import { listAuditEvents } from "@/lib/services/audit-service";
 import {
   getSubmissionPackage,
+  getInvoiceSupportingDocuments,
   listInvoiceQueue,
+  listPortalFollowups,
+  recordPaymentRemittance,
   recordDeliveryEvent,
   syncInvoicesFromErp,
 } from "@/lib/services/invoice-service";
@@ -39,6 +43,11 @@ const invoiceSchema = z.object({
   portalStatus: z.string().max(80).nullable(),
   exceptionCode: z.string().max(64).nullable(),
   exceptionMessage: z.string().max(500).nullable(),
+  dueDate: z.string().date(),
+  lastPortalCheckedAt: z.string().datetime({ offset: true }).nullable(),
+  paidAmountMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  lastPaymentAt: z.string().datetime({ offset: true }).nullable(),
+  lastPaymentReference: z.string().max(120).nullable(),
   version: z.number().int().positive(),
 }).strict();
 
@@ -79,6 +88,9 @@ type McpDependencies = Readonly<{
   listAuditEvents: typeof listAuditEvents;
   syncInvoicesFromErp: typeof syncInvoicesFromErp;
   recordDeliveryEvent: typeof recordDeliveryEvent;
+  listPortalFollowups: typeof listPortalFollowups;
+  getInvoiceSupportingDocuments: typeof getInvoiceSupportingDocuments;
+  recordPaymentRemittance: typeof recordPaymentRemittance;
 }>;
 
 const productionDependencies: McpDependencies = {
@@ -90,6 +102,9 @@ const productionDependencies: McpDependencies = {
   listAuditEvents,
   syncInvoicesFromErp,
   recordDeliveryEvent,
+  listPortalFollowups,
+  getInvoiceSupportingDocuments,
+  recordPaymentRemittance,
 };
 
 function authenticatedSubject(authInfo: AuthInfo) {
@@ -220,6 +235,44 @@ export function createOpenFinanceMcpServer(
     );
   }));
 
+  server.registerTool("list_portal_followups", {
+    title: "List customer portal follow-ups",
+    description: "List submitted, rejected, overdue, stale-status, partially paid, or locally blocked invoices that need customer-portal follow-up. This reads only the authenticated AR workspace and does not contact any portal.",
+    inputSchema: z.object({ customerName: z.string().min(1).max(160).optional() }).strict(),
+    outputSchema: z.object({
+      items: z.array(invoiceSchema.extend({
+        followupReason: z.enum(["needs_attention", "rejected", "status_stale", "overdue", "partially_paid"]),
+        suggestedAction: z.string().min(1).max(1000),
+        remainingDueMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+      })),
+      count: z.number().int().nonnegative(),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: { "openfinance/untrusted-content": true },
+  }, ({ customerName }) => execute(async () => {
+    const items = await dependencies.listPortalFollowups(supabase, customerName);
+    return result({ items, count: items.length }, `Found ${items.length} AR portal follow-up${items.length === 1 ? "" : "s"}.`);
+  }));
+
+  server.registerTool("get_invoice_supporting_documents", {
+    title: "Get invoice supporting documents",
+    description: "Read checksum-protected supporting PDFs for one AR invoice. Reading remains inside AR; obtain separate informed human approval before transferring any document to a customer portal.",
+    inputSchema: z.object({ invoiceNumber: invoiceNumberSchema }).strict(),
+    outputSchema: z.object({
+      invoiceNumber: invoiceNumberSchema,
+      documents: z.array(documentSchema.extend({
+        documentKind: z.enum(["proof_of_delivery", "service_acceptance", "timesheet", "tax_document", "contract", "other"]),
+        sizeBytes: z.number().int().positive().max(1_048_576),
+      })),
+      count: z.number().int().nonnegative(),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: { "openfinance/untrusted-content": true, "openfinance/sensitive-data": "invoice_supporting_documents" },
+  }, ({ invoiceNumber }) => execute(async () => {
+    const documents = await dependencies.getInvoiceSupportingDocuments(supabase, invoiceNumber);
+    return result({ invoiceNumber, documents, count: documents.length }, `Loaded ${documents.length} supporting document${documents.length === 1 ? "" : "s"} for ${invoiceNumber}.`);
+  }));
+
   server.registerTool("list_audit_events", {
     title: "List AR audit events",
     description: "Read recent tenant-scoped AR audit events. OAuth MCP actions are labeled with their client ID so a human can distinguish agent activity from portal UI activity.",
@@ -300,6 +353,28 @@ export function createOpenFinanceMcpServer(
     const request = deliveryEventRequestSchema.parse({ eventType: "portal_exception", ...input });
     const output = await dependencies.recordDeliveryEvent(supabase, request) as Record<string, unknown>;
     return result(output, `Recorded portal exceptions for ${input.items.length} invoice${input.items.length === 1 ? "" : "s"}.`);
+  }));
+
+  server.registerTool("record_payment_remittance", {
+    title: "Record verified payment remittance",
+    description: "Record an exact customer-portal payment allocation on an invoice with a verified portal receipt. Supports partial payments and transactionally rejects duplicate, excessive, or mismatched remittance. Call only after verifying the AP result.",
+    inputSchema: paymentRemittanceRequestSchema,
+    outputSchema: z.object({
+      invoiceNumber: invoiceNumberSchema,
+      paymentReference: z.string().min(1).max(120),
+      amountMinor: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+      currency: z.string().regex(/^[A-Z]{3}$/),
+      paymentMethod: z.enum(["ach", "wire", "check", "card", "other"]),
+      paidAt: z.string().datetime({ offset: true }),
+      totalPaidMinor: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+      remainingDueMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+      paymentStatus: z.enum(["paid", "partially_paid"]),
+      recordedAt: z.string().datetime({ offset: true }),
+    }).strict(),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, (input) => execute(async () => {
+    const output = await dependencies.recordPaymentRemittance(supabase, input) as Record<string, unknown>;
+    return result(output, `Recorded verified payment remittance ${input.paymentReference} for ${input.invoiceNumber}.`);
   }));
 
   return server;

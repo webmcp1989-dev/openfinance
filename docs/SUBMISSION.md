@@ -107,7 +107,7 @@ Show both audit trails and final states side by side.
 ## Final submission gate
 
 - Run the complete flow from a freshly seeded state in ChatGPT’s in-app browser at least twice.
-- Verify all nine tools are discoverable and that their titles, schemas, annotations, and results match `docs/WEBMCP.md`.
+- Verify all 19 browser WebMCP tools (7 AR and 12 AP) are discoverable and that their titles, schemas, annotations, and results match `docs/WEBMCP.md`.
 - Verify no invoice package crosses to Acme before the recorded transfer confirmation.
 - Verify no write occurs before the separate recorded submission confirmation.
 - Verify identical idempotent retries do not duplicate submissions or balance changes, and changed-payload key reuse fails.

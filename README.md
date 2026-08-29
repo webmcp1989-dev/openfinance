@@ -12,7 +12,7 @@ There is no shared database, credential, session, or point-to-point application 
 
 OpenFinance AR also provides an OAuth-protected remote MCP server at `https://openfinance-ar.vercel.app/mcp` for an AR team's own OpenAI or Claude agent. Supabase OAuth 2.1 supplies consent, PKCE, dynamic client registration, resource-bound access tokens, and revocation while existing RLS preserves user, tenant, and role boundaries. This does not create a private bridge to Acme: customer-portal interoperability still happens through the human-directed browser and Acme WebMCP. See [Remote MCP](docs/MCP.md).
 
-Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. A human can download a verified, detailed invoice PDF containing the supplier, customer, dates, PO, line item, amount due, and synthetic remittance details, then upload it through Acme's governed submission flow. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
+Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. Beyond governed upload, the applications expose line/receipt/service-entry PO context, invoice timelines, structured exception ownership, evidence-backed responses, corrected revisions, AP inquiries, payment remittance, and AR follow-up reconciliation. A human can download a verified, detailed invoice PDF and supporting evidence, then use Acme's governed submission and resolution flows. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
 
 ## Demo workflow
 
@@ -30,6 +30,7 @@ The intended result is deliberately non-trivial:
 6. Acme atomically submits only the confirmed valid invoices and returns portal references.
 7. OpenFinance records those references and the exception, updating the human-visible queue.
 8. Ten seconds later, Acme's deterministic buyer simulation marks one of the two committed invoices paid; the UI and read-only status tool expose the same payment reference.
+9. After exact human review, the agent writes that payment allocation back to AR, closing the invoice's remaining balance without any private AR-to-AP connection.
 
 ## Applications
 

@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { apiRequest } from "@/lib/browser-api";
-import type { ErpSyncResult, InvoiceQueueItem, SubmissionPackageItem } from "@/lib/domain/invoices";
+import type { ErpSyncResult, InvoiceQueueItem, InvoiceSupportingDocument, SubmissionPackageItem } from "@/lib/domain/invoices";
 import type { AuditEvent } from "@/lib/services/audit-service";
+import type { PortalFollowup } from "@/lib/services/invoice-service";
 import { OpenFinanceSiteTools } from "./openfinance-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -33,10 +34,19 @@ function idempotencyKey(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
+function parseAmountMinor(value: string) {
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(value.trim());
+  if (!match) throw new Error("Enter an amount with no more than two decimal places.");
+  const amountMinor = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error("Enter a valid positive amount.");
+  return amountMinor;
+}
+
 type OutcomeMode = "result" | "exception";
 
-export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, initialAuditAvailable, fullName, organizationName, signOutAction }: {
+export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initialAuditEvents, initialAuditAvailable, fullName, organizationName, signOutAction }: {
   initialInvoices: InvoiceQueueItem[];
+  initialFollowups: PortalFollowup[];
   initialAuditEvents: AuditEvent[];
   initialAuditAvailable: boolean;
   fullName: string;
@@ -44,6 +54,8 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
   signOutAction: () => Promise<void>;
 }) {
   const [invoices, setInvoices] = useState(initialInvoices);
+  const [followups, setFollowups] = useState(initialFollowups);
+  const [supportingDocuments, setSupportingDocuments] = useState<{ invoiceNumber: string; documents: InvoiceSupportingDocument[] } | null>(null);
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const [customerFilter, setCustomerFilter] = useState("");
@@ -60,10 +72,12 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
   const refresh = useCallback(async () => {
     const body = await apiRequest<{
       invoices: InvoiceQueueItem[];
+      followups: PortalFollowup[];
       auditEvents: AuditEvent[];
       auditAvailable: boolean;
     }>("/api/agent/workspace", { cache: "no-store" });
     setInvoices(body.invoices);
+    setFollowups(body.followups);
     setAuditEvents(body.auditEvents);
     setAuditAvailable(body.auditAvailable);
   }, []);
@@ -204,6 +218,63 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
     }
   }
 
+  async function loadSupportingDocuments(invoiceNumber: string) {
+    clearFeedback();
+    setPendingAction(`documents:${invoiceNumber}`);
+    try {
+      const result = await apiRequest<{ invoiceNumber: string; documents: InvoiceSupportingDocument[] }>("/api/agent/supporting-documents", {
+        method: "POST", body: JSON.stringify({ invoiceNumber }),
+      });
+      setSupportingDocuments(result);
+      if (result.documents.length === 0) setNotice(`${invoiceNumber} has no supporting documents.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Supporting documents could not be loaded");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  function downloadSupportingDocument(document: InvoiceSupportingDocument) {
+    const binary = atob(document.contentBase64);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: document.mediaType }));
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = document.fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function recordRemittance(formData: FormData) {
+    clearFeedback();
+    if (formData.get("confirmation") !== "approved") {
+      setError("Review and confirm the exact payment before recording it.");
+      return;
+    }
+    setPendingAction("remittance");
+    try {
+      const invoiceNumber = String(formData.get("invoiceNumber") ?? "");
+      await apiRequest("/api/agent/remittances", {
+        method: "POST",
+        body: JSON.stringify({
+          idempotencyKey: idempotencyKey("ui-remittance"),
+          invoiceNumber,
+          paymentReference: String(formData.get("paymentReference") ?? ""),
+          amountMinor: parseAmountMinor(String(formData.get("amount") ?? "")),
+          currency: "USD",
+          paymentMethod: String(formData.get("paymentMethod") ?? "ach"),
+          paidAt: new Date(String(formData.get("paidAt") ?? "")).toISOString(),
+        }),
+      });
+      await refresh();
+      setNotice(`${invoiceNumber} payment remittance was reconciled into OpenFinance.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Payment remittance could not be recorded");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   return (
     <main className="shell">
       <OpenFinanceSiteTools />
@@ -242,7 +313,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
       <section className="agent-guide" aria-label="Suggested agent task">
         <span className="agent-dot" aria-hidden="true" />
         <div><strong>Prefer delegation?</strong><p>Use browser site tools for the customer workflow, or connect your own AR agent through the governed remote MCP.</p></div>
-        <div className="agent-links"><a href="/mcp-info">Connect an agent</a><a href="/connections">Manage access</a><span className="agent-ready">4 site + 8 remote tools</span></div>
+        <div className="agent-links"><a href="/mcp-info">Connect an agent</a><a href="/connections">Manage access</a><span className="agent-ready">7 site + 11 remote tools</span></div>
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">
@@ -350,6 +421,34 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
           </form>
         </div>
       </section>}
+
+      <section className="workbench" aria-labelledby="followup-title">
+        <div className="workbench-heading"><div><p className="eyebrow">Exception to cash</p><h2 id="followup-title">Portal follow-ups and remittance</h2></div><span>{followups.length} actionable</span></div>
+        <div className="workbench-grid">
+          <div className="package-review">
+            <h3>Invoices needing follow-up</h3>
+            {followups.length === 0 ? <div className="empty-compact"><strong>No follow-ups</strong><p>Submitted invoices are current and no balance needs attention.</p></div> : followups.map((followup) => <article key={followup.invoiceNumber}>
+              <div><strong>{followup.invoiceNumber}</strong><span>{followup.followupReason.replaceAll("_", " ")}</span></div>
+              <p>{followup.suggestedAction}</p>
+              <dl><div><dt>Remaining due</dt><dd>{money.format(followup.remainingDueMinor / 100)}</dd></div><div><dt>Due date</dt><dd>{followup.dueDate}</dd></div></dl>
+              <button className="button secondary" type="button" onClick={() => void loadSupportingDocuments(followup.invoiceNumber)} disabled={pendingAction !== null}>Supporting documents</button>
+            </article>)}
+            {supportingDocuments && <div className="empty-compact"><strong>{supportingDocuments.invoiceNumber} evidence</strong>
+              {supportingDocuments.documents.length === 0 ? <p>No supporting documents are stored.</p> : supportingDocuments.documents.map((document) => <button className="button secondary" type="button" key={`${document.documentKind}-${document.sha256}`} onClick={() => downloadSupportingDocument(document)}>{document.documentKind.replaceAll("_", " ")} · {document.fileName}</button>)}
+            </div>}
+          </div>
+          <form className="outcome-form" action={(formData) => void recordRemittance(formData)}>
+            <div><h3>Record verified remittance</h3><p>Use only after the customer portal returns the completed payment allocation.</p></div>
+            <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select submitted invoice</option>{invoices.filter((invoice) => invoice.portalReference).map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber} · {money.format((invoice.amountMinor - invoice.paidAmountMinor) / 100)} due</option>)}</select></label>
+            <label><span>Payment reference</span><input name="paymentReference" required maxLength={120} placeholder="PAY-20260830-AB12CD34" /></label>
+            <label><span>Paid amount</span><input name="amount" required inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="18420.00" /></label>
+            <label><span>Payment method</span><select name="paymentMethod" defaultValue="ach"><option value="ach">ACH</option><option value="wire">Wire</option><option value="check">Check</option><option value="card">Card</option><option value="other">Other</option></select></label>
+            <label><span>Paid at</span><input name="paidAt" type="datetime-local" required /></label>
+            <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I verified this exact reference, invoice allocation, amount, and payment date in the customer portal.</span></label>
+            <button className="button primary full" type="submit" disabled={pendingAction !== null}>{pendingAction === "remittance" ? "Recording…" : "Record verified remittance"}</button>
+          </form>
+        </div>
+      </section>
 
       <section className="panel" aria-labelledby="activity-title">
         <div className="panel-heading"><div><p className="eyebrow">Audit trail</p><h2 id="activity-title">Recent delivery activity</h2></div><span>{auditAvailable ? `${auditEvents.length} events` : "Unavailable"}</span></div>

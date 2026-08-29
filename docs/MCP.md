@@ -33,10 +33,13 @@ The consent screen explains the actual capabilities and acting role. Users can i
 | `list_customers` | read | List tenant customers and configured portal origins. |
 | `list_invoices` | read | Filter live tenant invoice state. |
 | `get_submission_package` | sensitive read | Return exact ready invoice data and verified PDF payloads. Separate approval is required before cross-site transfer. |
+| `list_portal_followups` | read | Find blocked, rejected, overdue, status-stale, and partially paid invoices. |
+| `get_invoice_supporting_documents` | sensitive read | Return verified evidence PDFs for one invoice. Separate approval is required before cross-site transfer. |
 | `list_audit_events` | read | Read tenant audit activity, including OAuth client attribution. |
 | `sync_invoices_from_erp` | idempotent write | Run the authorized simulated ERP sync. |
 | `record_portal_result` | idempotent write | Record only portal results that were actually returned. |
 | `record_portal_exception` | idempotent write | Record exact portal validation exceptions. |
+| `record_payment_remittance` | idempotent write | Reconcile a verified full or partial AP payment allocation into AR. |
 
 Demo reset is intentionally excluded and OAuth clients are denied at the database boundary. The server never exposes Supabase credentials, another tenant, or Acme AP.
 

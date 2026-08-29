@@ -4,6 +4,7 @@ import { MAX_TRANSFER_INVOICE_COUNT } from "./transfer-limits";
 
 const invoiceNumberSchema = z.string().regex(/^[A-Z0-9][A-Z0-9-]{1,39}$/);
 const idempotencyKeySchema = z.string().min(16).max(128);
+const paymentReferenceSchema = z.string().min(1).max(120);
 
 export const invoiceDocumentParamsSchema = z.object({
   invoiceNumber: invoiceNumberSchema,
@@ -55,6 +56,20 @@ export const deliveryEventRequestSchema = z.discriminatedUnion("eventType", [
   }).strict(),
 ]);
 
+export const supportingDocumentsRequestSchema = z.object({
+  invoiceNumber: invoiceNumberSchema,
+}).strict();
+
+export const paymentRemittanceRequestSchema = z.object({
+  idempotencyKey: idempotencyKeySchema,
+  invoiceNumber: invoiceNumberSchema,
+  paymentReference: paymentReferenceSchema,
+  amountMinor: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  paymentMethod: z.enum(["ach", "wire", "check", "card", "other"]),
+  paidAt: z.iso.datetime({ offset: true }),
+}).strict();
+
 export type DeliveryEventRequest = z.infer<typeof deliveryEventRequestSchema>;
 export type ErpSyncRequest = z.infer<typeof erpSyncRequestSchema>;
 
@@ -82,7 +97,22 @@ export type InvoiceQueueItem = Readonly<{
   portalStatus: string | null;
   exceptionCode: string | null;
   exceptionMessage: string | null;
+  dueDate: string;
+  lastPortalCheckedAt: string | null;
+  paidAmountMinor: number;
+  lastPaymentAt: string | null;
+  lastPaymentReference: string | null;
   version: number;
+}>;
+
+export type InvoiceSupportingDocument = Readonly<{
+  documentKind: "proof_of_delivery" | "service_acceptance" | "timesheet" |
+    "tax_document" | "contract" | "other";
+  fileName: string;
+  mediaType: "application/pdf";
+  contentBase64: string;
+  sha256: string;
+  sizeBytes: number;
 }>;
 
 export type SubmissionPackageItem = InvoiceQueueItem & Readonly<{

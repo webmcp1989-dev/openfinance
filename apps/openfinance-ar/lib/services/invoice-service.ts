@@ -7,6 +7,7 @@ import type {
   DeliveryEventRequest,
   ErpSyncResult,
   InvoiceQueueItem,
+  InvoiceSupportingDocument,
   SubmissionPackageItem,
 } from "@/lib/domain/invoices";
 import { HttpError, fingerprint } from "@/lib/http-core";
@@ -24,6 +25,11 @@ type InvoiceRow = {
   portal_status: string | null;
   exception_code: string | null;
   exception_message: string | null;
+  due_date: string;
+  last_portal_checked_at: string | null;
+  paid_amount_minor: number;
+  last_payment_at: string | null;
+  last_payment_reference: string | null;
   version: number;
   customers: CustomerRelation;
 };
@@ -65,6 +71,11 @@ function mapQueueItem(row: InvoiceRow): InvoiceQueueItem {
     portalStatus: row.portal_status,
     exceptionCode: row.exception_code,
     exceptionMessage: row.exception_message,
+    dueDate: row.due_date,
+    lastPortalCheckedAt: row.last_portal_checked_at,
+    paidAmountMinor: Number(row.paid_amount_minor),
+    lastPaymentAt: row.last_payment_at,
+    lastPaymentReference: row.last_payment_reference,
     version: row.version,
   };
 }
@@ -72,23 +83,36 @@ function mapQueueItem(row: InvoiceRow): InvoiceQueueItem {
 const queueColumns = `
   invoice_number, amount_minor, currency, invoice_date, purchase_order_number,
   status, portal_reference, portal_status, exception_code, exception_message,
+  due_date, last_portal_checked_at, paid_amount_minor, last_payment_at, last_payment_reference,
   version, customers!inner(name)
 `;
 
-function canonicalDocumentBase64(value: string) {
+function canonicalDocumentBase64(
+  value: string,
+  error: { code: string; message: string } = {
+    code: "package_document_invalid",
+    message: "Stored invoice document is invalid",
+  },
+) {
   const canonical = value.replace(/[\t\n\r ]/g, "");
   const isCanonical = canonical.length >= 8
     && canonical.length <= 1_400_000
     && /^[A-Za-z0-9+/]+={0,2}$/.test(canonical)
     && Buffer.from(canonical, "base64").toString("base64") === canonical;
   if (!isCanonical) {
-    throw new HttpError(500, "package_document_invalid", "Stored invoice document is invalid");
+    throw new HttpError(500, error.code, error.message);
   }
   return canonical;
 }
 
-function validatedStoredDocument(row: DocumentRow) {
-  const contentBase64 = canonicalDocumentBase64(row.document_content_base64);
+function validatedStoredDocument(
+  row: DocumentRow,
+  error: { code: string; message: string } = {
+    code: "package_document_invalid",
+    message: "Stored invoice document is invalid",
+  },
+) {
+  const contentBase64 = canonicalDocumentBase64(row.document_content_base64, error);
   const bytes = Buffer.from(contentBase64, "base64");
   const tail = bytes.subarray(Math.max(0, bytes.length - 1_024));
   const sha256 = createHash("sha256").update(bytes).digest("hex");
@@ -111,7 +135,7 @@ function validatedStoredDocument(row: DocumentRow) {
     || tail.indexOf(Buffer.from("%%EOF")) === -1
     || !hasCoherentStructure
     || sha256 !== row.document_sha256) {
-    throw new HttpError(500, "package_document_invalid", "Stored invoice document is invalid");
+    throw new HttpError(500, error.code, error.message);
   }
 
   return { contentBase64, bytes: Uint8Array.from(bytes) };
@@ -200,6 +224,109 @@ export async function getInvoiceDocument(
     sha256: row.document_sha256,
     bytes: document.bytes,
   };
+}
+
+export type PortalFollowup = InvoiceQueueItem & Readonly<{
+  followupReason: "needs_attention" | "rejected" | "status_stale" | "overdue" | "partially_paid";
+  suggestedAction: string;
+  remainingDueMinor: number;
+}>;
+
+export async function listPortalFollowups(
+  supabase: SupabaseClient,
+  customerName?: string,
+): Promise<PortalFollowup[]> {
+  const invoices = await listInvoiceQueue(supabase, {
+    customerName,
+    statuses: ["needs_attention", "submitted", "accepted", "rejected"],
+  });
+  const now = Date.now();
+  return invoices.flatMap((invoice) => {
+    const remainingDueMinor = invoice.amountMinor - invoice.paidAmountMinor;
+    let followupReason: PortalFollowup["followupReason"] | null = null;
+    let suggestedAction = "";
+    if (invoice.status === "needs_attention") {
+      followupReason = "needs_attention";
+      suggestedAction = invoice.exceptionMessage ?? "Correct the local invoice before submission.";
+    } else if (invoice.status === "rejected") {
+      followupReason = "rejected";
+      suggestedAction = invoice.exceptionMessage ?? "Read the portal exception and prepare a correction.";
+    } else if (invoice.paidAmountMinor > 0 && remainingDueMinor > 0) {
+      followupReason = "partially_paid";
+      suggestedAction = "Reconcile the remaining balance against portal remittance or deductions.";
+    } else if (Date.parse(invoice.dueDate) < now && remainingDueMinor > 0) {
+      followupReason = "overdue";
+      suggestedAction = "Check payment status or open a buyer inquiry.";
+    } else {
+      const checkedAt = invoice.lastPortalCheckedAt ? Date.parse(invoice.lastPortalCheckedAt) : 0;
+      if (checkedAt > 0 && now - checkedAt <= 24 * 60 * 60 * 1000) return [];
+      followupReason = "status_stale";
+      suggestedAction = "Refresh the buyer portal status and record the verified result.";
+    }
+    return [{ ...invoice, followupReason, suggestedAction, remainingDueMinor }];
+  });
+}
+
+export async function getInvoiceSupportingDocuments(
+  supabase: SupabaseClient,
+  invoiceNumber: string,
+): Promise<InvoiceSupportingDocument[]> {
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices").select("id").eq("invoice_number", invoiceNumber).maybeSingle();
+  if (invoiceError) throw new HttpError(500, "supporting_document_query_failed", "Supporting documents could not be loaded");
+  if (!invoice) throw new HttpError(404, "invoice_not_found", "Invoice was not found");
+  const { data, error } = await supabase.from("invoice_supporting_documents")
+    .select("document_kind, file_name, media_type, content_base64, sha256, size_bytes")
+    .eq("invoice_id", invoice.id).order("created_at", { ascending: true });
+  if (error) throw new HttpError(500, "supporting_document_query_failed", "Supporting documents could not be loaded");
+  return data.map((row) => {
+    const document = validatedStoredDocument({
+      document_name: row.file_name,
+      document_media_type: row.media_type,
+      document_content_base64: row.content_base64,
+      document_sha256: row.sha256,
+    } as DocumentRow, {
+      code: "supporting_document_invalid",
+      message: "Stored supporting document is invalid",
+    });
+    if (document.bytes.length !== Number(row.size_bytes)) {
+      throw new HttpError(500, "supporting_document_invalid", "Stored supporting document is invalid");
+    }
+    return {
+      documentKind: row.document_kind as InvoiceSupportingDocument["documentKind"],
+      fileName: row.file_name,
+      mediaType: row.media_type as "application/pdf",
+      contentBase64: document.contentBase64,
+      sha256: row.sha256,
+      sizeBytes: document.bytes.length,
+    };
+  });
+}
+
+export async function recordPaymentRemittance(
+  supabase: SupabaseClient,
+  request: {
+    idempotencyKey: string;
+    invoiceNumber: string;
+    paymentReference: string;
+    amountMinor: number;
+    currency: string;
+    paymentMethod: "ach" | "wire" | "check" | "card" | "other";
+    paidAt: string;
+  },
+) {
+  const { idempotencyKey, ...payload } = request;
+  const { data, error } = await supabase.rpc("record_payment_remittance", {
+    p_idempotency_key: idempotencyKey,
+    p_request_fingerprint: fingerprint(payload),
+    p_payload: payload,
+  });
+  if (error?.code === "42501") throw new HttpError(403, "operator_access_required", "Operator access is required to record remittance");
+  if (error?.code === "23505") throw new HttpError(409, "idempotency_conflict", "Idempotency key or payment reference conflicts with an earlier record");
+  if (error?.code === "23514") throw new HttpError(409, "remittance_conflict", "Remittance does not match the current invoice balance or currency");
+  if (error?.code === "P0002") throw new HttpError(404, "invoice_not_found", "Invoice was not found");
+  if (error) throw new HttpError(422, "remittance_rejected", "Payment remittance could not be recorded");
+  return data;
 }
 
 export async function recordDeliveryEvent(
