@@ -82,6 +82,21 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290003_enforce_delivery_event_contract.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
   });
+
+  test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {
+    const arReset = await readFile(join(root, "services/openfinance/supabase/demo/reset.sql"), "utf8");
+    const apReset = await readFile(join(root, "services/acme/supabase/demo/reset.sql"), "utf8");
+    for (const reset of [arReset, apReset]) {
+      expect(reset).toStartWith("-- Administrative demo reset");
+      expect(reset).toContain("begin;");
+      expect(reset).toContain("pg_advisory_xact_lock");
+      expect(reset).toContain("get diagnostics v_updated = row_count");
+      expect(reset).toContain("raise exception");
+      expect(reset).toContain("commit;");
+    }
+    expect(arReset).toContain("v_updated <> 4");
+    expect(apReset).toContain("v_updated <> 3");
+  });
 });
 
 describe("WebMCP safety contracts", () => {

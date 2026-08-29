@@ -70,3 +70,16 @@ bun audit
 ```
 
 Run every SQL file under each service's `supabase/tests` directory in its corresponding project after applying all migrations. Then sign into both live applications in separate tabs, inspect Available site tools, and run the [demo checklist](DEMO.md).
+
+## Restore the synthetic demo state
+
+The applications intentionally expose no reset endpoint. Reset is an explicit administrative operation, not a hidden integration or a browser-agent capability.
+
+1. Confirm no demo submission is currently running and that both projects are the synthetic challenge projects listed above.
+2. In the **Acme AP** SQL editor, review and run `services/acme/supabase/demo/reset.sql`.
+3. Confirm it reports three open POs at their full seeded balances and zero batches, submissions, and audit events.
+4. In the **OpenFinance AR** SQL editor, review and run `services/openfinance/supabase/demo/reset.sql`.
+5. Confirm it reports three ready invoices, `INV-10503` as `needs_attention`, and zero delivery and audit events.
+6. Reload both applications and verify the [starting state](DEMO.md#starting-state) before recording or rerunning the test.
+
+Each script uses explicit synthetic IDs, an advisory transaction lock, exact affected-row assertions, and a transaction. Never run either script against a project containing real data, and never point a script at the other application's project.

@@ -6,5 +6,6 @@ This directory belongs only to the independent Acme AP Supabase project.
 - `supabase/migrations/202608290002_harden_submission_wrapper.sql` serializes retries for a supplier-scoped idempotency key and rejects duplicate invoice numbers before submission processing.
 - `supabase/tests/rls.test.sql` asserts grants, RLS, policy presence, and privileged-function hardening with pgTAP.
 - `supabase/tests/submission-wrapper.test.sql` verifies wrapper execution mode, retry serialization, and duplicate rejection.
+- `supabase/demo/reset.sql` is a reviewed administrative reset for only the fixed synthetic challenge supplier; it is never called by either application.
 
 Do not point these migrations at the OpenFinance project. Runtime access uses only the Acme publishable key and the authenticated Acme supplier session.
