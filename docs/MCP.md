@@ -21,7 +21,9 @@ Supabase OAuth must have:
 
 Clients use authorization code + PKCE (`S256`) and send the exact MCP URL as the OAuth resource indicator. OpenFinance accepts only a resource-bound ES256 access token with the exact issuer, audience `https://openfinance-ar.vercel.app/mcp`, expiry, OAuth client ID, authenticated role, active user, and RLS-visible AR membership. Identity scopes are standard Supabase scopes; data authorization comes from the user's AR profile, role, RLS policies, and transaction functions.
 
-The consent screen explains the actual capabilities and acting role. Users can inspect and revoke grants at `/connections`. OpenAI and Claude should retain approvals for consequential write tools.
+Supabase's OAuth server currently leaves the access-token audience at its default even when the client sends `resource`. The AR project's reviewed Custom Access Token hook binds `aud` to the exact MCP URL whenever an OAuth `client_id` is present and leaves normal portal sessions unchanged. The hook must be enabled in **Authentication → Auth Hooks → Customize Access Token**. This preserves strict MCP audience validation without creating a second authorization server.
+
+The consent screen explains the actual capabilities and acting role. Users can inspect and revoke grants at `/connections`; revocation invalidates the grant's refresh tokens, while already signed short-lived access tokens expire normally. OpenAI and Claude should retain approvals for consequential write tools.
 
 ## Tool inventory
 

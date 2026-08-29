@@ -18,6 +18,7 @@
 - Rollback-only pgTAP suites create foreign organization and supplier fixtures, then prove authenticated demo users cannot read or mutate those records.
 - The runtime has only the publishable key. Service-role keys and database passwords are prohibited.
 - Remote MCP accepts only Supabase OAuth access tokens whose ES256 signature, issuer, expiry, exact resource audience, `client_id`, authenticated role, Auth user, and RLS-visible AR profile all validate. A normal portal session JWT is not an MCP credential.
+- Supabase currently accepts but does not bind RFC 8707 `resource` to `aud`. The reviewed `custom_access_token_hook` therefore changes `aud` to the exact MCP URL only when `client_id` is present; normal portal tokens retain `aud=authenticated`. The resource server still validates exact audience and never compensates by weakening verification.
 - MCP requests validate `Host` and browser `Origin`, require Bearer auth before body parsing, accept only bounded JSON POSTs, return no-store responses, and advertise RFC 9728 protected-resource metadata.
 - OAuth MCP tools pass the bearer token to an unprivileged Supabase client; RLS and database role checks remain in force. Audit triggers label mutations `oauth_mcp` with the client ID. Demo reset is absent from MCP, its private function is not executable by `authenticated`, and its public wrapper rejects JWTs carrying `client_id`.
 

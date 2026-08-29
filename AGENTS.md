@@ -57,6 +57,7 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - All nine WebMCP capabilities also have human UI paths backed by the same services. Preserve exactly four AR and five AP challenge tools unless the documented demo contract is deliberately revised.
 - ERP invoice sync is available in the human UI and AR remote MCP, but is not a tenth browser WebMCP challenge tool; see `docs/MCP.md`.
 - The AR remote MCP is an own-system access surface only. Preserve exact Supabase OAuth resource/audience validation, RLS-bound bearer access, consent/revocation, OAuth audit attribution, and the technical prohibition on OAuth demo reset. Never let it call AP directly.
+- Preserve the Custom Access Token hook: hosted Supabase currently does not map RFC 8707 `resource` into `aud`, so the hook binds OAuth tokens to the exact MCP URL while leaving portal sessions unchanged.
 - Synthetic invoice files must remain genuinely renderable, credible invoices, not signature/EOF placeholders. Preserve the private database renderer, authoritative supplier/customer/invoice/date/PO/amount fields, deterministic Net-30 due date, explicit synthetic-data label, exact cross-reference offsets, parser/render tests, and authenticated download validation.
 - AP's challenge payment signal is deterministic backend simulation: every second committed supplier invoice settles after 10 seconds. Preserve its serialized, idempotent, read-only-discovery design; do not replace it with client timers that author state, random behavior, or hidden AR/AP integration.
 

@@ -1,12 +1,12 @@
 # Verification record
 
 This record captures the final technical verification performed against the
-August 29, 2026 release candidate. The synthetic demo databases were restored
+August 30, 2026 release candidate. The synthetic demo databases were restored
 to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 80 tests passed with 349 expectations.
+- `bun test`: 97 tests passed with 379 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -56,6 +56,36 @@ mapping, idempotency, and documentation coverage.
   without an authenticated session.
 - Production responses included the documented CSP, frame denial, no-sniff,
   HSTS, and permissions-policy headers.
+- The live AR audience-hook verification returned `true` for all six security
+  invariants: function presence, Auth schema and function privileges, application-user
+  denial, exact OAuth MCP audience, and preserved normal portal audience. The
+  rollback-only pgTAP suite contains six assertions covering the same boundary.
+
+## Remote MCP and OAuth verification
+
+- Production RFC 9728 protected-resource metadata advertises only
+  `https://openfinance-ar.vercel.app/mcp`, the Supabase authorization issuer,
+  header Bearer tokens, and the `email` identity scope. The authorization-server
+  metadata exposes authorization code, refresh token, dynamic registration, and
+  PKCE; unauthenticated MCP requests return `401` with the protected-resource
+  metadata URL in `WWW-Authenticate`.
+- A real dynamically registered public client completed authorization code +
+  PKCE through the deployed OpenFinance consent screen. The issued ES256 JWT had
+  the exact MCP audience, expected Supabase issuer, OAuth `client_id`,
+  `authenticated` role, user subject, one-hour lifetime, and refresh token.
+- Streamable HTTP initialization negotiated MCP `2025-06-18`. `tools/list`
+  returned exactly eight schema-bearing AR tools and no reset capability.
+- Live calls covered workspace, customer, invoice, PDF package, and audit reads;
+  all three PDFs had valid signatures, EOF markers, and matching SHA-256 hashes.
+  ERP sync imported two invoices, and an identical retry returned the same result.
+- The independent AP rehearsal returned two receipts and one PO-balance exception.
+  `record_portal_result` and `record_portal_exception` wrote those exact outcomes
+  through remote MCP; identical retries were stable, AR UI updated immediately,
+  audit events were labeled `oauth_mcp` with the exact client ID, and an OAuth
+  reset attempt returned `403`.
+- `/connections` displayed and revoked the test grant; its refresh token then
+  returned HTTP `400`. The temporary DCR client, token file, package JSON, and PDF
+  files were deleted after verification. No test credential remains in Git or Temp.
 
 ## In-app browser WebMCP verification
 
@@ -149,11 +179,9 @@ narration, thumbnail, generated WebM artifact, or create another video.
 
 ## Submission-only tasks
 
-All local, database, deployment, reset-UI, and non-transfer security gates are
-complete. One final post-deployment cross-origin WebMCP rehearsal remains
-paused at the required informed-transfer boundary until the user explicitly
-approves the exact three synthetic invoice packages. After that rehearsal and
-state restoration, the entrant must still enter the two private judge
+All local, database, deployment, OAuth/MCP, cross-application rehearsal,
+reset, and security gates are complete, and both applications are restored to
+the judge baseline. The entrant must still enter the two private judge
 passwords in Devpost, publish the existing reviewed narrated demo video using
 [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and submit
 before September 3, 2026 at 1:00 p.m. PDT.
