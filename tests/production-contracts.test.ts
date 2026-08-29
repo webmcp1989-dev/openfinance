@@ -215,9 +215,22 @@ describe("WebMCP safety contracts", () => {
 
   test("the AR discovery tool takes customer context from intent instead of executable demo constants", async () => {
     const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
+    const route = await readFile(join(root, "apps/openfinance-ar/app/api/agent/invoices/route.ts"), "utf8");
+    const openApi = await readFile(join(root, "docs/openapi.yaml"), "utf8");
     expect(ar).not.toContain("customerName=Acme%20Manufacturing");
     expect(ar).toContain('required: ["customerName"]');
     expect(ar).toContain('new URLSearchParams({ customerName, readyOnly: "true" })');
+    expect(route).toContain("customerName: z.string().min(1).max(160),");
+    expect(route).not.toContain("customerName: z.string().min(1).max(160).optional()");
+    const document = Bun.YAML.parse(openApi) as {
+      paths: Record<string, { get?: { parameters?: Array<{ name: string; required?: boolean }> } }>;
+    };
+    expect(document.paths["/api/agent/invoices"]?.get?.parameters).toContainEqual({
+      in: "query",
+      name: "customerName",
+      required: true,
+      schema: { type: "string", minLength: 1, maxLength: 160 },
+    });
   });
 
   test("both visible workspace endpoints are documented with audit events", async () => {

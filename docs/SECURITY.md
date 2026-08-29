@@ -30,6 +30,7 @@
 - WebMCP registrations are scoped to the authenticated page component with an `AbortSignal`; navigation or sign-out removes the old document's capabilities. An optional legacy unregistration fallback runs both at cleanup and after pending registrations settle, supporting earlier browser implementations without leaving late-registered capabilities behind.
 - Mutating routes require `application/json` and an exact same-origin `Origin` header.
 - Zod and Postgres constraints independently enforce shape, length, enum, money, identifier, and batch limits.
+- The AR discovery endpoint requires the customer name at the backend boundary; WebMCP schema validation is treated as advisory and cannot silently broaden or erase customer scope.
 - Money integers are capped at `9007199254740991` in WebMCP, HTTP, and Postgres contracts so JSON/JavaScript transport cannot silently lose precision.
 - Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
 - The stored AP requirements row is constrained to the same PDF, 1 MB, open-PO, and remaining-balance policy exposed by WebMCP and enforced by the transaction, so configuration cannot silently contradict runtime behavior.

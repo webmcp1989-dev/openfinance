@@ -4,7 +4,7 @@ import { apiError, requireAuthenticatedClient } from "@/lib/http";
 import { listInvoiceQueue } from "@/lib/services/invoice-service";
 
 const querySchema = z.object({
-  customerName: z.string().min(1).max(160).optional(),
+  customerName: z.string().min(1).max(160),
   readyOnly: z.enum(["true", "false"]).optional(),
 });
 
