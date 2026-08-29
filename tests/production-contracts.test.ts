@@ -59,10 +59,12 @@ describe("API authorization ordering", () => {
     "apps/openfinance-ar/app/api/agent/packages/route.ts",
     "apps/openfinance-ar/app/api/agent/delivery-events/route.ts",
     "apps/openfinance-ar/app/api/agent/erp-sync/route.ts",
+    "apps/openfinance-ar/app/api/demo/reset/route.ts",
     "apps/acme-ap/app/api/agent/purchase-orders/route.ts",
     "apps/acme-ap/app/api/agent/validate/route.ts",
     "apps/acme-ap/app/api/agent/submissions/route.ts",
     "apps/acme-ap/app/api/agent/status/route.ts",
+    "apps/acme-ap/app/api/demo/reset/route.ts",
   ];
 
   for (const route of writeRoutes) {
@@ -102,12 +104,14 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290005_canonicalize_delivery_requests.sql");
     expect(setup).toContain("202608290006_simulate_erp_invoice_sync.sql");
     expect(setup).toContain("202608290007_repair_renderable_invoice_pdfs.sql");
+    expect(setup).toContain("202608290011_add_authorized_demo_reset.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
     expect(setup).toContain("202608290003_bound_json_money.sql");
     expect(setup).toContain("202608290004_align_submission_policy.sql");
     expect(setup).toContain("202608290005_canonicalize_submission_requests.sql");
     expect(setup).toContain("202608290006_validate_pdf_structure.sql");
     expect(setup).toContain("202608290007_simulate_payment_settlement.sql");
+    expect(setup).toContain("202608290008_add_authorized_demo_reset.sql");
   });
 
   test("money stays within JSON's exact-integer range at every boundary", async () => {
@@ -211,6 +215,29 @@ describe("database mutation boundaries", () => {
     }
     expect(arReset).toContain("v_updated <> 4");
     expect(apReset).toContain("v_updated <> 3");
+  });
+
+  test("human demo resets are separately authorized, audited, and absent from WebMCP", async () => {
+    const arMigration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290011_add_authorized_demo_reset.sql"), "utf8");
+    const apMigration = await readFile(join(root, "services/acme/supabase/migrations/202608290008_add_authorized_demo_reset.sql"), "utf8");
+    const arTests = await readFile(join(root, "services/openfinance/supabase/tests/demo-reset.test.sql"), "utf8");
+    const apTests = await readFile(join(root, "services/acme/supabase/tests/demo-reset.test.sql"), "utf8");
+    const arTools = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
+    const apTools = await readFile(join(root, "apps/acme-ap/components/acme-site-tools.tsx"), "utf8");
+
+    for (const migration of [arMigration, apMigration]) {
+      expect(migration).toContain("auth.uid()");
+      expect(migration).toContain("pg_advisory_xact_lock");
+      expect(migration).toContain("demo_state_reset");
+      expect(migration).toContain("security invoker");
+      expect(migration).toContain("revoke execute on function public.reset_demo_state() from public, anon");
+    }
+    expect(arMigration).toContain("profile.role in ('admin', 'operator')");
+    expect(apMigration).toContain("profile.role in ('admin', 'submitter')");
+    expect(arTests).toContain("viewer cannot reset the demo");
+    expect(apTests).toContain("viewer cannot reset the demo");
+    expect(arTools).not.toContain("reset_demo_state");
+    expect(apTools).not.toContain("reset_demo_state");
   });
 
   test("RLS suites exercise real cross-tenant read and mutation denials", async () => {
@@ -338,6 +365,7 @@ describe("OpenAPI contract coverage", () => {
       "/api/agent/validate",
       "/api/agent/submissions",
       "/api/agent/status",
+      "/api/demo/reset",
     ];
 
     for (const path of writePaths) {

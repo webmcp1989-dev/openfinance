@@ -12,6 +12,7 @@ This file records only non-obvious continuation context. Repository-wide rules a
 ## Meaningful implementation decisions
 
 - AR **Sync invoices now** is intentionally a human-only ERP simulation, not a tenth WebMCP tool. This preserves the recorded challenge/demo contract while making the standalone AR workspace useful.
+- Both workspaces now provide a separately confirmed **Restore demo start** control so stateful judging is repeatable. AR migration `202608290011_add_authorized_demo_reset.sql` and AP migration `202608290008_add_authorized_demo_reset.sql` keep authorization and data restoration inside each independent database, permit only the fixed synthetic operator/submitter, serialize and assert the mutation, leave one visible reset audit event, and are deliberately not exposed through WebMCP.
 - Migration `services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql` owns the alternating `2 -> 0 -> 2 -> 0` behavior. It derives tenant/operator identity from the session, uses the tenant's configured synthetic customer, serializes retries, row-locks sync state, inserts valid synthetic invoice documents, and records idempotent results plus an audit event atomically.
 - `services/openfinance/supabase/demo/reset.sql` removes synthetic `ERP-*` imports and resets the next sync to two invoices.
 - AP's human workspace exposes requirements, PO/status lookup, PDF validation, explicit batch review, and confirmed atomic submission. AR exposes scoped queue filtering, package review, result/exception recording, and ERP sync.
@@ -35,5 +36,5 @@ This file records only non-obvious continuation context. Repository-wide rules a
 
 - ERP sync is deterministic synthetic challenge behavior, not a real ERP connector or scheduler. Commercial connectors and learned-browser compatibility remain future product work.
 - Database suites currently run manually in each Supabase SQL editor inside rollback transactions; ephemeral database CI is future hardening.
-- After any stateful live test, run both documented reset scripts and confirm the public judge state before recording or submitting the demo.
+- After any stateful live test, restore both applications separately with their human controls (or the reviewed SQL fallbacks) and confirm the public judge state before submission.
 - Challenge publication still requires entrant-controlled Devpost declarations, private judge credential entry, and public video publication; these values must remain outside the repository.

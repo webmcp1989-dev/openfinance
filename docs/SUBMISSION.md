@@ -46,6 +46,8 @@ Enter these in Devpost’s private credentials field after the final password re
 
 Include both live URLs and state that the sessions are intentionally independent. Never add the passwords to this file, the README, source control, screenshots, or narration.
 
+Also tell reviewers that each workspace has a separate two-step **Restore demo start** control. They should restore AP and AR independently before a fresh run; the controls affect only synthetic data, remain outside WebMCP, and leave a visible reset audit event.
+
 ## Video plan — target 2:47
 
 The final video must be public on YouTube, include clear audio, and remain under three minutes.

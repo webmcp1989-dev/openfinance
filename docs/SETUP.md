@@ -15,8 +15,8 @@ Run each migration only in its named project:
 
 | Application | Supabase project ref | Migrations, in order |
 | --- | --- | --- |
-| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql`<br>`services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql`<br>`services/openfinance/supabase/migrations/202608290004_bound_json_money.sql`<br>`services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql`<br>`services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql`<br>`services/openfinance/supabase/migrations/202608290007_repair_renderable_invoice_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608290008_render_detailed_invoice_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608290009_align_invoice_amount_due.sql`<br>`services/openfinance/supabase/migrations/202608290010_space_invoice_amount_due.sql` |
-| Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql`<br>`services/acme/supabase/migrations/202608290002_harden_submission_wrapper.sql`<br>`services/acme/supabase/migrations/202608290003_bound_json_money.sql`<br>`services/acme/supabase/migrations/202608290004_align_submission_policy.sql`<br>`services/acme/supabase/migrations/202608290005_canonicalize_submission_requests.sql`<br>`services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql`<br>`services/acme/supabase/migrations/202608290007_simulate_payment_settlement.sql` |
+| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql`<br>`services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql`<br>`services/openfinance/supabase/migrations/202608290004_bound_json_money.sql`<br>`services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql`<br>`services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql`<br>`services/openfinance/supabase/migrations/202608290007_repair_renderable_invoice_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608290008_render_detailed_invoice_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608290009_align_invoice_amount_due.sql`<br>`services/openfinance/supabase/migrations/202608290010_space_invoice_amount_due.sql`<br>`services/openfinance/supabase/migrations/202608290011_add_authorized_demo_reset.sql` |
+| Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql`<br>`services/acme/supabase/migrations/202608290002_harden_submission_wrapper.sql`<br>`services/acme/supabase/migrations/202608290003_bound_json_money.sql`<br>`services/acme/supabase/migrations/202608290004_align_submission_policy.sql`<br>`services/acme/supabase/migrations/202608290005_canonicalize_submission_requests.sql`<br>`services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql`<br>`services/acme/supabase/migrations/202608290007_simulate_payment_settlement.sql`<br>`services/acme/supabase/migrations/202608290008_add_authorized_demo_reset.sql` |
 
 Apply every listed migration in filename order through the Supabase SQL editor or a reviewed migration pipeline. The migrations are transactional, enable RLS on every exposed table, revoke anonymous access, grant only required reads, and expose authenticated write wrappers around private transaction functions.
 
@@ -73,13 +73,23 @@ Run every SQL file under each service's `supabase/tests` directory in its corres
 
 ## Restore the synthetic demo state
 
-The applications intentionally expose no reset endpoint. Reset is an explicit administrative operation, not a hidden integration or a browser-agent capability.
+Each authenticated demo workspace has a two-step **Restore demo start** control. Restore AR and AP separately: each application calls only its own same-origin backend and database. The reset is deliberately human-only, is not registered with WebMCP, requires an explicit confirmation payload, permits only the fixed synthetic demo operator or submitter, and replaces prior workflow audit entries with one visible `demo_state_reset` event.
+
+For a judge or normal demo rerun:
+
+1. In Acme AP, choose **Restore demo start**, review the deletion notice, and choose **Restore synthetic AP data**.
+2. In OpenFinance AR, choose **Restore demo start**, review the deletion notice, and choose **Restore synthetic AR data**.
+3. Confirm Acme shows three open POs at full balances and no receipts.
+4. Confirm OpenFinance shows three ready invoices, `INV-10503` as `needs_attention`, no imported `ERP-*` invoices, and the ERP sequence reset to `2 new → 0 new`.
+5. Each audit panel should contain exactly one visible reset event before the next workflow run.
+
+The reviewed SQL scripts remain an operator fallback:
 
 1. Confirm no demo submission is currently running and that both projects are the synthetic challenge projects listed above.
 2. In the **Acme AP** SQL editor, review and run `services/acme/supabase/demo/reset.sql`.
 3. Confirm it reports three open POs at their full seeded balances and zero batches, submissions, and audit events.
 4. In the **OpenFinance AR** SQL editor, review and run `services/openfinance/supabase/demo/reset.sql`.
 5. Confirm it reports three ready invoices, `INV-10503` as `needs_attention`, zero delivery and audit events, and an ERP sync sequence reset to `2 new → 0 new`.
-6. Reload both applications and verify the [starting state](DEMO.md#starting-state) before recording or rerunning the test.
+6. Reload both applications and verify the [starting state](DEMO.md#starting-state) before rerunning the test.
 
 Each script uses explicit synthetic IDs, an advisory transaction lock, exact affected-row assertions, and a transaction. Never run either script against a project containing real data, and never point a script at the other application's project.

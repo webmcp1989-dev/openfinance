@@ -37,6 +37,13 @@ nav a:hover { color: var(--blue); }
 .agent-guide { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; padding: 17px 20px; border: 1px solid #cbdaf0; border-radius: 16px; background: #f7faff; }
 .agent-guide p { margin: 4px 0 0; color: var(--muted); font-size: .88rem; }
 .pulse { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 6px #dfeafb; }
+.demo-controls { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 18px 20px; border: 1px dashed #cbd4df; border-radius: 16px; background: rgb(255 255 255 / 68%); }
+.demo-controls h2 { margin: 3px 0 4px; color: var(--navy); font-size: 1rem; letter-spacing: -.02em; }
+.demo-controls > div:first-child > p:last-child { margin: 0; color: var(--muted); font-size: .79rem; }
+.reset-confirmation { display: flex; align-items: center; gap: 18px; max-width: 700px; padding-left: 18px; border-left: 1px solid var(--line); }
+.reset-confirmation p { display: grid; gap: 3px; margin: 0; color: var(--muted); font-size: .76rem; line-height: 1.4; }
+.reset-confirmation p strong { color: var(--navy); font-size: .8rem; }
+.reset-confirmation > div { display: flex; flex: 0 0 auto; gap: 8px; }
 .requirements { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 22px 26px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 .requirements h2, .section-heading h2 { margin: 4px 0 0; color: var(--navy); letter-spacing: -.025em; }
 .requirements ul { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -79,6 +86,8 @@ nav a:hover { color: var(--blue); }
 .money-field input { border: 0; border-radius: 0; outline: 0 !important; }
 .portal-button.primary { color: #fff; background: var(--blue); }
 .portal-button.secondary { border-color: #b8cae4; color: var(--blue); background: #f3f7fd; }
+.portal-button.quiet { border-color: var(--line); color: #4d5c72; background: #fff; }
+.portal-button.danger { border-color: #e7b8b0; color: #93372f; background: #fff5f3; }
 .validation-result { padding: 13px 14px; border: 1px solid; border-radius: 11px; font-size: .8rem; }
 .validation-result.valid { border-color: #abd7c6; color: #126848; background: #edfaf5; }
 .validation-result.invalid { border-color: #efc3bb; color: #9c3a30; background: #fff3f0; }
@@ -137,6 +146,8 @@ nav a:hover { color: var(--blue); }
   .requirements { align-items: flex-start; flex-direction: column; }
   .submission-workbench { grid-template-columns: 1fr; }
   .candidate-form { border-right: 0; border-bottom: 1px solid var(--line); }
+  .demo-controls, .reset-confirmation { align-items: flex-start; flex-direction: column; }
+  .reset-confirmation { width: 100%; padding: 14px 0 0; border-top: 1px solid var(--line); border-left: 0; }
 }
 @media (max-width: 620px) {
   .portal-shell { width: min(100% - 24px, 1240px); }
@@ -147,4 +158,6 @@ nav a:hover { color: var(--blue); }
   .file-field { grid-column: auto; }
   .inline-field { grid-template-columns: 1fr; }
   .section-heading { align-items: flex-start; gap: 14px; }
+  .demo-controls > .portal-button, .reset-confirmation > div, .reset-confirmation .portal-button { width: 100%; }
+  .reset-confirmation > div { flex-direction: column-reverse; }
 }

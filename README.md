@@ -47,7 +47,7 @@ bun test
 bun run build
 ```
 
-Copy `.env.example` to each app's `.env.local` and use only that app's Supabase URL and publishable key. See [setup](docs/SETUP.md) for migrations, demo users, deployments, and reset instructions.
+Copy `.env.example` to each app's `.env.local` and use only that app's Supabase URL and publishable key. See [setup](docs/SETUP.md) for migrations, demo users, deployments, and the separate human-only reset needed for repeatable judging.
 
 ## Documentation
 

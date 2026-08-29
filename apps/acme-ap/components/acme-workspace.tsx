@@ -25,6 +25,9 @@ type ValidationResult = Readonly<{
 }>;
 
 function auditSummary(event: AuditEvent) {
+  if (event.action === "demo_state_reset") {
+    return "Canonical synthetic AP data restored";
+  }
   if (event.action === "demo_payment_scheduled") {
     const invoiceNumber = typeof event.details.invoiceNumber === "string" ? event.details.invoiceNumber : "Invoice";
     return `${invoiceNumber} · synthetic buyer settlement scheduled`;
@@ -97,6 +100,7 @@ export function AcmeWorkspace({
   const [validatedBatch, setValidatedBatch] = useState<InvoiceCandidate[]>([]);
   const [confirmation, setConfirmation] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [resetOpen, setResetOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -250,6 +254,31 @@ export function AcmeWorkspace({
     }
   }
 
+  async function restoreDemo() {
+    clearFeedback();
+    setPendingAction("reset");
+    try {
+      await apiRequest("/api/demo/reset", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "restore-canonical-demo" }),
+      });
+      setPurchaseOrderLookup(undefined);
+      setStatusLookup(undefined);
+      setCandidatePurchaseOrder("");
+      setValidation(null);
+      setValidatedBatch([]);
+      setConfirmation(false);
+      setFileInputKey((key) => key + 1);
+      setResetOpen(false);
+      await refresh();
+      setNotice("Acme AP was restored to the canonical synthetic starting state.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The synthetic demo could not be restored");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   return (
     <main className="portal-shell">
       <AcmeSiteTools />
@@ -267,6 +296,25 @@ export function AcmeWorkspace({
       <section className="agent-guide" aria-label="Human and agent workflow">
         <span className="pulse" aria-hidden="true" />
         <div><strong>One workspace, two ways to work</strong><p>Complete every operation yourself below, or delegate discovery and preparation to your agent while retaining submission approval.</p></div>
+      </section>
+
+      <section className="demo-controls" aria-labelledby="demo-controls-title">
+        <div>
+          <p className="kicker">Synthetic challenge environment</p>
+          <h2 id="demo-controls-title">Need a fresh demo run?</h2>
+          <p>Restore only this AP workspace, then restore OpenFinance AR separately.</p>
+        </div>
+        {!resetOpen ? <button className="portal-button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
+          Restore demo start
+        </button> : <div className="reset-confirmation" role="group" aria-label="Confirm Acme demo reset">
+          <p><strong>Delete synthetic AP activity?</strong><span>Receipts, payment signals, and workflow audit events will be replaced by the canonical purchase-order balances.</span></p>
+          <div>
+            <button className="portal-button quiet" type="button" onClick={() => setResetOpen(false)} disabled={pendingAction !== null}>Cancel</button>
+            <button className="portal-button danger" type="button" onClick={() => void restoreDemo()} disabled={pendingAction !== null}>
+              {pendingAction === "reset" ? "Restoring…" : "Restore synthetic AP data"}
+            </button>
+          </div>
+        </div>}
       </section>
 
       <section className="requirements" aria-labelledby="requirements-title">

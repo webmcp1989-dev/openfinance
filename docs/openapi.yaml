@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: OpenFinance WebMCP demo HTTP APIs
-  version: 1.4.0
+  version: 1.5.0
   license:
     name: MIT
     identifier: MIT
@@ -306,6 +306,43 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+  /api/demo/reset:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: restoreSyntheticDemoState
+      summary: Restore one application's independent synthetic challenge baseline
+      description: >-
+        Human-only capability. It is intentionally absent from WebMCP and must be
+        confirmed separately in each application. The authenticated database function
+        allows only the seeded demo operator or submitter and records the reset in that
+        application's audit trail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [confirmation]
+              properties:
+                confirmation: { type: string, const: restore-canonical-demo }
+      responses:
+        "200":
+          description: This application's synthetic baseline was restored
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/OpenFinanceDemoResetResult" }
+                  - { $ref: "#/components/schemas/AcmeDemoResetResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
 components:
   securitySchemes:
     cookieSession:
@@ -325,7 +362,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
     Forbidden:
-      description: A same-origin write request is required
+      description: A same-origin request and sufficient tenant-scoped role are required
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
@@ -614,6 +651,25 @@ components:
         submissions: { type: array, items: { $ref: "#/components/schemas/SubmissionReceipt" } }
         auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
         auditAvailable: { type: boolean, description: False when the optional recent-audit read failed; auditEvents is then empty. }
+    OpenFinanceDemoResetResult:
+      type: object
+      additionalProperties: false
+      required: [restoredInvoiceCount, deletedDeliveryEventCount, deletedErpEventCount, deletedErpInvoiceCount, resetAt]
+      properties:
+        restoredInvoiceCount: { type: integer, const: 4 }
+        deletedDeliveryEventCount: { type: integer, minimum: 0 }
+        deletedErpEventCount: { type: integer, minimum: 0 }
+        deletedErpInvoiceCount: { type: integer, minimum: 0 }
+        resetAt: { type: string, format: date-time }
+    AcmeDemoResetResult:
+      type: object
+      additionalProperties: false
+      required: [restoredPurchaseOrderCount, deletedSubmissionCount, deletedBatchCount, resetAt]
+      properties:
+        restoredPurchaseOrderCount: { type: integer, const: 3 }
+        deletedSubmissionCount: { type: integer, minimum: 0 }
+        deletedBatchCount: { type: integer, minimum: 0 }
+        resetAt: { type: string, format: date-time }
     ErrorResponse:
       type: object
       required: [error]

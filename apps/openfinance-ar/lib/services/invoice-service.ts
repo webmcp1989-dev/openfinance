@@ -245,3 +245,27 @@ export async function syncInvoicesFromErp(
 
   return data as ErpSyncResult;
 }
+
+export type DemoResetResult = Readonly<{
+  restoredInvoiceCount: number;
+  deletedDeliveryEventCount: number;
+  deletedErpEventCount: number;
+  deletedErpInvoiceCount: number;
+  resetAt: string;
+}>;
+
+export async function resetDemoState(supabase: SupabaseClient): Promise<DemoResetResult> {
+  const { data, error } = await supabase.rpc("reset_demo_state");
+
+  if (error) {
+    if (error.code === "42501") {
+      throw new HttpError(403, "demo_reset_forbidden", "This account cannot restore the synthetic demo");
+    }
+    if (error.code === "P0002") {
+      throw new HttpError(409, "demo_baseline_incomplete", "The synthetic demo baseline is incomplete");
+    }
+    throw new HttpError(422, "demo_reset_failed", "The synthetic demo could not be restored");
+  }
+
+  return data as DemoResetResult;
+}

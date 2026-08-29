@@ -13,7 +13,7 @@ An AR operator has several invoices ready in OpenFinance but Acme requires submi
 - Acme: `PO-8890` has $10,000 remaining, less than the $12,900 on `INV-10507`.
 - Acme has no submitted invoices.
 
-Restore this state with the two reviewed administrative scripts in [setup](SETUP.md#restore-the-synthetic-demo-state). The reset scripts are independent, explicit operator actions and are not available to the browser agent.
+Restore this state with the separate two-step human controls in each app or the reviewed administrative scripts in [setup](SETUP.md#restore-the-synthetic-demo-state). Resets are independently authorized and audited, and are not available to the browser agent.
 
 ## Live flow
 

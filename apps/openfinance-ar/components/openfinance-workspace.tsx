@@ -19,6 +19,9 @@ function statusLabel(invoice: InvoiceQueueItem) {
 }
 
 function auditSummary(event: AuditEvent) {
+  if (event.action === "demo_state_reset") {
+    return "Canonical synthetic AR data restored";
+  }
   const eventType = typeof event.details.eventType === "string"
     ? event.details.eventType.replaceAll("_", " ")
     : event.action === "erp_invoice_sync_completed" ? "ERP invoice sync" : "delivery update";
@@ -49,6 +52,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
   const [packages, setPackages] = useState<SubmissionPackageItem[]>([]);
   const [outcomeMode, setOutcomeMode] = useState<OutcomeMode>("result");
   const [workbenchOpen, setWorkbenchOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +142,27 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
     }
   }
 
+  async function restoreDemo() {
+    clearFeedback();
+    setPendingAction("reset");
+    try {
+      await apiRequest("/api/demo/reset", {
+        method: "POST",
+        body: JSON.stringify({ confirmation: "restore-canonical-demo" }),
+      });
+      setSelected([]);
+      setPackages([]);
+      setWorkbenchOpen(false);
+      setResetOpen(false);
+      await refresh();
+      setNotice("OpenFinance AR was restored to the canonical synthetic starting state.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The synthetic demo could not be restored");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function recordOutcome(formData: FormData) {
     clearFeedback();
     const invoiceNumber = String(formData.get("invoiceNumber") ?? "");
@@ -218,6 +243,25 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
         <span className="agent-dot" aria-hidden="true" />
         <div><strong>Prefer delegation?</strong><p>Ask: “Submit all Acme invoices that are ready for their AP portal.”</p></div>
         <span className="agent-ready">4 site tools</span>
+      </section>
+
+      <section className="demo-controls" aria-labelledby="demo-controls-title">
+        <div>
+          <p className="eyebrow">Synthetic challenge environment</p>
+          <h2 id="demo-controls-title">Need a fresh demo run?</h2>
+          <p>Restore only this AR workspace, then restore the independent AP portal separately.</p>
+        </div>
+        {!resetOpen ? <button className="button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
+          Restore demo start
+        </button> : <div className="reset-confirmation" role="group" aria-label="Confirm OpenFinance demo reset">
+          <p><strong>Delete synthetic AR activity?</strong><span>Portal results, imported ERP invoices, and workflow audit events will be replaced by the canonical starting data.</span></p>
+          <div>
+            <button className="button quiet" type="button" onClick={() => setResetOpen(false)} disabled={pendingAction !== null}>Cancel</button>
+            <button className="button danger" type="button" onClick={() => void restoreDemo()} disabled={pendingAction !== null}>
+              {pendingAction === "reset" ? "Restoring…" : "Restore synthetic AR data"}
+            </button>
+          </div>
+        </div>}
       </section>
 
       <section className="panel" aria-labelledby="invoice-title">

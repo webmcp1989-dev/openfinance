@@ -26,6 +26,7 @@
 - AR result and exception recording enforces exact payload fields, legal portal statuses, field bounds, purchase-order presence, and allowed invoice state transitions inside Postgres—not only in the HTTP layer.
 - AR ERP sync derives the organization and authorized operator from `auth.uid()`, serializes a tenant-scoped idempotency key, row-locks the alternating sync state, and records the exact stored response and audit event in the same transaction. Its state and event tables have RLS enabled and no direct authenticated grants.
 - Public RPC functions are security invokers. Privileged implementation functions live in the unexposed `private` schema, set an empty search path, schema-qualify every relation, and receive minimal execution grants.
+- Repeatable challenge resets are independent human-only mutations. Each same-origin route requires an exact confirmation payload; each private database function derives the caller from `auth.uid()`, accepts only the fixed synthetic organization or supplier with an operator/submitter role, serializes resets, asserts every baseline row count, and leaves one visible reset audit event. No reset capability is registered with WebMCP, and neither application can reset the other.
 
 ## Request and document safety
 
