@@ -81,7 +81,7 @@ AR stores evidence independently and never reads AP records directly. Its follow
 
 ## Data transfer
 
-The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, checks the PDF signature and final 1,024-byte window for `%%EOF`, and verifies the hash. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
+The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, verifies canonical base64, requires the accepted classic PDF structure (catalog, page, and byte-accurate `startxref` to `xref` before EOF), and verifies the hash. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
 
 The same AR document is available to an authenticated human through a no-store download route. That route revalidates the stored document and relies on AR RLS before returning it; manual upload in Acme uses the same AP validation and confirmed-submission backend as agent-assisted transfer.
 

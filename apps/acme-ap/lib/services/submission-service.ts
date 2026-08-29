@@ -12,6 +12,7 @@ import type {
   ValidationIssue,
 } from "@/lib/domain/submissions";
 import { fingerprint, HttpError } from "@/lib/http-core";
+import { hasStructuralPdf } from "@/lib/pdf-structure";
 
 type PurchaseOrderRow = {
   purchase_order_number: string;
@@ -174,11 +175,9 @@ function inspectDocument(invoice: InvoiceCandidate): ValidationIssue | null {
     return { code: "invalid_document", message: "The invoice document is not valid base64." };
   }
   const canonical = bytes.toString("base64");
-  const tail = bytes.subarray(Math.max(0, bytes.length - 1_024));
   if (canonical !== invoice.document.contentBase64
     || bytes.length > 1_048_576
-    || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))
-    || tail.indexOf(Buffer.from("%%EOF")) === -1) {
+    || !hasStructuralPdf(bytes)) {
     return { code: "invalid_document", message: "The invoice document must be a valid PDF no larger than 1 MB." };
   }
   const actualHash = createHash("sha256").update(bytes).digest("hex");

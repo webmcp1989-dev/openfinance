@@ -735,7 +735,8 @@ components:
           minLength: 8
           maxLength: 1400000
           pattern: "^[A-Za-z0-9+/]+={0,2}$"
-          description: Canonical RFC 4648 base64 without line wrapping or whitespace; decoded content must be at most 1 MiB, start with `%PDF-`, and contain `%%EOF` within its final 1,024 bytes.
+          description: >-
+            Canonical RFC 4648 base64 without line wrapping or whitespace. Decoded content must be at most 1 MiB and use the accepted classic PDF profile: `%PDF-` header, catalog and page markers, plus a terminal numeric `startxref` whose byte offset points to an `xref` table before `%%EOF`.
         sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
     InvoicePackage:
       allOf:

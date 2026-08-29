@@ -11,6 +11,7 @@ import type {
 } from "@/lib/domain/submissions";
 import type { AuditEvent } from "@/lib/services/audit-service";
 import type { SubmissionRow } from "@/lib/services/submission-service";
+import { hasStructuralPdf } from "@/lib/pdf-structure";
 import { AcmeSiteTools } from "./acme-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -64,6 +65,9 @@ export async function fileDocument(file: File, requirements: SubmissionRequireme
   }
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
+  if (!hasStructuralPdf(bytes)) {
+    throw new Error("Choose a structurally valid PDF invoice document.");
+  }
   let binary = "";
   for (let offset = 0; offset < bytes.length; offset += 32_768) {
     binary += String.fromCharCode(...bytes.subarray(offset, offset + 32_768));

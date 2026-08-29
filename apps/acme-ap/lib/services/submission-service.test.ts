@@ -6,7 +6,18 @@ import type { InvoiceCandidate } from "@/lib/domain/submissions";
 mock.module("server-only", () => ({}));
 const { getInvoiceStatus, submitInvoiceBatch, validateInvoice } = await import("./submission-service");
 
-const documentBytes = Buffer.from("%PDF-1.4\nOpenFinance test\n%%EOF", "utf8");
+function renderStructuralPdf() {
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n",
+  ];
+  const prefix = `%PDF-1.4\n${objects.join("")}`;
+  const xrefOffset = Buffer.byteLength(prefix, "utf8");
+  return Buffer.from(`${prefix}xref\n0 4\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n${xrefOffset}\n%%EOF\n`, "utf8");
+}
+
+const documentBytes = renderStructuralPdf();
 
 function invoice(overrides: Partial<InvoiceCandidate> = {}): InvoiceCandidate {
   return {
@@ -104,6 +115,24 @@ describe("Acme invoice validation", () => {
         mediaType: "application/pdf",
         contentBase64: incompleteBytes.toString("base64"),
         sha256: createHash("sha256").update(incompleteBytes).digest("hex"),
+      },
+    });
+
+    const result = await validateInvoice(client as never, candidate);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "invalid_document" }));
+  });
+
+  test("rejects a header-and-EOF pseudo-PDF that has no renderable structure", async () => {
+    const { client } = fakeSupabase();
+    const pseudoBytes = Buffer.from("%PDF-1.4\nThis is not a PDF object graph.\n%%EOF", "utf8");
+    const candidate = invoice({
+      document: {
+        fileName: "INV-10482.pdf",
+        mediaType: "application/pdf",
+        contentBase64: pseudoBytes.toString("base64"),
+        sha256: createHash("sha256").update(pseudoBytes).digest("hex"),
       },
     });
 

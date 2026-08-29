@@ -70,7 +70,7 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - Consequential/retryable writes must be tenant-scoped, idempotent, concurrency-safe, auditable, and transactionally correct.
 - Cross-site document transfer and AP submission require separate, informed human approvals. Preview destination, invoice numbers, POs, amounts, total, and exclusions.
 - Exception responses, corrected invoice replacement, buyer inquiries, and AR remittance writeback also require an exact human preview and approval immediately before the consequential write.
-- Treat tool inputs/outputs and uploaded documents as untrusted. Preserve the bounded PDF, SHA-256, canonical base64, exact-integer money, and three-item batch controls.
+- Treat tool inputs/outputs and uploaded documents as untrusted. Preserve the bounded classic-PDF structure (catalog, page, byte-accurate `startxref`/`xref`), SHA-256, canonical base64, exact-integer money, and three-item batch controls. Keep the AP server and database checks authoritative; client-side file checks are UX only.
 - Keep security headers, no-cache authenticated state, optional-audit degradation, and visible post-write refresh behavior.
 
 ## Database and migrations

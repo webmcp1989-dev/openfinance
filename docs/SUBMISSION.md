@@ -33,7 +33,7 @@ The workflow remains understandable and usable by a human on either site. With t
 
 ### How WebMCP was implemented
 
-Both Next.js applications register imperative WebMCP tools only in authenticated page context. OpenFinance exposes four narrow tools for listing ready invoices, packaging selected documents, recording portal results, and recording exceptions. Acme exposes five tools for reading requirements, finding purchase orders, validating invoice packages, atomically submitting a confirmed batch, and retrieving status.
+Both Next.js applications register imperative WebMCP tools only in authenticated page context. OpenFinance exposes seven focused tools for ready-invoice discovery, package and supporting-document reads, portal follow-ups, and governed portal-result, exception, and remittance writeback. Acme exposes twelve focused tools for requirements, PO and invoice context, validation, confirmed batch submission, status/portfolio reads, exception evidence, corrected revisions, inquiries, and payment remittance. Reset remains a human-only capability.
 
 Each tool calls only its own same-origin backend with the page’s current cookie session. Read operations use `readOnlyHint`; externally sourced business records use `untrustedContentHint`; every tool has a precise title, strict JSON Schema, cancellable execution, and structured recovery guidance. Backend Zod validation and independent PostgreSQL constraints enforce inputs. Supabase Row Level Security derives tenant or supplier scope from the authenticated user. Consequential writes use fingerprint-bound idempotency, and the AP batch transaction locks PO rows before validating and decrementing balances. The two apps run on separate Vercel origins backed by separate Supabase projects.
 

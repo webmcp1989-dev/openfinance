@@ -21,8 +21,8 @@ select ok(exists (
   select 1 from pg_constraint
   where conrelid = 'public.invoice_attachments'::regclass
     and conname = 'invoice_attachments_pdf_structure_check'
-    and position('%%EOF' in pg_get_constraintdef(oid)) > 0
-), 'supporting-evidence PDFs require a terminal marker');
+    and position('is_canonical_structural_pdf' in pg_get_constraintdef(oid)) > 0
+), 'supporting-evidence PDFs require canonical structural validation');
 select is(
   (select proargnames::text from pg_proc where oid = 'public.create_invoice_inquiry(text,text,jsonb)'::regprocedure),
   '{p_idempotency_key,p_request_fingerprint,p_payload}',

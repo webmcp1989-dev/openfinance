@@ -189,11 +189,19 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("extensions.digest(pg_catalog.convert_to(p_invoices::text");
   });
 
-  test("AP verifies PDF structure and checksum before the submission transaction", async () => {
-    const migration = await readFile(join(root, "services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql"), "utf8");
-    expect(migration).toContain("pg_catalog.convert_to('%PDF-', 'UTF8')");
-    expect(migration).toContain("pg_catalog.convert_to('%%EOF', 'UTF8')");
-    expect(migration).toContain("Document checksum mismatch");
+  test("AP verifies canonical structural PDFs and checksums before any invoice mutation", async () => {
+    const legacyMigration = await readFile(join(root, "services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql"), "utf8");
+    const migration = await readFile(join(root, "services/acme/supabase/migrations/202608300009_enforce_structural_pdf_contract.sql"), "utf8");
+    const sqlTests = await readFile(join(root, "services/acme/supabase/tests/submission-wrapper.test.sql"), "utf8");
+    expect(legacyMigration).toContain("Document checksum mismatch");
+    expect(migration).toContain("create or replace function private.is_structurally_valid_pdf");
+    expect(migration).toContain("/Catalog");
+    expect(migration).toContain("/Page(");
+    expect(migration).toContain("startxref");
+    expect(migration).toContain("private.is_canonical_structural_pdf");
+    expect(migration).toContain("private.replace_rejected_invoice");
+    expect(migration).toContain("invoice_attachments_pdf_structure_check");
+    expect(sqlTests).toContain("header-and-EOF-only pseudo-PDF from the original defect");
   });
 
   test("AP payment discovery is deterministic, scoped, immutable, and read-only", async () => {

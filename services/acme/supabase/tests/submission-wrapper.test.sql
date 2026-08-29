@@ -7,7 +7,7 @@ select set_config(
   (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
   true
 );
-select plan(13);
+select plan(14);
 
 select ok(
   exists (
@@ -49,6 +49,18 @@ select throws_ok(
 );
 
 set local role authenticated;
+
+create function pg_temp.structural_pdf()
+returns bytea
+language plpgsql
+immutable
+as $$
+declare
+  v_prefix text := E'%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n';
+begin
+  return convert_to(v_prefix || E'xref\n0 4\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n' || octet_length(convert_to(v_prefix, 'UTF8')) || E'\n%%EOF\n', 'UTF8');
+end;
+$$;
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.submit_invoice_batch(text,text,jsonb)'::regprocedure),
@@ -151,6 +163,31 @@ select throws_ok(
   'database rejects a PDF signature without an end-of-file marker'
 );
 
+select throws_ok(
+  $$
+    select public.submit_invoice_batch(
+      'pseudo-pdf-test-20260830',
+      repeat('f', 64),
+      jsonb_build_array(jsonb_build_object(
+        'invoiceNumber', 'INV-PSEUDO-PDF-01',
+        'invoiceDate', '2026-08-30',
+        'amountMinor', 1000,
+        'currency', 'USD',
+        'purchaseOrderNumber', 'PO-8821',
+        'document', jsonb_build_object(
+          'fileName', 'INV-PSEUDO-PDF-01.pdf',
+          'mediaType', 'application/pdf',
+          'contentBase64', encode(convert_to(E'%PDF-1.4\nThis is not a PDF object graph.\n%%EOF\n', 'UTF8'), 'base64'),
+          'sha256', encode(extensions.digest(convert_to(E'%PDF-1.4\nThis is not a PDF object graph.\n%%EOF\n', 'UTF8'), 'sha256'), 'hex')
+        )
+      ))
+    )
+  $$,
+  '22023',
+  'Document is not a valid permitted PDF',
+  'database rejects the header-and-EOF-only pseudo-PDF from the original defect'
+);
+
 create temporary table retry_probe (
   response jsonb not null
 ) on commit drop;
@@ -168,8 +205,8 @@ select public.submit_invoice_batch(
     'document', jsonb_build_object(
       'fileName', 'INV-RETRY-01.pdf',
       'mediaType', 'application/pdf',
-      'contentBase64', encode(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'base64'),
-      'sha256', encode(extensions.digest(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'sha256'), 'hex')
+      'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+      'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
     )
   ))
 );
@@ -187,8 +224,8 @@ select is(
       'document', jsonb_build_object(
         'fileName', 'INV-RETRY-01.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'base64'),
-        'sha256', encode(extensions.digest(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'sha256'), 'hex')
+        'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
     ))
   ),
@@ -216,8 +253,8 @@ select throws_ok(
         'document', jsonb_build_object(
           'fileName', 'INV-RETRY-01.pdf',
           'mediaType', 'application/pdf',
-          'contentBase64', encode(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'base64'),
-          'sha256', encode(extensions.digest(convert_to(E'%PDF-retry-test\n%%EOF', 'UTF8'), 'sha256'), 'hex')
+          'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+          'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
         )
       ))
     )

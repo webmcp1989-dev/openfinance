@@ -58,6 +58,18 @@ select ok(
 
 set local role authenticated;
 
+create function pg_temp.structural_pdf()
+returns bytea
+language plpgsql
+immutable
+as $$
+declare
+  v_prefix text := E'%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n';
+begin
+  return convert_to(v_prefix || E'xref\n0 4\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n' || octet_length(convert_to(v_prefix, 'UTF8')) || E'\n%%EOF\n', 'UTF8');
+end;
+$$;
+
 select public.submit_invoice_batch(
   'payment-pair-test-20260829',
   repeat('9', 64),
@@ -71,8 +83,8 @@ select public.submit_invoice_batch(
       'document', jsonb_build_object(
         'fileName', 'INV-PAYTEST-01.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(convert_to(E'%PDF-payment-test-1\n%%EOF', 'UTF8'), 'base64'),
-        'sha256', encode(extensions.digest(convert_to(E'%PDF-payment-test-1\n%%EOF', 'UTF8'), 'sha256'), 'hex')
+        'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
     ),
     jsonb_build_object(
@@ -84,8 +96,8 @@ select public.submit_invoice_batch(
       'document', jsonb_build_object(
         'fileName', 'INV-PAYTEST-02.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(convert_to(E'%PDF-payment-test-2\n%%EOF', 'UTF8'), 'base64'),
-        'sha256', encode(extensions.digest(convert_to(E'%PDF-payment-test-2\n%%EOF', 'UTF8'), 'sha256'), 'hex')
+        'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
     )
   )

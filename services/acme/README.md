@@ -14,10 +14,11 @@ This directory belongs only to the independent Acme AP Supabase project.
 - `supabase/migrations/202608300002_replace_rejected_invoice.sql` adds the transactional, idempotent corrected-invoice revision workflow with atomic PO balance reallocation.
 - `supabase/migrations/202608300003_align_simulator_and_reset.sql` keeps payment scheduling and the synthetic reset correct for the expanded schema.
 - `supabase/migrations/202608300004_current_invoice_statuses.sql` limits effective status reads to the current invoice revision.
-- `supabase/migrations/202608300005_validate_attachment_pdfs.sql` enforces PDF signature and terminal-marker integrity for supplier evidence at the database boundary.
+- `supabase/migrations/202608300005_validate_attachment_pdfs.sql` adds the supplier-evidence PDF constraint, which is strengthened by the later structural-PDF migration.
 - `supabase/migrations/202608300006_serialize_invoice_inquiries.sql` serializes supplier-scoped inquiry retries.
 - `supabase/migrations/202608300007_serialize_exception_responses.sql` serializes supplier-scoped exception-response retries and requires a complete PDF marker for every attached document.
 - `supabase/migrations/202608300008_name_postgrest_rpc_arguments.sql` gives every new public mutation wrapper stable named arguments for PostgREST RPC discovery.
+- `supabase/migrations/202608300009_enforce_structural_pdf_contract.sql` makes the AP UI, service, public submission wrapper, corrected-invoice transaction, and evidence constraint reject canonical PDF-looking placeholders unless they have the accepted classic catalog/page/cross-reference structure.
 - `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign supplier and proves its purchase orders cannot be read or consumed.
 - `supabase/tests/submission-wrapper.test.sql` verifies policy alignment, exact request enforcement, PDF structure, wrapper execution mode, retry serialization, identical-response replay, single balance decrement, changed-payload rejection, and duplicate rejection.
 - `supabase/tests/payment-settlement.test.sql` verifies payment-state isolation, view security, deterministic pair behavior, paid-status maturity, references, and audit creation.
