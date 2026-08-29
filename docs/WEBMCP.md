@@ -1,6 +1,6 @@
 # WebMCP site tools
 
-OpenFinance uses the imperative `document.modelContext.registerTool` API on authenticated top-level pages. ChatGPT's current built-in browser does not discover declarative form tools or iframe registrations, so neither is used.
+OpenFinance uses the imperative `document.modelContext.registerTool` API on authenticated top-level pages because the challenge workflow needs structured, stateful operations backed by same-origin services rather than form submission. Declarative form tools and iframe exposure are not part of this focused workflow.
 
 Each registration is bound to an `AbortSignal` whose lifetime matches the authenticated page component, following the current WebMCP draft lifecycle. Navigating away or signing out aborts the registrations so capabilities from the previous authenticated document cannot remain available. The optional legacy `unregisterTool` cleanup is retained as a compatibility fallback for browser implementations predating signal-scoped registration and runs again after pending registrations settle, closing the late-registration race during navigation.
 
