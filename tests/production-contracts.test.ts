@@ -83,6 +83,7 @@ describe("database mutation boundaries", () => {
     const setup = await readFile(join(root, "docs/SETUP.md"), "utf8");
     expect(setup).toContain("202608290003_enforce_delivery_event_contract.sql");
     expect(setup).toContain("202608290004_bound_json_money.sql");
+    expect(setup).toContain("202608290005_canonicalize_delivery_requests.sql");
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
     expect(setup).toContain("202608290003_bound_json_money.sql");
     expect(setup).toContain("202608290004_align_submission_policy.sql");
@@ -118,6 +119,14 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("Invalid document fields");
     expect(migration).toContain("Document is not canonical base64");
     expect(migration).toContain("extensions.digest(pg_catalog.convert_to(p_invoices::text");
+  });
+
+  test("AR derives idempotency identity and compares canonical retry content in Postgres", async () => {
+    const migration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql"), "utf8");
+    expect(migration).toContain("v_existing_payload is distinct from p_payload");
+    expect(migration).toContain("v_existing_event_type is distinct from p_event_type");
+    expect(migration).toContain("extensions.digest(");
+    expect(migration).toContain("v_existing_fingerprint");
   });
 
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {

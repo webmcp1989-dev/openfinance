@@ -37,6 +37,7 @@
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.
 - Recent-audit reads are optional display data. If one fails, the workspace explicitly marks the audit panel unavailable instead of misreporting zero events or taking down the core tenant-scoped financial view.
+- AR delivery writebacks and AP submissions derive authoritative idempotency identity in PostgreSQL. Reusing a key with changed event type, payload, or invoice content is rejected even if a direct caller supplies the same forged fingerprint.
 - Production responses set a restrictive CSP, deny framing and MIME sniffing, disable unused browser capabilities, isolate cross-origin resources, and suppress referrer data.
 - Login failures do not reveal whether an email exists. A separately authenticated account whose tenant profile is missing receives an actionable workspace-assignment message instead of a misleading credential error.
 

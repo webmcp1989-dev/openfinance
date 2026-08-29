@@ -28,6 +28,8 @@ There is no shared database, session cookie, service credential, server-to-serve
 5. Supabase Data API calls run as the authenticated user; Postgres grants and RLS enforce tenant scope independently of application code.
 6. Private Postgres functions perform consequential multi-row changes atomically and idempotently.
 
+Both public mutation wrappers serialize tenant-scoped idempotency keys and derive authoritative request identity inside PostgreSQL. The compatibility fingerprint argument is format-checked but not trusted; exact stored content determines whether a retry is identical.
+
 The browser never receives a service-role key. The frontend is not an authorization or business-rule boundary.
 Shared hashing and typed-error primitives live in framework-free `http-core` modules, so domain services and their tests do not initialize Next.js or Supabase infrastructure.
 

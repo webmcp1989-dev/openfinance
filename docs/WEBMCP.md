@@ -38,7 +38,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 - Read outputs include live versions, balances, rules, checksums, and validation issues needed to verify decisions.
 - Acme's stored requirements are database-constrained to the same PDF, size, open-PO, and balance contract advertised by its tools and enforced during submission.
 - Write outputs include durable references and committed remaining balances.
-- Frontend schemas aid tool selection; Zod, RLS, exact public-RPC validation, constraints, and transaction code remain authoritative. The AP RPC derives its own payload fingerprint, so a caller-supplied digest cannot disguise changed idempotent content.
+- Frontend schemas aid tool selection; Zod, RLS, exact public-RPC validation, constraints, and transaction code remain authoritative. Both mutation RPCs derive request identity in PostgreSQL, so a caller-supplied digest cannot disguise changed idempotent content. AR also compares the stored event type and payload directly before replaying an existing delivery result.
 
 ## Required orchestration
 
