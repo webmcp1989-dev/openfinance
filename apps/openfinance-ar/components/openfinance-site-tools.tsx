@@ -113,11 +113,24 @@ export function OpenFinanceSiteTools() {
       },
     ];
 
-    void Promise.all(tools.map((tool) => context.registerTool(tool)));
-    return () => {
+    const registrationController = new AbortController();
+    let disposed = false;
+    const removeTools = () => {
+      registrationController.abort();
       if (typeof context.unregisterTool === "function") {
         for (const tool of tools) void context.unregisterTool(tool.name);
       }
+    };
+
+    void Promise.allSettled(tools.map(async (tool) => {
+      await context.registerTool(tool, { signal: registrationController.signal });
+    })).then((results) => {
+      if (!disposed && results.some((result) => result.status === "rejected")) removeTools();
+    });
+
+    return () => {
+      disposed = true;
+      removeTools();
     };
   }, []);
 

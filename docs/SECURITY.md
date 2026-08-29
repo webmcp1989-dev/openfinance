@@ -27,6 +27,7 @@
 
 ## Request and document safety
 
+- WebMCP registrations are scoped to the authenticated page component with an `AbortSignal`; navigation or sign-out removes the old document's capabilities. An optional legacy unregistration fallback supports earlier browser implementations.
 - Mutating routes require `application/json` and an exact same-origin `Origin` header.
 - Zod and Postgres constraints independently enforce shape, length, enum, money, identifier, and batch limits.
 - Money integers are capped at `9007199254740991` in WebMCP, HTTP, and Postgres contracts so JSON/JavaScript transport cannot silently lose precision.

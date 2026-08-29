@@ -176,6 +176,18 @@ describe("database mutation boundaries", () => {
 });
 
 describe("WebMCP safety contracts", () => {
+  test("tool registrations are scoped to the authenticated page lifetime", async () => {
+    for (const app of ["openfinance-ar", "acme-ap"]) {
+      const component = app === "openfinance-ar" ? "openfinance" : "acme";
+      const source = await readFile(join(root, `apps/${app}/components/${component}-site-tools.tsx`), "utf8");
+      const types = await readFile(join(root, `apps/${app}/types/webmcp.d.ts`), "utf8");
+      expect(source).toContain("const registrationController = new AbortController()");
+      expect(source).toContain("{ signal: registrationController.signal }");
+      expect(source).toContain("registrationController.abort()");
+      expect(types).toContain("options?: Readonly<{ signal?: AbortSignal }>");
+    }
+  });
+
   test("browser-facing package transfers stay below the deployed payload boundary", async () => {
     const ar = await readFile(join(root, "apps/openfinance-ar/components/openfinance-site-tools.tsx"), "utf8");
     const ap = await readFile(join(root, "apps/acme-ap/components/acme-site-tools.tsx"), "utf8");

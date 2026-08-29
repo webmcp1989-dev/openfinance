@@ -13,7 +13,10 @@ type WebMcpTool = Readonly<{
 }>;
 
 interface DocumentModelContext {
-  registerTool(tool: WebMcpTool): Promise<void> | void;
+  registerTool(
+    tool: WebMcpTool,
+    options?: Readonly<{ signal?: AbortSignal }>,
+  ): Promise<void> | void;
   unregisterTool?(name: string): Promise<void> | void;
 }
 
