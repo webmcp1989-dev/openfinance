@@ -124,6 +124,9 @@ export async function recordDeliveryEvent(
     if (error.code === "23505") {
       throw new HttpError(409, "idempotency_conflict", "Idempotency key conflicts with an earlier request");
     }
+    if (error.code === "23514") {
+      throw new HttpError(409, "invoice_state_conflict", "Invoice state changed; reload the queue before recording the portal outcome");
+    }
     if (error.code === "P0002") {
       throw new HttpError(404, "invoice_not_found", "An invoice was not found");
     }
