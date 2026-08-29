@@ -47,6 +47,9 @@ describe("authentication recovery messages", () => {
       expect(source).toContain('error === "profile_missing"');
       expect(source).toContain("account is authenticated but is not assigned");
       expect(source).toContain("The email or password is incorrect.");
+      expect(source).toContain("import { signIn, signOut }");
+      expect(source).toContain("action={signOut}");
+      expect(source).toContain("Use a different account");
     });
   }
 });

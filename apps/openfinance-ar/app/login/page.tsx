@@ -1,4 +1,4 @@
-import { signIn } from "./actions";
+import { signIn, signOut } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -13,15 +13,21 @@ export default async function LoginPage({
       : null;
   return (
     <main className="auth-shell">
-      <form action={signIn} className="auth-card">
-        <p className="eyebrow">OpenFinance</p>
-        <h1>Sign in to portal delivery</h1>
-        <p>Use your supplier workspace credentials. Site tools become available only after authentication.</p>
-        <label>Email<input name="email" type="email" autoComplete="username" required /></label>
-        <label>Password<input name="password" type="password" autoComplete="current-password" minLength={8} required /></label>
-        {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-        <button type="submit">Sign in</button>
-      </form>
+      <section className="auth-card" aria-labelledby="login-title">
+        <form action={signIn} className="auth-form">
+          <p className="eyebrow">OpenFinance</p>
+          <h1 id="login-title">Sign in to portal delivery</h1>
+          <p>Use your supplier workspace credentials. Site tools become available only after authentication.</p>
+          <label>Email<input name="email" type="email" autoComplete="username" required /></label>
+          <label>Password<input name="password" type="password" autoComplete="current-password" minLength={8} required /></label>
+          {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
+          <button type="submit">Sign in</button>
+        </form>
+        {error === "profile_missing" ? <form action={signOut} className="account-recovery">
+          <p>Signed in with a different account?</p>
+          <button type="submit">Use a different account</button>
+        </form> : null}
+      </section>
     </main>
   );
 }

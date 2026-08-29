@@ -125,12 +125,17 @@ tbody tr:last-child td { border-bottom: 0; }
 
 .auth-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 20% 0%, #dff3ea, transparent 40%), var(--canvas); }
 .auth-card { width: min(440px, 100%); display: grid; gap: 18px; padding: 34px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); box-shadow: 0 24px 70px rgb(20 50 40 / 12%); }
+.auth-form { display: grid; gap: 18px; }
 .auth-card h1 { margin: 0; letter-spacing: -.03em; }
-.auth-card > p:not(.eyebrow, .form-error) { margin: -8px 0 2px; color: var(--muted); line-height: 1.55; }
+.auth-form > p:not(.eyebrow, .form-error) { margin: -8px 0 2px; color: var(--muted); line-height: 1.55; }
 .auth-card label { display: grid; gap: 7px; color: #42534d; font-size: .82rem; font-weight: 700; }
 .auth-card input { width: 100%; padding: 12px 14px; border: 1px solid #cbd8d3; border-radius: 10px; color: var(--ink); background: #fff; }
 .auth-card input:focus { outline: 3px solid #d5eee5; border-color: var(--brand); }
 .auth-card button { padding: 13px 16px; border: 0; border-radius: 10px; color: #fff; background: var(--brand); font-weight: 750; }
+.account-recovery { display: grid; gap: 9px; padding-top: 18px; border-top: 1px solid var(--line); }
+.account-recovery p { margin: 0; color: var(--muted); font-size: .8rem; text-align: center; }
+.auth-card .account-recovery button { border: 1px solid #b9d0c7; color: var(--brand); background: #f4fbf8; }
+.auth-card .account-recovery button:hover { background: var(--brand-soft); }
 .form-error { margin: 0; color: #a93a2e; font-size: .83rem; }
 
 @media (max-width: 880px) {
