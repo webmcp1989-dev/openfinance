@@ -16,6 +16,7 @@ This file records only non-obvious continuation context. Repository-wide rules a
 - `services/openfinance/supabase/demo/reset.sql` removes synthetic `ERP-*` imports and resets the next sync to two invoices.
 - AP's human workspace exposes requirements, PO/status lookup, PDF validation, explicit batch review, and confirmed atomic submission. AR exposes scoped queue filtering, package review, result/exception recording, and ERP sync.
 - Human UI controls are convenience and presentation only. The same route, service, RLS, public wrapper, and private transaction boundaries remain authoritative.
+- Both Next.js configs set `agentRules: false` so `next dev` does not generate duplicate app-level `AGENTS.md`/`CLAUDE.md` files; the reviewed root `AGENTS.md` remains authoritative.
 
 ## Migration and environment status
 

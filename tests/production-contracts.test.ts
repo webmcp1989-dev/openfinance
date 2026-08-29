@@ -13,6 +13,7 @@ const root = join(import.meta.dir, "..");
 describe("production security headers", () => {
   for (const [name, config] of [["OpenFinance AR", openFinanceConfig], ["Acme AP", acmeConfig]] as const) {
     test(`${name} denies framing and unnecessary browser capabilities`, async () => {
+      expect(config.agentRules).toBe(false);
       expect(config.headers).toBeFunction();
       const rules = await config.headers!();
       const headers = Object.fromEntries(rules[0]!.headers.map((header) => [header.key, header.value]));
