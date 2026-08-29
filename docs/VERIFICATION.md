@@ -6,16 +6,20 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 67 tests passed with 271 expectations.
+- `bun test`: 67 tests passed with 273 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
 - `bun audit`: no known dependency vulnerabilities.
-- A fresh clone of public GitHub commit `dd12be5` completed frozen install,
+- Both documented development-server commands reached Ready on ports 3000 and
+  3001. Next.js agent-file generation is disabled, so they do not create
+  duplicate nested instructions.
+- A fresh clone of public GitHub commit `e82137c` completed frozen install,
   type-check, lint, all 67 tests, and both production builds using only the
-  documented variables with safe build-time placeholders.
-- GitHub Actions CI run 35 completed successfully. Both Vercel production
-  projects reported commit `dd12be5` as Ready.
+  documented variables with safe build-time placeholders; its dependency
+  audit found no vulnerabilities.
+- GitHub Actions completed successfully for final code commit `e82137c`. Both
+  Vercel production projects reported that commit as a successful deployment.
 
 The test suite covers strict request contracts, authentication ordering,
 security headers, responsive authentication controls, PDF structure and
