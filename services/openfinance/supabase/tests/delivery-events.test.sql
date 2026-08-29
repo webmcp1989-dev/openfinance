@@ -20,7 +20,7 @@ select set_config(
 );
 set local role authenticated;
 
-select plan(7);
+select plan(10);
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.record_delivery_event(public.delivery_event_type,text,text,jsonb)'::regprocedure),
@@ -86,6 +86,38 @@ select is(
   (select status::text from public.invoices where invoice_number = 'TEST-STATE-01'),
   'needs_attention',
   'the valid exception moves the invoice to needs attention'
+);
+
+select lives_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_exception',
+      'valid-exception-test-20260829',
+      repeat('d', 64),
+      '{"items":[{"invoiceNumber":"TEST-STATE-01","exceptionCode":"po_balance","message":"PO balance is insufficient."}]}'::jsonb
+    )
+  $$,
+  'an identical delivery-event retry returns the stored response'
+);
+
+select is(
+  (select version from public.invoices where invoice_number = 'TEST-STATE-01'),
+  2,
+  'an identical delivery-event retry does not update the invoice twice'
+);
+
+select throws_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_exception',
+      'valid-exception-test-20260829',
+      repeat('f', 64),
+      '{"items":[{"invoiceNumber":"TEST-STATE-01","exceptionCode":"po_balance","message":"A changed message."}]}'::jsonb
+    )
+  $$,
+  '23505',
+  'Idempotency key reused with different payload',
+  'a changed-payload delivery-event retry is rejected'
 );
 
 select throws_ok(
