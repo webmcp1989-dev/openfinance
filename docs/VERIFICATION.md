@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 77 tests passed with 322 expectations.
+- `bun test`: 80 tests passed with 349 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -18,8 +18,9 @@ to the documented starting state after testing.
   type-check, lint, all 67 tests, and both production builds using only the
   documented variables with safe build-time placeholders; its dependency
   audit found no vulnerabilities.
-- GitHub Actions completed successfully for final code commit `e82137c`. Both
-  Vercel production projects reported that commit as a successful deployment.
+- GitHub Actions completed successfully for final capability commit `693100a`.
+  Both Vercel production projects reported that commit as a successful
+  deployment.
 - Final recovery commit `e4bc4ae` is pushed to `main`; the deployed AP
   missing-profile page visibly exposes the tested local account-switch action.
 
@@ -44,8 +45,15 @@ mapping, idempotency, and documentation coverage.
 - The Acme deterministic payment-settlement suite passed 15 assertions in the
   live AP project, covering direct-table denial, wrapper privileges, serialized
   pair selection, 10-second maturity, payment references, and auditing.
+- The independent AR and AP human-reset suites each passed 14 rollback-only
+  assertions in their live projects. They prove invoker/definer boundaries,
+  anonymous denial, role denial, exact fixture restoration, deterministic
+  simulator reset, and one visible reset audit event.
 - Unauthenticated workspace reads returned `401`, forged-origin writes returned
   `403`, and unsupported write content types returned `415`.
+- The deployed reset routes independently returned `403` for a foreign origin,
+  `415` for a missing JSON media type, and `401` for a same-origin request
+  without an authenticated session.
 - Production responses included the documented CSP, frame denial, no-sniff,
   HSTS, and permissions-policy headers.
 
@@ -75,9 +83,10 @@ ChatGPT's in-app browser using only the tools exposed by the two live sites.
   remained `received`; the two subsequent status-tool reads left the AP audit
   count unchanged at two events.
 
-After the second run, both scoped administrative reset scripts succeeded. The
-public judge state is now three ready AR invoices, one local missing-PO
-exception, full AP purchase-order balances, and empty receipt and audit trails.
+After the final capability deployment, both independent two-step human reset
+controls succeeded. The public judge state is now three ready AR invoices, one
+local missing-PO exception, full AP purchase-order balances, no AP receipts,
+and one visible `demo_state_reset` audit event in each application.
 Both synthetic judge passwords were then rotated to unique strong values and
 verified through fresh, independent live sign-ins. The credentials remain
 private and are not stored in this repository.
@@ -95,6 +104,11 @@ private and are not stored in this repository.
 - AR adds a human-only ERP sync control; the backend and database tests prove
   its tenant-scoped alternating behavior without changing the four-tool AR
   WebMCP surface.
+- Both deployed workspaces expose a two-step human-only reset. Visual review
+  confirmed the exact deletion warning, cancel path, responsive layout,
+  successful state refresh, and reset audit event. The authenticated WebMCP
+  inventories remained exactly four AR tools and five AP tools, with no reset
+  tool.
 - AR provides a tenant-scoped, no-store invoice PDF download whose route and
   service tests verify exact bytes, safe headers, authorization ordering,
   structure, size, and checksum validation.
@@ -115,7 +129,7 @@ private and are not stored in this repository.
 
 ## Demo video artifact
 
-The local renderer produced
+The existing local renderer produced
 `artifacts/demo-video/openfinance-demo.webm` from committed screenshots of the
 deployed applications and eight Windows-generated narration tracks. Native
 browser playback and seeking verified frames at 0:55, 1:45, and 2:35 and played
@@ -130,9 +144,16 @@ The same renderer produces the tracked 1600×900 judge-facing thumbnail at
 `scripts/demo-video/assets/youtube-thumbnail.png`; tests verify its dimensions,
 bounded size, and public-safe YouTube copy.
 
+The repeatable-reset capability did not modify the renderer, screenshots,
+narration, thumbnail, generated WebM artifact, or create another video.
+
 ## Submission-only tasks
 
-Technical delivery is complete. The entrant must still enter the two verified
-private judge passwords in Devpost, publish the reviewed narrated demo video
-using [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and
-submit before September 3, 2026 at 1:00 p.m. PDT.
+All local, database, deployment, reset-UI, and non-transfer security gates are
+complete. One final post-deployment cross-origin WebMCP rehearsal remains
+paused at the required informed-transfer boundary until the user explicitly
+approves the exact three synthetic invoice packages. After that rehearsal and
+state restoration, the entrant must still enter the two private judge
+passwords in Devpost, publish the existing reviewed narrated demo video using
+[YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and submit
+before September 3, 2026 at 1:00 p.m. PDT.
