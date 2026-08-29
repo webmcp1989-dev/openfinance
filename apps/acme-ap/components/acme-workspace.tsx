@@ -15,6 +15,7 @@ import { AcmeSiteTools } from "./acme-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const timestamp = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
+const preciseTimestamp = new Intl.DateTimeFormat("en-US", { timeStyle: "medium" });
 
 type ValidationResult = Readonly<{
   valid: boolean;
@@ -24,6 +25,10 @@ type ValidationResult = Readonly<{
 }>;
 
 function auditSummary(event: AuditEvent) {
+  if (event.action === "demo_payment_scheduled") {
+    const invoiceNumber = typeof event.details.invoiceNumber === "string" ? event.details.invoiceNumber : "Invoice";
+    return `${invoiceNumber} · synthetic buyer settlement scheduled`;
+  }
   const itemCount = typeof event.details.itemCount === "number" ? event.details.itemCount : 0;
   return `${itemCount} invoice${itemCount === 1 ? "" : "s"} · batch ${event.entityId.slice(0, 8)}`;
 }
@@ -103,6 +108,10 @@ export function AcmeWorkspace({
     }>("/api/agent/workspace", { cache: "no-store" });
     setPurchaseOrders(body.purchaseOrders);
     setSubmissions(body.submissions);
+    setStatusLookup((current) => {
+      if (!current) return current;
+      return body.submissions.find((submission) => submission.invoiceNumber === current.invoiceNumber) ?? current;
+    });
     setAuditEvents(body.auditEvents);
     setAuditAvailable(body.auditAvailable);
   }, []);
@@ -112,6 +121,21 @@ export function AcmeWorkspace({
     window.addEventListener("acme:data-changed", handleDataChanged);
     return () => window.removeEventListener("acme:data-changed", handleDataChanged);
   }, [refresh]);
+
+  useEffect(() => {
+    const nextSettlement = submissions
+      .filter((submission) => submission.settlementExpectedAt && !submission.paidAt)
+      .map((submission) => Date.parse(submission.settlementExpectedAt as string))
+      .filter(Number.isFinite)
+      .sort((left, right) => left - right)[0];
+    if (nextSettlement === undefined) return;
+
+    const timer = window.setTimeout(
+      () => void refresh().catch(() => undefined),
+      Math.max(0, nextSettlement - Date.now() + 500),
+    );
+    return () => window.clearTimeout(timer);
+  }, [refresh, submissions]);
 
   const batchTotal = useMemo(
     () => validatedBatch.reduce((sum, candidate) => sum + candidate.amountMinor, 0),
@@ -261,7 +285,7 @@ export function AcmeWorkspace({
           <form className="lookup-card" action={(formData) => void findInvoiceStatus(formData)}>
             <div><span className="step-number neutral">4</span><div><strong>Track an invoice</strong><p>Retrieve its current receipt and status.</p></div></div>
             <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "status" ? "Checking…" : "Check status"}</button></div></label>
-            {statusLookup && <div className="lookup-result"><strong>{statusLookup.invoiceNumber}</strong><span className="state open">{statusLookup.status}</span><p>{statusLookup.portalReference}</p><b>{money.format(statusLookup.amountMinor / 100)}</b></div>}
+            {statusLookup && <div className="lookup-result"><strong>{statusLookup.invoiceNumber}</strong><span className={`state ${statusLookup.status}`}>{statusLookup.status}</span><p>{statusLookup.paymentReference ?? statusLookup.portalReference}</p><b>{money.format(statusLookup.amountMinor / 100)}</b></div>}
           </form>
         </div>
 
@@ -310,11 +334,17 @@ export function AcmeWorkspace({
 
       <section className="submissions" id="submissions" aria-labelledby="submissions-title">
         <div className="section-heading"><div><p className="kicker">Portal receipts</p><h2 id="submissions-title">Invoice submissions</h2></div><span>{submissions.length} received</span></div>
+        <div className="settlement-note"><strong>Synthetic buyer payment signal</strong><p>For this challenge demo, every second committed invoice settles 10 seconds after receipt. The portal and agent read the same live AP status.</p></div>
         {submissions.length === 0 ? <div className="empty-state"><strong>No invoices submitted yet</strong><p>Validated invoices will appear here immediately after confirmed submission.</p></div> : (
           <div className="submission-list">{submissions.map((submission) => (
             <article key={submission.portalReference}>
-              <div><strong>{submission.invoiceNumber}</strong><span>{submission.status}</span></div>
+              <div><strong>{submission.invoiceNumber}</strong><span className={submission.status}>{submission.status}</span></div>
               <p>{submission.portalReference} · {submission.purchaseOrderNumber}</p>
+              {submission.status === "paid" && submission.paymentReference && submission.paidAt
+                ? <small>Paid {preciseTimestamp.format(new Date(submission.paidAt))} · {submission.paymentReference}</small>
+                : submission.settlementExpectedAt
+                  ? <small>Payment signal expected at {preciseTimestamp.format(new Date(submission.settlementExpectedAt))}</small>
+                  : <small>Awaiting buyer processing</small>}
               <b>{money.format(submission.amountMinor / 100)}</b>
             </article>
           ))}</div>

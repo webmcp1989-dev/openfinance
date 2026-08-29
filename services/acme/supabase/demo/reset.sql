@@ -16,6 +16,10 @@ where supplier_id = '50000000-0000-4000-8000-000000000001';
 delete from public.submission_batches
 where supplier_id = '50000000-0000-4000-8000-000000000001';
 
+update private.payment_simulator_state
+set next_sequence = 1
+where supplier_id = '50000000-0000-4000-8000-000000000001';
+
 do $$
 declare
   v_updated integer;
@@ -52,5 +56,9 @@ select
    where supplier_id = '50000000-0000-4000-8000-000000000001') as submission_batch_count,
   (select count(*) from public.invoice_submissions
    where supplier_id = '50000000-0000-4000-8000-000000000001') as invoice_submission_count,
+  (select count(*) from public.payment_settlements
+   where supplier_id = '50000000-0000-4000-8000-000000000001') as payment_settlement_count,
   (select count(*) from public.audit_events
-   where supplier_id = '50000000-0000-4000-8000-000000000001') as audit_event_count;
+   where supplier_id = '50000000-0000-4000-8000-000000000001') as audit_event_count,
+  (select next_sequence from private.payment_simulator_state
+   where supplier_id = '50000000-0000-4000-8000-000000000001') as next_payment_sequence;

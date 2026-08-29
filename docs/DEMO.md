@@ -25,9 +25,10 @@ Restore this state with the two reviewed administrative scripts in [setup](SETUP
 6. It reports two valid invoices and the exact `PO-8890` balance exception for `INV-10507`.
 7. It asks for a separate explicit confirmation to submit only `INV-10482` and `INV-10491`, showing each PO and amount, the $25,670 total, and all exclusions.
 8. After submission confirmation, it calls `submit_invoice_batch` once with a unique idempotency key.
-9. The Acme UI immediately shows two receipts and reduced PO balances.
+9. The Acme UI immediately shows two receipts and reduced PO balances. It transparently identifies the synthetic buyer payment signal scheduled for the second committed invoice.
 10. The agent records the two portal references and the exception back in OpenFinance with two idempotent tools.
 11. The OpenFinance UI shows the delivered and exception statuses.
+12. After 10 seconds, the Acme UI refreshes once. The agent calls `get_invoice_status` for both receipts and explains that exactly one has become `paid`, including its `PAY-...` reference, while the other remains received.
 
 ## Pass criteria
 
@@ -38,6 +39,9 @@ Restore this state with the two reviewed administrative scripts in [setup](SETUP
 - Reusing an idempotency key with a different payload fails.
 - Both UIs visibly reflect the backend state after tool execution.
 - Portal references returned by Acme exactly match those recorded in OpenFinance.
+- Payment discovery is a read-only status check: one of the pair becomes paid after 10 seconds, no status read causes a mutation, and the UI shows the same result.
+
+For the all-human fallback, download a verified PDF from an OpenFinance invoice package, then use Acme's invoice form to upload, validate, review, confirm, and submit it. This path uses the same tenant-scoped backend rules as the agent flow.
 
 ## Judge-facing emphasis
 

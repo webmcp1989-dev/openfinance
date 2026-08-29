@@ -258,6 +258,12 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
             {packages.length === 0 ? <div className="empty-compact"><strong>No package loaded</strong><p>Select up to three ready invoices and choose Review package.</p></div> : packages.map((item) => <article key={item.invoiceNumber}>
               <div><strong>{item.invoiceNumber}</strong><span>{money.format(item.amountMinor / 100)}</span></div>
               <dl><div><dt>Purchase order</dt><dd>{item.purchaseOrderNumber}</dd></div><div><dt>Document</dt><dd>{item.document.fileName}</dd></div><div><dt>Integrity</dt><dd title={item.document.sha256}>{item.document.sha256.slice(0, 12)}… verified</dd></div></dl>
+              <div className="document-actions">
+                <p>Download this verified PDF, then upload it in Acme AP for manual validation.</p>
+                <a className="button secondary" href={`/api/agent/invoices/${encodeURIComponent(item.invoiceNumber)}/document`} download={item.document.fileName} aria-label={`Download ${item.invoiceNumber} PDF`}>
+                  Download PDF
+                </a>
+              </div>
             </article>)}
           </div>
           <form className="outcome-form" action={(formData) => void recordOutcome(formData)}>

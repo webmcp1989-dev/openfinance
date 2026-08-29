@@ -91,7 +91,7 @@ export function AcmeSiteTools() {
       {
         name: "get_invoice_status",
         title: "Get invoice status",
-        description: "Read Acme's receipt reference and current status for one invoice number belonging to the signed-in supplier.",
+        description: "Read Acme's receipt, current AP status, and any completed synthetic payment reference for one invoice belonging to the signed-in supplier. This is a read-only status check.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["invoiceNumber"],
           properties: { invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },

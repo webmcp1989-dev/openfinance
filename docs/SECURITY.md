@@ -21,6 +21,7 @@
 ## Consequential writes
 
 - AP submission is one atomic Postgres transaction and locks PO rows before checking and decrementing balances.
+- AP synthetic settlement scheduling runs in the same transaction as a committed receipt. Its per-supplier sequence is serialized, every eligible second invoice receives one immutable schedule, and an idempotent submission retry cannot create a second payment signal.
 - Idempotency is scoped by tenant or supplier and bound to a SHA-256 fingerprint. The AP public wrapper derives its fingerprint from the canonical Postgres JSON payload rather than trusting the caller's digest. Transaction-scoped advisory locks serialize concurrent retries for the same scoped key; a repeated identical request reaches the transaction and returns its original response without a duplicate preflight blocking it, while a key reused for a different payload fails.
 - AR result and exception recording enforces exact payload fields, legal portal statuses, field bounds, purchase-order presence, and allowed invoice state transitions inside Postgres—not only in the HTTP layer.
 - AR ERP sync derives the organization and authorized operator from `auth.uid()`, serializes a tenant-scoped idempotency key, row-locks the alternating sync state, and records the exact stored response and audit event in the same transaction. Its state and event tables have RLS enabled and no direct authenticated grants.
@@ -34,12 +35,14 @@
 - The AR discovery endpoint requires the customer name at the backend boundary; WebMCP schema validation is treated as advisory and cannot silently broaden or erase customer scope.
 - Money integers are capped at `9007199254740991` in WebMCP, HTTP, and Postgres contracts so JSON/JavaScript transport cannot silently lose precision.
 - Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
+- The human AR download route authenticates before resolving the invoice, relies on tenant RLS, revalidates canonical base64, PDF structure, size, and SHA-256, returns the same generic not-found response for inaccessible records, and marks the response private/no-store.
 - The stored AP requirements row is constrained to the same PDF, 1 MB, open-PO, and remaining-balance policy exposed by WebMCP and enforced by the transaction, so configuration cannot silently contradict runtime behavior.
 - The AP public RPC independently enforces the exact invoice and document fields, three-item transfer cap, canonical base64 representation, identifier and money bounds, and valid date before entering the privileged transaction.
 - Cross-site package reads and AP submission requests are limited to three invoices, keeping their worst-case JSON payload below the deployment platform's 4.5 MB function request/response boundary.
 - No backend URL fetch is accepted, eliminating this workflow's SSRF surface.
 - APIs return stable public error codes and do not expose raw database errors.
 - Recent-audit reads are optional display data. If one fails, the workspace explicitly marks the audit panel unavailable instead of misreporting zero events or taking down the core tenant-scoped financial view.
+- The AP public effective-status function is `security_invoker`; its private implementation derives supplier scope from `auth.uid()` and the profile table. Settlement and sequence tables have no direct application grants. Payment references remain hidden until database time reaches the synthetic schedule, and reads never mutate payment state.
 - AR delivery writebacks and AP submissions derive authoritative idempotency identity in PostgreSQL. Reusing a key with changed event type, payload, or invoice content is rejected even if a direct caller supplies the same forged fingerprint.
 - Production responses set a restrictive CSP, deny framing and MIME sniffing, disable unused browser capabilities, isolate cross-origin resources, and suppress referrer data.
 - Login failures do not reveal whether an email exists. A separately authenticated account whose tenant profile is missing receives an actionable workspace-assignment message instead of a misleading credential error.

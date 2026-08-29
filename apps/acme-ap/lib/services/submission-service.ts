@@ -22,8 +22,11 @@ export type SubmissionRow = Readonly<{
   purchaseOrderNumber: string;
   amountMinor: number;
   currency: string;
-  status: "received" | "under_review" | "accepted" | "rejected";
+  status: "received" | "under_review" | "accepted" | "rejected" | "paid";
   createdAt: string;
+  settlementExpectedAt: string | null;
+  paidAt: string | null;
+  paymentReference: string | null;
 }>;
 
 type SubmissionDatabaseRow = {
@@ -33,10 +36,11 @@ type SubmissionDatabaseRow = {
   currency: string;
   status: SubmissionRow["status"];
   created_at: string;
-  purchase_orders: { purchase_order_number: string } | { purchase_order_number: string }[];
+  purchase_order_number: string;
+  settlement_expected_at: string | null;
+  paid_at: string | null;
+  payment_reference: string | null;
 };
-
-const submissionColumns = "invoice_number, portal_reference, amount_minor, currency, status, created_at, purchase_orders!inner(purchase_order_number)";
 
 function mapPurchaseOrder(row: PurchaseOrderRow): PurchaseOrder {
   return {
@@ -54,11 +58,14 @@ function mapSubmission(row: SubmissionDatabaseRow): SubmissionRow {
   return {
     invoiceNumber: row.invoice_number,
     portalReference: row.portal_reference,
-    purchaseOrderNumber: Array.isArray(row.purchase_orders) ? row.purchase_orders[0]?.purchase_order_number ?? "" : row.purchase_orders.purchase_order_number,
+    purchaseOrderNumber: row.purchase_order_number,
     amountMinor: Number(row.amount_minor),
     currency: row.currency,
     status: row.status,
     createdAt: row.created_at,
+    settlementExpectedAt: row.settlement_expected_at,
+    paidAt: row.paid_at,
+    paymentReference: row.payment_reference,
   };
 }
 
@@ -156,18 +163,18 @@ export async function submitInvoiceBatch(supabase: SupabaseClient, idempotencyKe
 }
 
 export async function listSubmissions(supabase: SupabaseClient): Promise<SubmissionRow[]> {
-  const { data, error } = await supabase.from("invoice_submissions")
-    .select(submissionColumns)
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("get_invoice_submission_statuses", {
+    p_invoice_number: null,
+  });
   if (error) throw new HttpError(500, "submission_query_failed", "Invoice submissions could not be loaded");
   return (data as unknown as SubmissionDatabaseRow[]).map(mapSubmission);
 }
 
 export async function getInvoiceStatus(supabase: SupabaseClient, invoiceNumber: string) {
-  const { data, error } = await supabase.from("invoice_submissions")
-    .select(submissionColumns)
-    .eq("invoice_number", invoiceNumber)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_invoice_submission_statuses", {
+    p_invoice_number: invoiceNumber,
+  });
   if (error) throw new HttpError(500, "submission_query_failed", "Invoice status could not be loaded");
-  return data ? mapSubmission(data as unknown as SubmissionDatabaseRow) : null;
+  const row = (data as unknown as SubmissionDatabaseRow[])[0];
+  return row ? mapSubmission(row) : null;
 }

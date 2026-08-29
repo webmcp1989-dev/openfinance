@@ -103,6 +103,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290004_align_submission_policy.sql");
     expect(setup).toContain("202608290005_canonicalize_submission_requests.sql");
     expect(setup).toContain("202608290006_validate_pdf_structure.sql");
+    expect(setup).toContain("202608290007_simulate_payment_settlement.sql");
   });
 
   test("money stays within JSON's exact-integer range at every boundary", async () => {
@@ -141,6 +142,20 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("pg_catalog.convert_to('%PDF-', 'UTF8')");
     expect(migration).toContain("pg_catalog.convert_to('%%EOF', 'UTF8')");
     expect(migration).toContain("Document checksum mismatch");
+  });
+
+  test("AP payment discovery is deterministic, scoped, immutable, and read-only", async () => {
+    const migration = await readFile(join(root, "services/acme/supabase/migrations/202608290007_simulate_payment_settlement.sql"), "utf8");
+    const testSuite = await readFile(join(root, "services/acme/supabase/tests/payment-settlement.test.sql"), "utf8");
+    expect(migration).toContain("next_sequence = private.payment_simulator_state.next_sequence + 1");
+    expect(migration).toContain("mod(v_sequence_number, 2) = 0");
+    expect(migration).toContain("interval '10 seconds'");
+    expect(migration).toContain("demo_payment_scheduled");
+    expect(migration).toContain("security invoker");
+    expect(migration).toContain("submission.supplier_id = (select private.current_supplier_id())");
+    expect(migration).toContain("revoke all on public.payment_settlements from public, anon, authenticated");
+    expect(testSuite).toContain("exactly one of each committed invoice pair receives a settlement schedule");
+    expect(testSuite).toContain("the read-only status function advances only the eligible second invoice to paid");
   });
 
   test("AR derives idempotency identity and compares canonical retry content in Postgres", async () => {

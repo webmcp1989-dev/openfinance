@@ -5,6 +5,10 @@ import { MAX_TRANSFER_INVOICE_COUNT } from "./transfer-limits";
 const invoiceNumberSchema = z.string().regex(/^[A-Z0-9][A-Z0-9-]{1,39}$/);
 const idempotencyKeySchema = z.string().min(16).max(128);
 
+export const invoiceDocumentParamsSchema = z.object({
+  invoiceNumber: invoiceNumberSchema,
+}).strict();
+
 export const erpSyncRequestSchema = z.object({
   idempotencyKey: idempotencyKeySchema,
 }).strict();

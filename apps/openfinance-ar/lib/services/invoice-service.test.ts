@@ -1,9 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
+import { createHash } from "node:crypto";
 
 mock.module("server-only", () => ({}));
-const { getSubmissionPackage, recordDeliveryEvent, syncInvoicesFromErp } = await import("./invoice-service");
+const { getInvoiceDocument, getSubmissionPackage, recordDeliveryEvent, syncInvoicesFromErp } = await import("./invoice-service");
 
-function packageClient(contentBase64: string) {
+const validDocumentBytes = Buffer.from("%PDF-1.4\nOpenFinance invoice\n%%EOF", "utf8");
+const validDocumentBase64 = validDocumentBytes.toString("base64");
+const validDocumentSha256 = createHash("sha256").update(validDocumentBytes).digest("hex");
+
+function packageClient(contentBase64: string, sha256 = validDocumentSha256) {
   const row = {
     invoice_number: "INV-10482",
     amount_minor: 1_842_000,
@@ -20,7 +25,7 @@ function packageClient(contentBase64: string) {
     document_name: "INV-10482.pdf",
     document_media_type: "application/pdf",
     document_content_base64: contentBase64,
-    document_sha256: "0".repeat(64),
+    document_sha256: sha256,
   };
   const chain = {
     select() { return chain; },
@@ -31,10 +36,27 @@ function packageClient(contentBase64: string) {
   return { from() { return chain; } };
 }
 
+function documentClient(options: { data?: Record<string, unknown> | null; error?: { code: string } | null } = {}) {
+  const calls: string[] = [];
+  const row = options.data === undefined ? {
+    document_name: "INV-10482.pdf",
+    document_media_type: "application/pdf",
+    document_content_base64: validDocumentBase64,
+    document_sha256: validDocumentSha256,
+  } : options.data;
+  const chain = {
+    select() { calls.push("select"); return chain; },
+    eq(column: string, value: string) { calls.push(`${column}:${value}`); return chain; },
+    single() { calls.push("single"); return Promise.resolve({ data: row, error: options.error ?? null }); },
+  };
+  return { client: { from() { calls.push("invoices"); return chain; } }, calls };
+}
+
 describe("OpenFinance submission packages", () => {
   test("normalizes PostgreSQL line-wrapped base64 before cross-site transfer", async () => {
-    const result = await getSubmissionPackage(packageClient("YWJj\nZA==") as never, ["INV-10482"]);
-    expect(result[0]?.document.contentBase64).toBe("YWJjZA==");
+    const wrapped = `${validDocumentBase64.slice(0, 12)}\n${validDocumentBase64.slice(12)}`;
+    const result = await getSubmissionPackage(packageClient(wrapped) as never, ["INV-10482"]);
+    expect(result[0]?.document.contentBase64).toBe(validDocumentBase64);
   });
 
   test("fails closed when stored document content is not base64", async () => {
@@ -45,6 +67,36 @@ describe("OpenFinance submission packages", () => {
   test("fails closed when stored base64 is not canonically padded", async () => {
     await expect(getSubmissionPackage(packageClient("AAAAAAAAA") as never, ["INV-10482"]))
       .rejects.toMatchObject({ status: 500, code: "package_document_invalid" });
+  });
+
+  test("fails closed when the stored checksum does not match the PDF", async () => {
+    await expect(getSubmissionPackage(packageClient(validDocumentBase64, "0".repeat(64)) as never, ["INV-10482"]))
+      .rejects.toMatchObject({ status: 500, code: "package_document_invalid" });
+  });
+});
+
+describe("OpenFinance human invoice downloads", () => {
+  test("returns the verified tenant-scoped PDF bytes and metadata", async () => {
+    const { client, calls } = documentClient();
+    const result = await getInvoiceDocument(client as never, "INV-10482");
+
+    expect(Buffer.from(result.bytes)).toEqual(validDocumentBytes);
+    expect(result).toMatchObject({
+      fileName: "INV-10482.pdf",
+      mediaType: "application/pdf",
+      sha256: validDocumentSha256,
+    });
+    expect(calls).toEqual(["invoices", "select", "invoice_number:INV-10482", "single"]);
+  });
+
+  test("does not reveal a missing or unauthorized invoice document", async () => {
+    const { client } = documentClient({ data: null, error: { code: "PGRST116" } });
+    await expect(getInvoiceDocument(client as never, "INV-FOREIGN"))
+      .rejects.toMatchObject({
+        status: 404,
+        code: "invoice_document_not_found",
+        message: "Invoice document was not found",
+      });
   });
 });
 

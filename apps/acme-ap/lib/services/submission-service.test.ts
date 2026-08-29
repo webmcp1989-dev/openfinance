@@ -144,26 +144,24 @@ describe("Acme invoice validation", () => {
     expect(calls[0]).toEqual(expect.objectContaining({ name: "submit_invoice_batch" }));
   });
 
-  test("loads one invoice status with a scoped single-row query", async () => {
+  test("loads one invoice status through the supplier-scoped read function", async () => {
     const calls: string[] = [];
     const row = {
       invoice_number: "INV-10482",
       portal_reference: "ACME-20260829-ABCDEF12",
       amount_minor: 1_842_000,
       currency: "USD",
-      status: "received",
+      status: "paid",
       created_at: "2026-08-29T07:00:00.000Z",
-      purchase_orders: { purchase_order_number: "PO-8821" },
+      purchase_order_number: "PO-8821",
+      settlement_expected_at: "2026-08-29T07:00:10.000Z",
+      paid_at: "2026-08-29T07:00:10.000Z",
+      payment_reference: "PAY-20260829-1234ABCD",
     };
     const client = {
-      from(table: string) {
-        calls.push(`from:${table}`);
-        const chain = {
-          select() { calls.push("select"); return chain; },
-          eq(column: string, value: string) { calls.push(`eq:${column}:${value}`); return chain; },
-          maybeSingle() { calls.push("maybeSingle"); return Promise.resolve({ data: row, error: null }); },
-        };
-        return chain;
+      rpc(name: string, args: unknown) {
+        calls.push(`rpc:${name}:${JSON.stringify(args)}`);
+        return Promise.resolve({ data: [row], error: null });
       },
     };
 
@@ -174,14 +172,14 @@ describe("Acme invoice validation", () => {
       purchaseOrderNumber: "PO-8821",
       amountMinor: 1_842_000,
       currency: "USD",
-      status: "received",
+      status: "paid",
       createdAt: "2026-08-29T07:00:00.000Z",
+      settlementExpectedAt: "2026-08-29T07:00:10.000Z",
+      paidAt: "2026-08-29T07:00:10.000Z",
+      paymentReference: "PAY-20260829-1234ABCD",
     });
     expect(calls).toEqual([
-      "from:invoice_submissions",
-      "select",
-      "eq:invoice_number:INV-10482",
-      "maybeSingle",
+      'rpc:get_invoice_submission_statuses:{"p_invoice_number":"INV-10482"}',
     ]);
   });
 });

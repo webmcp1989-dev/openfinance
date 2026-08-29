@@ -57,9 +57,17 @@ Within one database transaction it:
 
 Application preflight improves the human-agent experience but the transaction is authoritative, preventing time-of-check/time-of-use errors. The submission endpoint therefore calls the transaction directly instead of repeating the read-only preflight first: an identical retry reaches the stored idempotent response, while the transaction still revalidates every invariant before a first commit.
 
+## AP payment signal simulation
+
+After each committed submission, a private trigger assigns a serialized per-supplier sequence. Every second invoice receives one immutable synthetic payment schedule for 10 seconds later and a scheduling audit event in the same transaction. A public security-invoker wrapper delegates to a private function that derives supplier scope from the authenticated profile, computes the effective `paid` status from database time, and exposes the payment reference only after maturity. The settlement and sequence tables have no direct application read or write grants.
+
+The browser schedules a single refresh for the next known settlement time, avoiding polling. Status reads never mutate data, and idempotent submission retries cannot create another schedule. This is an explicit buyer-side challenge simulation inside Acme AP, not a payment processor or a hidden integration with OpenFinance AR.
+
 ## Data transfer
 
 The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, checks the PDF signature and final 1,024-byte window for `%%EOF`, and verifies the hash. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
+
+The same AR document is available to an authenticated human through a no-store download route. That route revalidates the stored document and relies on AR RLS before returning it; manual upload in Acme uses the same AP validation and confirmed-submission backend as agent-assisted transfer.
 
 ## Performance choices
 

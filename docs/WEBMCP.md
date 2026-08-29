@@ -27,7 +27,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 | `find_purchase_order` | read | Returns one supplier-authorized PO and live balance. |
 | `validate_invoice` | read, transfer-approved | Checks a human-approved package without reserving balance or writing data. |
 | `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts; identical retries return the original result. |
-| `get_invoice_status` | read | Returns current receipt and status for one supplier invoice. |
+| `get_invoice_status` | read | Returns the current receipt, effective AP status, and completed synthetic payment reference for one supplier invoice. |
 
 ## Contract principles
 
@@ -54,9 +54,11 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 8. Verify returned references and visible AP state.
 9. Record verified results and exceptions in OpenFinance.
 
-Both applications refresh their visible state after writes and show recent tenant-scoped database audit events alongside the invoice queue, PO balances, and portal receipts.
+Both applications refresh their visible state after writes and show recent tenant-scoped database audit events alongside the invoice queue, PO balances, and portal receipts. Acme's deterministic challenge simulator schedules every second committed supplier invoice for payment 10 seconds later. `get_invoice_status` remains a read-only discovery operation: it reads the same session-scoped backend status used by the human UI and never advances state as a side effect.
 
 The human workspaces provide equivalent paths for every tool capability through the same backend contracts: AR supports scoped queue filtering, package review, and portal result/exception recording; AP supports live requirements, PO lookup, invoice validation, confirmed batch submission, and status lookup. This keeps both applications useful without an agent while preserving identical authorization and business rules.
+
+AR also offers an authenticated PDF download for a human who wants to use a manual portal path. The downloaded bytes are revalidated against the stored PDF signature, tail marker, size, canonical base64, and SHA-256 before release; Acme's existing human upload form independently validates the same document through its own backend.
 
 AR's **Sync invoices now** ERP simulation is deliberately human-only. It alternates two imported invoices and no new invoices in a tenant-scoped, idempotent backend transaction; it is not a tenth challenge tool and does not create a hidden integration with AP.
 

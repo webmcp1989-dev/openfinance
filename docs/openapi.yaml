@@ -255,6 +255,31 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+  /api/agent/invoices/{invoiceNumber}/document:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    get:
+      operationId: downloadInvoiceDocument
+      summary: Download one authenticated, tenant-scoped AR invoice PDF
+      parameters:
+        - in: path
+          name: invoiceNumber
+          required: true
+          schema: { $ref: "#/components/schemas/InvoiceNumber" }
+      responses:
+        "200":
+          description: Verified invoice PDF with its stored SHA-256 digest
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+            X-Invoice-Document-SHA256:
+              schema: { type: string, pattern: "^[a-f0-9]{64}$" }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /api/agent/status:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -301,6 +326,11 @@ components:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
     Forbidden:
       description: A same-origin write request is required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: The authenticated tenant cannot access the requested resource
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
@@ -542,15 +572,21 @@ components:
         createdAt: { type: string, format: date-time }
     SubmissionReceipt:
       type: object
-      required: [invoiceNumber, portalReference, purchaseOrderNumber, amountMinor, currency, status, createdAt]
+      required: [invoiceNumber, portalReference, purchaseOrderNumber, amountMinor, currency, status, createdAt, settlementExpectedAt, paidAt, paymentReference]
       properties:
         invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
         portalReference: { type: string }
         purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
         amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
         currency: { type: string, pattern: "^[A-Z]{3}$" }
-        status: { type: string, enum: [received, under_review, accepted, rejected] }
+        status: { type: string, enum: [received, under_review, accepted, rejected, paid] }
         createdAt: { type: string, format: date-time }
+        settlementExpectedAt:
+          type: [string, "null"]
+          format: date-time
+          description: Synthetic buyer settlement time for each eligible second committed invoice.
+        paidAt: { type: [string, "null"], format: date-time }
+        paymentReference: { type: [string, "null"], pattern: "^PAY-[0-9]{8}-[A-F0-9]{8}$" }
     InvoiceStatusResult:
       type: object
       additionalProperties: false

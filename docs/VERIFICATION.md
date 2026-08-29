@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 67 tests passed with 273 expectations.
+- `bun test`: 73 tests passed with 300 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -24,7 +24,8 @@ to the documented starting state after testing.
 The test suite covers strict request contracts, authentication ordering,
 security headers, responsive authentication controls, PDF structure and
 checksum validation, money bounds, database mutation boundaries, WebMCP tool
-lifecycle and annotations, idempotency, and documentation coverage.
+lifecycle and annotations, authenticated human downloads, payment-aware status
+mapping, idempotency, and documentation coverage.
 
 ## Live database and security verification
 
@@ -35,6 +36,9 @@ lifecycle and annotations, idempotency, and documentation coverage.
   alternation, idempotent replay, unique inserts, and auditing.
 - The Acme RLS suite passed 15 assertions and its submission transaction suite
   passed 13 assertions in the independent live AP project.
+- The Acme deterministic payment-settlement suite passed 15 assertions in the
+  live AP project, covering direct-table denial, wrapper privileges, serialized
+  pair selection, 10-second maturity, payment references, and auditing.
 - Unauthenticated workspace reads returned `401`, forged-origin writes returned
   `403`, and unsupported write content types returned `415`.
 - Production responses included the documented CSP, frame denial, no-sniff,
@@ -79,8 +83,14 @@ private and are not stored in this repository.
 - AR adds a human-only ERP sync control; the backend and database tests prove
   its tenant-scoped alternating behavior without changing the four-tool AR
   WebMCP surface.
+- AR provides a tenant-scoped, no-store invoice PDF download whose route and
+  service tests verify exact bytes, safe headers, authorization ordering,
+  structure, size, and checksum validation.
 - AP provides requirements, PO and receipt lookup, exact PDF preflight, a
   three-invoice review batch, and an explicit final submission confirmation.
+- AP schedules every second committed invoice for a synthetic buyer payment
+  signal after 10 seconds. The human UI performs one scheduled refresh and the
+  existing read-only status tool returns the same backend-derived state.
 
 ## Demo video artifact
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
@@ -33,6 +34,19 @@ type PackageRow = InvoiceRow & {
   document_content_base64: string;
   document_sha256: string;
 };
+
+type DocumentRow = Pick<PackageRow,
+  "document_name" | "document_media_type" | "document_content_base64" | "document_sha256"
+>;
+
+export type InvoiceDocumentDownload = Readonly<{
+  fileName: string;
+  mediaType: "application/pdf";
+  sha256: string;
+  bytes: Uint8Array;
+}>;
+
+const MAX_DOCUMENT_BYTES = 1_048_576;
 
 function customerName(relation: CustomerRelation) {
   return Array.isArray(relation) ? relation[0]?.name ?? "" : relation.name;
@@ -73,6 +87,27 @@ function canonicalDocumentBase64(value: string) {
   return canonical;
 }
 
+function validatedStoredDocument(row: DocumentRow) {
+  const contentBase64 = canonicalDocumentBase64(row.document_content_base64);
+  const bytes = Buffer.from(contentBase64, "base64");
+  const tail = bytes.subarray(Math.max(0, bytes.length - 1_024));
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const validMetadata = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(row.document_name)
+    && row.document_media_type === "application/pdf"
+    && /^[a-f0-9]{64}$/.test(row.document_sha256);
+
+  if (!validMetadata
+    || bytes.length === 0
+    || bytes.length > MAX_DOCUMENT_BYTES
+    || !bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))
+    || tail.indexOf(Buffer.from("%%EOF")) === -1
+    || sha256 !== row.document_sha256) {
+    throw new HttpError(500, "package_document_invalid", "Stored invoice document is invalid");
+  }
+
+  return { contentBase64, bytes: Uint8Array.from(bytes) };
+}
+
 export async function listInvoiceQueue(
   supabase: SupabaseClient,
   options: { customerName?: string; readyOnly?: boolean } = {},
@@ -110,15 +145,45 @@ export async function getSubmissionPackage(
     throw new HttpError(409, "invoice_not_ready", `Not ready or not found: ${missing.join(", ")}`);
   }
 
-  return rows.map((row) => ({
-    ...mapQueueItem(row),
-    document: {
-      fileName: row.document_name,
-      mediaType: row.document_media_type,
-      contentBase64: canonicalDocumentBase64(row.document_content_base64),
-      sha256: row.document_sha256,
-    },
-  }));
+  return rows.map((row) => {
+    const document = validatedStoredDocument(row);
+    return {
+      ...mapQueueItem(row),
+      document: {
+        fileName: row.document_name,
+        mediaType: row.document_media_type,
+        contentBase64: document.contentBase64,
+        sha256: row.document_sha256,
+      },
+    };
+  });
+}
+
+export async function getInvoiceDocument(
+  supabase: SupabaseClient,
+  invoiceNumber: string,
+): Promise<InvoiceDocumentDownload> {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("document_name, document_media_type, document_content_base64, document_sha256")
+    .eq("invoice_number", invoiceNumber)
+    .single();
+
+  if (error?.code === "PGRST116" || !data) {
+    throw new HttpError(404, "invoice_document_not_found", "Invoice document was not found");
+  }
+  if (error) {
+    throw new HttpError(500, "invoice_document_query_failed", "Invoice document could not be loaded");
+  }
+
+  const row = data as unknown as DocumentRow;
+  const document = validatedStoredDocument(row);
+  return {
+    fileName: row.document_name,
+    mediaType: row.document_media_type,
+    sha256: row.document_sha256,
+    bytes: document.bytes,
+  };
 }
 
 export async function recordDeliveryEvent(

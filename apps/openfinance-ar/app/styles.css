@@ -108,6 +108,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .package-review dl div { min-width: 0; }
 .package-review dt { color: var(--muted); font-size: .67rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
 .package-review dd { margin: 4px 0 0; overflow: hidden; font-size: .79rem; text-overflow: ellipsis; white-space: nowrap; }
+.package-review .document-actions { align-items: center; padding-top: 12px; border-top: 1px solid #e1ece8; }
+.document-actions p { margin: 0; color: var(--muted); font-size: .77rem; line-height: 1.45; }
+.document-actions .button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; text-decoration: none; }
 .empty-compact { padding: 22px; border: 1px dashed #bfd3cb; border-radius: 13px; color: var(--muted); text-align: center; background: rgb(255 255 255 / 60%); }
 .empty-compact p { margin: 5px 0 0; font-size: .82rem; }
 .outcome-form { display: grid; align-content: start; gap: 14px; background: #fff; }
