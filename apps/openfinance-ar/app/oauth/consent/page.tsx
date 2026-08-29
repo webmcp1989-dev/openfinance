@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { safeOAuthRedirect } from "@/lib/mcp/oauth";
+import { authorizationIdSchema, safeOAuthRedirect } from "@/lib/mcp/oauth";
 import { createClient } from "@/lib/supabase/server";
 import { approveAuthorization, denyAuthorization } from "./actions";
 
 const querySchema = z.object({
-  authorization_id: z.string().uuid(),
+  authorization_id: authorizationIdSchema,
   error: z.string().optional(),
 }).strict();
 

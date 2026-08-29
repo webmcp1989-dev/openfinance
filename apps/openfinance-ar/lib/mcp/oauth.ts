@@ -1,5 +1,10 @@
 import "server-only";
 
+import { z } from "zod";
+
+// Supabase authorization request IDs are opaque, URL-safe values rather than UUIDs.
+export const authorizationIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,128}$/);
+
 export function safeOAuthRedirect(value: string) {
   const target = new URL(value);
   const isSecure = target.protocol === "https:";

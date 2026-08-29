@@ -1,12 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
-import { safeOAuthRedirect } from "@/lib/mcp/oauth";
+import { authorizationIdSchema, safeOAuthRedirect } from "@/lib/mcp/oauth";
 import { createClient } from "@/lib/supabase/server";
-
-const authorizationIdSchema = z.string().uuid();
 
 async function decide(formData: FormData, decision: "approve" | "deny") {
   const authorizationId = authorizationIdSchema.parse(formData.get("authorizationId"));
