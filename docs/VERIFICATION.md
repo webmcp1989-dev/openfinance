@@ -11,7 +11,11 @@ to the documented starting state after testing.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
 - `bun audit`: no known dependency vulnerabilities.
-- Git diff checks were clean and local `main` matched `origin/main`.
+- A fresh clone of public GitHub commit `dd12be5` completed frozen install,
+  type-check, lint, all 67 tests, and both production builds using only the
+  documented variables with safe build-time placeholders.
+- GitHub Actions CI run 35 completed successfully. Both Vercel production
+  projects reported commit `dd12be5` as Ready.
 
 The test suite covers strict request contracts, authentication ordering,
 security headers, responsive authentication controls, PDF structure and
@@ -65,6 +69,9 @@ private and are not stored in this repository.
 
 - Both applications expose every WebMCP capability through accessible human UI
   controls backed by the same authenticated routes and authoritative services.
+- The deployed AR package-review path returned the selected invoice's filename
+  and checksum verification. The deployed AP PO and status lookups returned the
+  live authorized balance and the correct no-receipt state without mutation.
 - AR adds a human-only ERP sync control; the backend and database tests prove
   its tenant-scoped alternating behavior without changing the four-tool AR
   WebMCP surface.
