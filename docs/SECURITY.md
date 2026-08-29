@@ -15,6 +15,7 @@
 - Every exposed table has RLS enabled and anonymous grants revoked.
 - Authenticated grants are read-only; writes are available only through explicitly granted RPC wrappers.
 - Tenant identity is derived from `auth.uid()` through a profile row. Caller-supplied organization, buyer, or supplier IDs are never trusted.
+- Rollback-only pgTAP suites create foreign organization and supplier fixtures, then prove authenticated demo users cannot read or mutate those records.
 - The runtime has only the publishable key. Service-role keys and database passwords are prohibited.
 
 ## Consequential writes

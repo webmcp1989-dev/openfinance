@@ -97,6 +97,17 @@ describe("database mutation boundaries", () => {
     expect(arReset).toContain("v_updated <> 4");
     expect(apReset).toContain("v_updated <> 3");
   });
+
+  test("RLS suites exercise real cross-tenant read and mutation denials", async () => {
+    const ar = await readFile(join(root, "services/openfinance/supabase/tests/rls.test.sql"), "utf8");
+    const ap = await readFile(join(root, "services/acme/supabase/tests/rls.test.sql"), "utf8");
+    expect(ar).toContain("Foreign Test Organization");
+    expect(ar).toContain("foreign organization invoices are hidden by RLS");
+    expect(ar).toContain("delivery writeback cannot mutate a foreign organization invoice");
+    expect(ap).toContain("Foreign Test Supplier");
+    expect(ap).toContain("foreign supplier purchase orders are hidden by RLS");
+    expect(ap).toContain("submission cannot consume a foreign supplier purchase order");
+  });
 });
 
 describe("WebMCP safety contracts", () => {
