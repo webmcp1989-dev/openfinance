@@ -41,7 +41,7 @@ Restore this state with the two reviewed administrative scripts in [setup](SETUP
 - Portal references returned by Acme exactly match those recorded in OpenFinance.
 - Payment discovery is a read-only status check: one of the pair becomes paid after 10 seconds, no status read causes a mutation, and the UI shows the same result.
 
-For the all-human fallback, download a verified PDF from an OpenFinance invoice package, then use Acme's invoice form to upload, validate, review, confirm, and submit it. This path uses the same tenant-scoped backend rules as the agent flow.
+For the all-human fallback, select any ready invoice in the OpenFinance queue and use the download button that appears beside the selection count. A human can download immediately or inspect the protected package first, then use Acme's invoice form to upload, validate, review, confirm, and submit it. Multiple selections expose one explicit download per invoice so the browser never relies on ambiguous bulk-download behavior. This path uses the same tenant-scoped backend rules as the agent flow.
 
 ## Judge-facing emphasis
 

@@ -230,7 +230,25 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
             </select></label>
           </div>
         </div>
-        <div className="selection-hint"><span>{selectedReady.length} of 3 ready invoices selected</span><span>Choose invoices to inspect their protected submission package.</span></div>
+        <div className="selection-hint">
+          <div className="selection-copy">
+            <span className="selection-count">{selectedReady.length} of 3 ready invoices selected</span>
+            <span>{selectedReady.length === 0
+              ? "Select a ready invoice to reveal its human download."
+              : "Download now, or review the protected package before portal submission."}</span>
+          </div>
+          {selectedReady.length > 0 && <div className="selection-actions" aria-label="Selected invoice downloads">
+            {selectedReady.map((invoiceNumber) => <a
+              key={invoiceNumber}
+              className="button secondary selection-download"
+              href={`/api/agent/invoices/${encodeURIComponent(invoiceNumber)}/document`}
+              download={`${invoiceNumber}.pdf`}
+              aria-label={`Download selected invoice ${invoiceNumber} PDF`}
+            >
+              Download {invoiceNumber}
+            </a>)}
+          </div>}
+        </div>
         <div className="table-wrap"><table>
           <thead><tr><th className="select-column"><span className="sr-only">Select</span></th><th>Invoice</th><th>Customer</th><th>Amount</th><th>Purchase order</th><th>Status</th><th>Portal result</th></tr></thead>
           <tbody>{filteredInvoices.map((invoice) => {
