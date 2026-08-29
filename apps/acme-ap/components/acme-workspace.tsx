@@ -51,8 +51,10 @@ function hex(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
-async function fileDocument(file: File, requirements: SubmissionRequirements) {
-  if (!requirements.acceptedMediaTypes.includes(file.type)) throw new Error("Choose a PDF invoice document.");
+export async function fileDocument(file: File, requirements: SubmissionRequirements) {
+  const hasAcceptedMediaType = requirements.acceptedMediaTypes.includes(file.type);
+  const hasPortablePdfFallback = file.type === "" && file.name.toLowerCase().endsWith(".pdf");
+  if (!hasAcceptedMediaType && !hasPortablePdfFallback) throw new Error("Choose a PDF invoice document.");
   if (file.size > requirements.maxDocumentBytes) throw new Error("The PDF is larger than the portal limit.");
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(file.name)) {
     throw new Error("Use a file name containing only letters, numbers, dots, dashes, and underscores.");

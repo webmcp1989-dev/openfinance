@@ -35,6 +35,7 @@
 - The AR discovery endpoint requires the customer name at the backend boundary; WebMCP schema validation is treated as advisory and cannot silently broaden or erase customer scope.
 - Money integers are capped at `9007199254740991` in WebMCP, HTTP, and Postgres contracts so JSON/JavaScript transport cannot silently lose precision.
 - Invoice PDFs are limited to 1 MB decoded and about 1.4 MB encoded, must begin with `%PDF-`, and must match their declared SHA-256.
+- The AP browser accepts an empty OS-provided MIME type only for a `.pdf` filename so valid downloads remain portable across browsers. This is UX-only: the backend still independently enforces the declared PDF media type, canonical bytes, signature, EOF marker, size, and checksum.
 - The human AR download route authenticates before resolving the invoice, relies on tenant RLS, revalidates canonical base64, PDF header, catalog/page markers, byte-accurate classic cross-reference pointer, EOF, size, and SHA-256, returns the same generic not-found response for inaccessible records, and marks the response private/no-store.
 - The stored AP requirements row is constrained to the same PDF, 1 MB, open-PO, and remaining-balance policy exposed by WebMCP and enforced by the transaction, so configuration cannot silently contradict runtime behavior.
 - The AP public RPC independently enforces the exact invoice and document fields, three-item transfer cap, canonical base64 representation, identifier and money bounds, and valid date before entering the privileged transaction.

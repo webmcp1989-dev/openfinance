@@ -8,7 +8,7 @@ OpenFinance AR  <-- site tools -->  ChatGPT + human  <-- site tools -->  Acme AP
 
 There is no shared database, credential, session, or point-to-point application integration. The browser agent works through each site's narrow, authenticated WebMCP tools. The human explicitly approves the destination and exact invoice packages before cross-site validation, then separately confirms the exact valid batch before the consequential AP submission tool runs.
 
-Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. A human can download a verified AR invoice PDF and upload it through Acme's governed submission flow. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
+Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. A human can download a verified, detailed invoice PDF containing the supplier, customer, dates, PO, line item, amount due, and synthetic remittance details, then upload it through Acme's governed submission flow. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
 
 ## Demo workflow
 

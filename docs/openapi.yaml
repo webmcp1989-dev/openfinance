@@ -268,7 +268,7 @@ paths:
           schema: { $ref: "#/components/schemas/InvoiceNumber" }
       responses:
         "200":
-          description: Verified invoice PDF with its stored SHA-256 digest
+          description: Verified detailed invoice PDF with supplier, customer, dates, PO, amount due, and its stored SHA-256 digest
           headers:
             Content-Disposition:
               schema: { type: string }

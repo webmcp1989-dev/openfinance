@@ -94,6 +94,15 @@ private and are not stored in this repository.
 - AP schedules every second committed invoice for a synthetic buyer payment
   signal after 10 seconds. The human UI performs one scheduled refresh and the
   existing read-only status tool returns the same backend-derived state.
+- The repaired human workflow was exercised twice independently against the
+  live deployments with four distinct ERP invoices. All four standards-compliant
+  PDFs passed the AP upload preflight; both confirmed two-invoice batches
+  committed atomically; invoices 2 and 4 alone matured to `paid` after 10
+  seconds with stable `PAY-*` references; invoices 1 and 3 remained `received`.
+- Each paid/received pair matched through both the visible AP workspace and
+  authenticated `get_invoice_status` WebMCP calls. The read-only status calls
+  did not add audit events: each run produced exactly one batch event and one
+  synthetic-payment-scheduled event.
 
 ## Demo video artifact
 

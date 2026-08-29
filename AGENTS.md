@@ -56,7 +56,7 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - Reuse bounded helpers within one application. Do not create shared business schemas or code that secretly couples AR and AP.
 - All nine WebMCP capabilities also have human UI paths backed by the same services. Preserve exactly four AR and five AP challenge tools unless the documented demo contract is deliberately revised.
 - ERP invoice sync is a human UI/backend simulation, not a tenth WebMCP tool; see `docs/AI_HANDOFF.md`.
-- Synthetic invoice files must remain genuinely renderable PDFs, not signature/EOF placeholders. Preserve the private database renderer, exact cross-reference offsets, parser/render tests, and authenticated download validation.
+- Synthetic invoice files must remain genuinely renderable, credible invoices, not signature/EOF placeholders. Preserve the private database renderer, authoritative supplier/customer/invoice/date/PO/amount fields, deterministic Net-30 due date, explicit synthetic-data label, exact cross-reference offsets, parser/render tests, and authenticated download validation.
 - AP's challenge payment signal is deterministic backend simulation: every second committed supplier invoice settles after 10 seconds. Preserve its serialized, idempotent, read-only-discovery design; do not replace it with client timers that author state, random behavior, or hidden AR/AP integration.
 
 ## Authentication, isolation, and security
