@@ -6,12 +6,13 @@ This file records only non-obvious continuation context. Repository-wide rules a
 
 - GitHub: `https://github.com/webmcp1989-dev/openfinance` (`main`).
 - AR: `https://openfinance-ar.vercel.app`; AP: `https://openfinance-ap.vercel.app`.
-- The apps use separate Vercel projects, Supabase projects, authentication sessions, databases, and migration histories. WebMCP through the human-directed browser is the only cross-application runtime bridge.
+- The apps use separate Vercel projects, Supabase projects, authentication sessions, databases, and migration histories. WebMCP through the human-directed browser remains the only cross-application runtime bridge. AR remote MCP is an additional own-system interface and has no AP access.
 - The fixed challenge surface is four AR tools and five AP tools. Every capability also has a human UI path through the same authenticated backend contract.
 
 ## Meaningful implementation decisions
 
-- AR **Sync invoices now** is intentionally a human-only ERP simulation, not a tenth WebMCP tool. This preserves the recorded challenge/demo contract while making the standalone AR workspace useful.
+- AR **Sync invoices now** is available through UI and the separately OAuth-authenticated AR remote MCP, but is not a tenth browser WebMCP challenge tool.
+- The remote MCP uses the official TypeScript SDK and Streamable HTTP at `/mcp`, RFC 9728 metadata, Supabase OAuth authorization-code + PKCE/DCR, a custom `/oauth/consent` page, grant revocation at `/connections`, strict ES256 issuer/audience/client validation, and an unprivileged bearer Supabase client so existing RLS remains authoritative. Its eight tools are documented in `docs/MCP.md`; reset is excluded.
 - Both workspaces now provide a separately confirmed **Restore demo start** control so stateful judging is repeatable. AR migration `202608290011_add_authorized_demo_reset.sql` and AP migration `202608290008_add_authorized_demo_reset.sql` keep authorization and data restoration inside each independent database, permit only the fixed synthetic operator/submitter, serialize and assert the mutation, leave one visible reset audit event, and are deliberately not exposed through WebMCP.
 - Migration `services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql` owns the alternating `2 -> 0 -> 2 -> 0` behavior. It derives tenant/operator identity from the session, uses the tenant's configured synthetic customer, serializes retries, row-locks sync state, inserts valid synthetic invoice documents, and records idempotent results plus an audit event atomically.
 - `services/openfinance/supabase/demo/reset.sql` removes synthetic `ERP-*` imports and resets the next sync to two invoices.
@@ -30,7 +31,8 @@ This file records only non-obvious continuation context. Repository-wide rules a
 - AP migration `202608290007_simulate_payment_settlement.sql` is applied to the live AP project and its 15-assertion rollback-only pgTAP suite passed. Any new environment must apply it before deploying the payment-aware AP code.
 - AR migration `202608290011_add_authorized_demo_reset.sql` and AP migration `202608290008_add_authorized_demo_reset.sql` are applied to their independent live projects. Each 14-assertion rollback-only reset suite passed. Commit `693100a` is green in CI and Ready in both Vercel production projects; both live two-step controls restored their own canonical state and left exactly one reset audit event.
 - Two independent live human-workspace runs transferred four repaired ERP PDFs through AP preflight and confirmed submission. In each pair, only the even-sequence invoice became `paid` after 10 seconds; UI and authenticated WebMCP status reads returned the same payment reference without additional audit writes.
-- No dependency or environment-variable change was introduced. Each app still requires only its own `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- AR adds `@modelcontextprotocol/server`, `jose`, and direct declarations for Supabase's runtime `tslib`/`iceberg-js` dependencies. Production AR also requires `OPENFINANCE_MCP_URL=https://openfinance-ar.vercel.app/mcp`; AP remains unchanged.
+- AR migration `202608290012_secure_mcp_oauth_activity.sql` labels audit writes as `human` or `oauth_mcp` with the OAuth client ID and prevents OAuth JWTs from invoking the human-only reset. Apply it before enabling the remote MCP.
 - Never store demo/judge passwords, database credentials, Vercel tokens, or Supabase service-role keys in Git.
 
 ## Verified limitations and follow-up

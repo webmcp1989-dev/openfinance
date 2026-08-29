@@ -1,11 +1,13 @@
+import { safeReturnTo } from "@/lib/safe-return-to";
 import { signIn, signOut } from "./actions";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; returnTo?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, returnTo: requestedReturnTo } = await searchParams;
+  const returnTo = safeReturnTo(requestedReturnTo);
   const errorMessage = error === "profile_missing"
     ? "Your account is authenticated but is not assigned to an OpenFinance workspace. Contact an administrator."
     : error
@@ -18,6 +20,7 @@ export default async function LoginPage({
           <p className="eyebrow">OpenFinance</p>
           <h1 id="login-title">Sign in to portal delivery</h1>
           <p>Use your supplier workspace credentials. Site tools become available only after authentication.</p>
+          <input name="returnTo" type="hidden" value={returnTo} />
           <label>Email<input name="email" type="email" autoComplete="username" required /></label>
           <label>Password<input name="password" type="password" autoComplete="current-password" minLength={8} required /></label>
           {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}

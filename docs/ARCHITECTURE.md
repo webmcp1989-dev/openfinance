@@ -19,6 +19,12 @@ OpenFinance AR and Acme AP are separate applications deployed on different origi
 
 There is no shared database, session cookie, service credential, server-to-server API, queue, webhook, or hidden synchronization path.
 
+## AR remote MCP access surface
+
+An AR team's own external agent may connect to `OpenFinance AR /mcp` through Streamable HTTP. The resource server publishes RFC 9728 metadata and delegates OAuth 2.1 authorization to the AR project's Supabase Auth server. Supabase supplies authorization code + PKCE, dynamic client registration, consent, refresh, and revocation. OpenFinance validates the ES256 signature, exact issuer, exact MCP resource audience, expiry, OAuth `client_id`, active Auth user, AR profile, tenant, and role before creating any tool server.
+
+Each tool uses an unprivileged Supabase client carrying the OAuth bearer token. Existing RLS and RPC role checks therefore remain authoritative. The remote MCP never uses a service-role key and cannot access Acme AP. It is an additional own-system interface, not the cross-application bridge demonstrated by the challenge.
+
 ## Layers inside each app
 
 1. UI renders human-readable state and registers tools only on an authenticated top-level page.
@@ -37,7 +43,7 @@ Every one of the nine WebMCP operations also has a first-class human UI path. Th
 
 ## AR ERP sync simulation
 
-The AR workspace includes a human-only **Sync invoices now** operation that models an inbound ERP connector without expanding the fixed nine-tool challenge contract. Its same-origin route accepts only an idempotency key. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
+The AR workspace includes **Sync invoices now**, which models an inbound ERP connector without expanding the fixed nine-tool WebMCP challenge contract. It is available through the human UI and the separately authenticated AR remote MCP. Its same-origin UI route and MCP tool both reach the same authoritative service/RPC. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
 
 Repeatable judging uses separate two-step human resets in AR and AP. These are not WebMCP tools and are not a cross-application integration: each app requires a same-origin confirmation, authorizes the fixed synthetic operator or submitter in its own database, restores only its own fixture rows in one serialized transaction, and writes one reset audit event. A reviewer must restore both applications independently.
 

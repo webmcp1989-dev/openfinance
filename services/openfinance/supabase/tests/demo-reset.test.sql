@@ -2,13 +2,14 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(14);
+select plan(15);
 select has_function('public', 'reset_demo_state', array[]::text[], 'public demo reset wrapper exists');
 select has_function('private', 'reset_demo_state', array[]::text[], 'private demo reset implementation exists');
-select ok(not (select prosecdef from pg_proc where oid = 'public.reset_demo_state()'::regprocedure), 'public reset wrapper is security invoker');
+select ok((select prosecdef from pg_proc where oid = 'public.reset_demo_state()'::regprocedure), 'public reset wrapper enforces the human-only boundary as security definer');
 select ok((select prosecdef from pg_proc where oid = 'private.reset_demo_state()'::regprocedure), 'private reset implementation is security definer');
 select ok(not has_function_privilege('anon', 'public.reset_demo_state()', 'execute'), 'anonymous callers cannot reset demo state');
 select ok(has_function_privilege('authenticated', 'public.reset_demo_state()', 'execute'), 'authenticated callers can reach the authorized wrapper');
+select ok(not has_function_privilege('authenticated', 'private.reset_demo_state()', 'execute'), 'authenticated callers cannot bypass the public reset boundary');
 
 select set_config(
   'request.jwt.claim.sub',

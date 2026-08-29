@@ -60,7 +60,9 @@ The human workspaces provide equivalent paths for every tool capability through 
 
 AR also offers an authenticated PDF download for a human who wants to use a manual portal path. The downloaded bytes are revalidated against the stored PDF signature, tail marker, size, canonical base64, and SHA-256 before release; Acme's existing human upload form independently validates the same document through its own backend.
 
-AR's **Sync invoices now** ERP simulation is deliberately human-only. It alternates two imported invoices and no new invoices in a tenant-scoped, idempotent backend transaction; it is not a tenth challenge tool and does not create a hidden integration with AP.
+AR's **Sync invoices now** ERP simulation is not a tenth browser WebMCP challenge tool. It is available in the human UI and through the independently authenticated AR remote MCP, alternates two imported invoices and no new invoices in a tenant-scoped idempotent backend transaction, and never connects to AP.
+
+The AR remote MCP is documented separately in [MCP.md](MCP.md). It is the AR team's governed own-system interface. It does not alter the browser WebMCP tool inventory or the required human approvals before invoice data crosses into the customer portal.
 
 Both applications also expose a two-step **Restore demo start** control so multiple reviewers can reproduce the canonical state. Reset remains human-only and is intentionally absent from the nine-tool WebMCP inventory. AR and AP authorize, execute, and audit their resets independently through their own same-origin backends; neither reset crosses origins or coordinates the other application.
 

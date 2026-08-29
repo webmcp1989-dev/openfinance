@@ -241,8 +241,8 @@ export function OpenFinanceWorkspace({ initialInvoices, initialAuditEvents, init
 
       <section className="agent-guide" aria-label="Suggested agent task">
         <span className="agent-dot" aria-hidden="true" />
-        <div><strong>Prefer delegation?</strong><p>Ask: “Submit all Acme invoices that are ready for their AP portal.”</p></div>
-        <span className="agent-ready">4 site tools</span>
+        <div><strong>Prefer delegation?</strong><p>Use browser site tools for the customer workflow, or connect your own AR agent through the governed remote MCP.</p></div>
+        <div className="agent-links"><a href="/mcp-info">Connect an agent</a><a href="/connections">Manage access</a><span className="agent-ready">4 site + 8 remote tools</span></div>
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">

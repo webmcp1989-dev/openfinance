@@ -3,10 +3,14 @@
 OpenFinance demonstrates agent-mediated interoperability between two independently authenticated B2B finance applications for the [OpenAI WebMCP Challenge](https://openai.com/webmcp-challenge/).
 
 ```text
+AR team's agent  <-- OAuth remote MCP -->  OpenFinance AR
+                                           |
 OpenFinance AR  <-- site tools -->  ChatGPT + human  <-- site tools -->  Acme AP
 ```
 
 There is no shared database, credential, session, or point-to-point application integration. The browser agent works through each site's narrow, authenticated WebMCP tools. The human explicitly approves the destination and exact invoice packages before cross-site validation, then separately confirms the exact valid batch before the consequential AP submission tool runs.
+
+OpenFinance AR also provides an OAuth-protected remote MCP server at `https://openfinance-ar.vercel.app/mcp` for an AR team's own OpenAI or Claude agent. Supabase OAuth 2.1 supplies consent, PKCE, dynamic client registration, resource-bound access tokens, and revocation while existing RLS preserves user, tenant, and role boundaries. This does not create a private bridge to Acme: customer-portal interoperability still happens through the human-directed browser and Acme WebMCP. See [Remote MCP](docs/MCP.md).
 
 Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. A human can download a verified, detailed invoice PDF containing the supplier, customer, dates, PO, line item, amount due, and synthetic remittance details, then upload it through Acme's governed submission flow. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
 
@@ -55,6 +59,7 @@ Copy `.env.example` to each app's `.env.local` and use only that app's Supabase 
 - [System architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY.md)
 - [WebMCP tool inventory](docs/WEBMCP.md)
+- [Remote MCP and OAuth](docs/MCP.md)
 - [Demo runbook](docs/DEMO.md)
 - [Verification record](docs/VERIFICATION.md)
 - [Challenge submission package](docs/SUBMISSION.md)

@@ -119,7 +119,12 @@ function validatedStoredDocument(row: DocumentRow) {
 
 export async function listInvoiceQueue(
   supabase: SupabaseClient,
-  options: { customerName?: string; readyOnly?: boolean } = {},
+  options: {
+    customerName?: string;
+    invoiceNumber?: string;
+    readyOnly?: boolean;
+    statuses?: InvoiceQueueItem["status"][];
+  } = {},
 ) {
   let query = supabase
     .from("invoices")
@@ -128,7 +133,9 @@ export async function listInvoiceQueue(
     .order("invoice_number", { ascending: true });
 
   if (options.customerName) query = query.eq("customers.name", options.customerName);
+  if (options.invoiceNumber) query = query.eq("invoice_number", options.invoiceNumber);
   if (options.readyOnly) query = query.eq("status", "ready");
+  else if (options.statuses?.length) query = query.in("status", options.statuses);
 
   const { data, error } = await query;
   if (error) throw new HttpError(500, "invoice_query_failed", "Invoice queue could not be loaded");
@@ -208,6 +215,9 @@ export async function recordDeliveryEvent(
   });
 
   if (error) {
+    if (error.code === "42501") {
+      throw new HttpError(403, "operator_access_required", "Operator access is required to record portal outcomes");
+    }
     if (error.code === "23505") {
       throw new HttpError(409, "idempotency_conflict", "Idempotency key conflicts with an earlier request");
     }

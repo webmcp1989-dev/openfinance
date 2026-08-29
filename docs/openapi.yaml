@@ -1,13 +1,15 @@
 openapi: 3.1.0
 info:
   title: OpenFinance WebMCP demo HTTP APIs
-  version: 1.5.0
+  version: 1.6.0
   license:
     name: MIT
     identifier: MIT
   description: >-
     Same-origin backend APIs used by the OpenFinance AR and independent Acme AP
-    WebMCP tools. All operations require the application's own Supabase cookie session.
+    WebMCP tools, plus the OpenFinance AR OAuth discovery and remote MCP transport.
+    Application APIs require their own Supabase cookie session; remote MCP uses a
+    resource-bound Supabase OAuth Bearer token and MCP JSON-RPC semantics.
 servers:
   - url: https://openfinance-ar.vercel.app
     description: OpenFinance AR
@@ -16,6 +18,56 @@ servers:
 security:
   - cookieSession: []
 paths:
+  /.well-known/oauth-protected-resource/mcp:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    get:
+      operationId: discoverOpenFinanceMcpResource
+      summary: Discover the OAuth-protected OpenFinance AR MCP resource
+      security: []
+      responses:
+        "200":
+          description: RFC 9728 protected-resource metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                required: [resource, authorization_servers, bearer_methods_supported]
+                properties:
+                  resource: { type: string, format: uri }
+                  authorization_servers:
+                    type: array
+                    minItems: 1
+                    items: { type: string, format: uri }
+                  bearer_methods_supported:
+                    type: array
+                    items: { type: string, enum: [header] }
+                  scopes_supported:
+                    type: array
+                    items: { type: string }
+  /mcp:
+    servers:
+      - url: https://openfinance-ar.vercel.app
+    post:
+      operationId: invokeOpenFinanceMcp
+      summary: Invoke the OpenFinance AR Streamable HTTP MCP transport
+      description: >-
+        MCP JSON-RPC endpoint. Exact method, tool, input, output, notification, and
+        protocol-version contracts are defined by MCP and docs/MCP.md, not OpenAPI.
+      security:
+        - oauthMcpBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: MCP JSON or SSE protocol response }
+        "401": { description: Missing, invalid, expired, or wrong-resource OAuth token }
+        "403": { description: Host or Origin is not allowed }
+        "413": { description: Request exceeds 128 KiB }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
   /api/agent/invoices:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -350,6 +402,15 @@ components:
       in: cookie
       name: sb-session
       description: Logical Supabase SSR cookie session; actual cookie names are project-specific.
+    oauthMcpBearer:
+      type: oauth2
+      description: Supabase OAuth 2.1 authorization code with PKCE and an exact OpenFinance MCP resource indicator.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://bhjtwmpwlmdqjxlvgrhj.supabase.co/auth/v1/oauth/authorize
+          tokenUrl: https://bhjtwmpwlmdqjxlvgrhj.supabase.co/auth/v1/oauth/token
+          scopes:
+            email: Confirm the signed-in user's email identity
   responses:
     BadRequest:
       description: Request fields or query parameters are invalid
