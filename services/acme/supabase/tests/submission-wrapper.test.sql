@@ -7,7 +7,7 @@ select set_config(
   (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
   true
 );
-select plan(10);
+select plan(12);
 
 select ok(
   exists (
@@ -75,6 +75,57 @@ select throws_ok(
   'database rejects duplicate invoice numbers before submission processing'
 );
 
+select throws_ok(
+  $$
+    select public.submit_invoice_batch(
+      'extra-field-test-20260829',
+      repeat('e', 64),
+      jsonb_build_array(jsonb_build_object(
+        'invoiceNumber', 'INV-EXTRA-01',
+        'invoiceDate', '2026-08-29',
+        'amountMinor', 1000,
+        'currency', 'USD',
+        'purchaseOrderNumber', 'PO-8821',
+        'supplierId', 'caller-controlled',
+        'document', jsonb_build_object(
+          'fileName', 'INV-EXTRA-01.pdf',
+          'mediaType', 'application/pdf',
+          'contentBase64', encode(convert_to('%PDF-extra-test', 'UTF8'), 'base64'),
+          'sha256', encode(extensions.digest(convert_to('%PDF-extra-test', 'UTF8'), 'sha256'), 'hex')
+        )
+      ))
+    )
+  $$,
+  '22023',
+  'Invalid invoice fields',
+  'database rejects additional caller-controlled invoice fields'
+);
+
+select throws_ok(
+  $$
+    select public.submit_invoice_batch(
+      'noncanonical-test-20260829',
+      repeat('d', 64),
+      jsonb_build_array(jsonb_build_object(
+        'invoiceNumber', 'INV-NONCANONICAL-01',
+        'invoiceDate', '2026-08-29',
+        'amountMinor', 1000,
+        'currency', 'USD',
+        'purchaseOrderNumber', 'PO-8821',
+        'document', jsonb_build_object(
+          'fileName', 'INV-NONCANONICAL-01.pdf',
+          'mediaType', 'application/pdf',
+          'contentBase64', rtrim(encode(convert_to('%PDF-noncanonical-test', 'UTF8'), 'base64'), '='),
+          'sha256', encode(extensions.digest(convert_to('%PDF-noncanonical-test', 'UTF8'), 'sha256'), 'hex')
+        )
+      ))
+    )
+  $$,
+  '22023',
+  'Document is not valid base64',
+  'database rejects an alternate base64 representation of the same PDF'
+);
+
 create temporary table retry_probe (
   response jsonb not null
 ) on commit drop;
@@ -130,7 +181,7 @@ select throws_ok(
   $$
     select public.submit_invoice_batch(
       'matching-retry-test-20260829',
-      repeat('c', 64),
+      repeat('b', 64),
       jsonb_build_array(jsonb_build_object(
         'invoiceNumber', 'INV-RETRY-01',
         'invoiceDate', '2026-08-29',

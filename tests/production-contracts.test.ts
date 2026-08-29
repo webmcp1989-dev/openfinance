@@ -86,6 +86,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
     expect(setup).toContain("202608290003_bound_json_money.sql");
     expect(setup).toContain("202608290004_align_submission_policy.sql");
+    expect(setup).toContain("202608290005_canonicalize_submission_requests.sql");
   });
 
   test("money stays within JSON's exact-integer range at every boundary", async () => {
@@ -108,6 +109,15 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("enforce_remaining_balance");
     expect(openApi).toContain("items: { type: string, const: application/pdf }");
     expect(openApi).toContain("maxDocumentBytes: { type: integer, const: 1048576 }");
+  });
+
+  test("AP derives idempotency identity and canonicalizes direct RPC input in Postgres", async () => {
+    const migration = await readFile(join(root, "services/acme/supabase/migrations/202608290005_canonicalize_submission_requests.sql"), "utf8");
+    expect(migration).toContain("jsonb_array_length(p_invoices) not between 1 and 3");
+    expect(migration).toContain("Invalid invoice fields");
+    expect(migration).toContain("Invalid document fields");
+    expect(migration).toContain("Document is not canonical base64");
+    expect(migration).toContain("extensions.digest(pg_catalog.convert_to(p_invoices::text");
   });
 
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {
