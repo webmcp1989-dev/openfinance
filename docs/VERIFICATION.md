@@ -14,13 +14,13 @@ to the documented starting state after testing.
 - Both documented development-server commands reached Ready on ports 3000 and
   3001. Next.js agent-file generation is disabled, so they do not create
   duplicate nested instructions.
-- A fresh clone of public GitHub commit `8c8ff30` completed frozen install,
-  type-check, zero-warning lint, all 97 tests, and both production builds using
+- A fresh clone of public GitHub commit `3c6286f` completed frozen install,
+  type-check, zero-warning lint, all 108 tests, and both production builds using
   only the documented variables with safe build-time placeholders; its
   dependency audit found no vulnerabilities.
-- GitHub Actions completed successfully for final OAuth/MCP commit `8c8ff30`.
-  Both Vercel production projects reported that commit as a Ready production
-  deployment.
+- GitHub Actions CI run 52 completed successfully for expanded WebMCP commit
+  `3c6286f`. Both Vercel production applications served that release during the
+  independent live browser verification.
 
 The test suite covers strict request contracts, authentication ordering,
 security headers, responsive authentication controls, PDF structure and
