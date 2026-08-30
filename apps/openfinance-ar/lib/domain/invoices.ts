@@ -25,6 +25,7 @@ const portalResultItemSchema = z.object({
   invoiceNumber: invoiceNumberSchema,
   portalReference: z.string().min(1).max(120),
   portalStatus: z.enum(["received", "under_review", "accepted"]),
+  supersedesPortalReference: z.string().min(1).max(120).optional(),
 }).strict();
 
 const portalExceptionItemSchema = z.object({

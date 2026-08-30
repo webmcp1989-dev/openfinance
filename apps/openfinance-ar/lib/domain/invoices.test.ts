@@ -34,6 +34,19 @@ describe("OpenFinance agent request contracts", () => {
     expect(invalid.success).toBe(false);
   });
 
+  test("requires an explicit prior reference for a replacement result", () => {
+    expect(deliveryEventRequestSchema.parse({
+      eventType: "portal_result",
+      idempotencyKey: "replacement-result-20260830-01",
+      items: [{
+        invoiceNumber: "INV-10482",
+        portalReference: "ACME-REVISION-02",
+        portalStatus: "received",
+        supersedesPortalReference: "ACME-ORIGINAL-01",
+      }],
+    }).items[0]).toMatchObject({ supersedesPortalReference: "ACME-ORIGINAL-01" });
+  });
+
   test("requires one bounded ERP sync idempotency key", () => {
     expect(erpSyncRequestSchema.parse({ idempotencyKey: "erp-sync-request-20260829" })).toEqual({
       idempotencyKey: "erp-sync-request-20260829",

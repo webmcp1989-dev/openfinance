@@ -71,6 +71,7 @@ const portalResultItemSchema = z.object({
   invoiceNumber: invoiceNumberSchema,
   portalReference: z.string().min(1).max(120),
   portalStatus: z.enum(["received", "under_review", "accepted"]),
+  supersedesPortalReference: z.string().min(1).max(120).optional(),
 }).strict();
 
 const portalExceptionItemSchema = z.object({
@@ -313,7 +314,7 @@ export function createOpenFinanceMcpServer(
 
   server.registerTool("record_portal_result", {
     title: "Record customer portal results",
-    description: "Record verified customer-portal references and receipt statuses after invoices were actually submitted. This mutates AR state, is idempotent for the supplied key, and requires operator or admin access.",
+    description: "Record verified customer-portal references and receipt statuses after invoices were actually submitted. For a corrected AP revision, supply the exact prior reference in supersedesPortalReference. This mutates AR state, is idempotent for the supplied key, and requires operator or admin access.",
     inputSchema: z.object({
       idempotencyKey: idempotencyKeySchema,
       items: z.array(portalResultItemSchema).min(1).max(10).refine(

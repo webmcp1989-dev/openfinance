@@ -193,6 +193,9 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
           invoiceNumber,
           portalReference: String(formData.get("portalReference") ?? ""),
           portalStatus: String(formData.get("portalStatus") ?? "received"),
+          ...(String(formData.get("supersedesPortalReference") ?? "").trim()
+            ? { supersedesPortalReference: String(formData.get("supersedesPortalReference")).trim() }
+            : {}),
         }],
       } : {
         eventType: "portal_exception",
@@ -411,11 +414,12 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
             </div>
             <label><span>Invoice</span><select key={`${outcomeMode}-${selectedReady[0] ?? ""}`} name="invoiceNumber" required defaultValue={selectedReady[0] ?? ""}>
               <option value="" disabled>Select an invoice</option>{invoices.filter((invoice) => outcomeMode === "result"
-                ? invoice.status === "ready"
+                ? invoice.status === "ready" || invoice.status === "submitted"
                 : invoice.status === "ready" || invoice.status === "needs_attention").map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber}</option>)}
             </select></label>
             {outcomeMode === "result" ? <>
               <label><span>Portal reference</span><input name="portalReference" required minLength={1} maxLength={120} placeholder="ACME-2026-…" /></label>
+              <label><span>Superseded portal reference <small>(replacement only)</small></span><input name="supersedesPortalReference" minLength={1} maxLength={120} placeholder="Exact prior Acme reference" /></label>
               <label><span>Portal status</span><select name="portalStatus" defaultValue="received"><option value="received">Received</option><option value="under_review">Under review</option><option value="accepted">Accepted</option></select></label>
             </> : <>
               <label><span>Exception code</span><input name="exceptionCode" required pattern="[a-z][a-z0-9_]{1,63}" placeholder="amount_exceeds_balance" /></label>

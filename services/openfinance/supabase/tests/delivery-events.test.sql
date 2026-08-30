@@ -13,6 +13,18 @@ insert into public.invoices (
   'test-state-01.pdf', 'application/pdf', 'JVBERi0xLjQK', repeat('a', 64)
 );
 
+insert into public.invoices (
+  organization_id, customer_id, invoice_number, invoice_date, amount_minor,
+  currency, purchase_order_number, status, document_name, document_media_type,
+  document_content_base64, document_sha256, portal_reference, portal_status
+) values (
+  '10000000-0000-4000-8000-000000000001',
+  '20000000-0000-4000-8000-000000000001',
+  'TEST-REPLACE-01', current_date, 25000, 'USD', 'PO-TEST-02', 'submitted',
+  'test-replace-01.pdf', 'application/pdf', 'JVBERi0xLjQK', repeat('b', 64),
+  'ACME-ORIGINAL-01', 'received'
+);
+
 select set_config(
   'request.jwt.claim.sub',
   (select id::text from auth.users where lower(email) = 'demo@openfinance.dev'),
@@ -20,7 +32,7 @@ select set_config(
 );
 set local role authenticated;
 
-select plan(11);
+select plan(17);
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.record_delivery_event(public.delivery_event_type,text,text,jsonb)'::regprocedure),
@@ -138,6 +150,62 @@ select throws_ok(
   '23514',
   'Invoice state does not allow a portal result',
   'a needs-attention invoice cannot be marked submitted by a direct RPC call'
+);
+
+select throws_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_result', 'replacement-missing-prior-01', repeat('f', 64),
+      '{"items":[{"invoiceNumber":"TEST-REPLACE-01","portalReference":"ACME-REVISION-02","portalStatus":"received"}]}'::jsonb
+    )
+  $$,
+  '23514',
+  'Portal reference cannot change after submission',
+  'a submitted reference cannot change without an explicit superseded reference'
+);
+
+select throws_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_result', 'replacement-wrong-prior-0001', repeat('1', 64),
+      '{"items":[{"invoiceNumber":"TEST-REPLACE-01","portalReference":"ACME-REVISION-02","portalStatus":"received","supersedesPortalReference":"ACME-NOT-CURRENT"}]}'::jsonb
+    )
+  $$,
+  '23514',
+  'Superseded portal reference does not match current AR state',
+  'a replacement result fails closed when its prior reference is stale'
+);
+
+select lives_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_result', 'replacement-valid-20260830-01', repeat('2', 64),
+      '{"items":[{"invoiceNumber":"TEST-REPLACE-01","portalReference":"ACME-REVISION-02","portalStatus":"received","supersedesPortalReference":"ACME-ORIGINAL-01"}]}'::jsonb
+    )
+  $$,
+  'a verified replacement result updates the AP reference'
+);
+
+select is(
+  (select portal_reference from public.invoices where invoice_number = 'TEST-REPLACE-01'),
+  'ACME-REVISION-02',
+  'the replacement reference becomes current in AR'
+);
+
+select lives_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_result', 'replacement-valid-20260830-01', repeat('2', 64),
+      '{"items":[{"invoiceNumber":"TEST-REPLACE-01","portalReference":"ACME-REVISION-02","portalStatus":"received","supersedesPortalReference":"ACME-ORIGINAL-01"}]}'::jsonb
+    )
+  $$,
+  'an identical replacement-result retry replays safely'
+);
+
+select is(
+  (select version from public.invoices where invoice_number = 'TEST-REPLACE-01'),
+  2,
+  'replacement-result replay does not update the invoice twice'
 );
 
 select * from finish();

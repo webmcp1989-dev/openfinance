@@ -18,7 +18,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 | `get_submission_package` | read | Returns exact invoice fields and checksum-protected PDF payloads for selected ready invoices. |
 | `list_portal_followups` | read | Finds blocked, rejected, overdue, status-stale, or partially paid invoices and suggests the next AR action. |
 | `get_invoice_supporting_documents` | sensitive read | Returns verified evidence PDFs for one invoice after informed transfer approval. |
-| `record_portal_result` | write, idempotent | Records portal references only after Acme actually returns them. |
+| `record_portal_result` | write, idempotent | Records portal references only after Acme actually returns them. A corrected AP revision must include the exact current AR reference as `supersedesPortalReference`; stale or implicit overwrites fail closed. |
 | `record_portal_exception` | write, idempotent | Records precise AP validation exceptions without claiming submission. |
 | `record_payment_remittance` | write, idempotent | Reconciles one verified full or partial AP payment allocation into AR. |
 

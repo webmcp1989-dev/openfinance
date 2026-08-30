@@ -17,6 +17,7 @@ const portalResultItem = {
     invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" },
     portalReference: { type: "string", minLength: 1, maxLength: 120 },
     portalStatus: { type: "string", enum: ["received", "under_review", "accepted"] },
+    supersedesPortalReference: { type: "string", minLength: 1, maxLength: 120 },
   },
 } as const;
 
@@ -97,7 +98,7 @@ export function OpenFinanceSiteTools() {
       {
         name: "record_portal_result",
         title: "Record portal results",
-        description: "Record portal references and receipt statuses returned by Acme AP for invoices that were actually submitted. This changes the OpenFinance queue; use only after verifying the AP result.",
+        description: "Record portal references and receipt statuses returned by Acme AP for invoices that were actually submitted. For a corrected AP revision, include the exact prior reference in supersedesPortalReference; AR permits the change only when it matches current state. This changes the OpenFinance queue; use only after verifying the AP result.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "items"],
           properties: {

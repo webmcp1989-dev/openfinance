@@ -849,6 +849,11 @@ components:
               invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
               portalReference: { type: string, minLength: 1, maxLength: 120 }
               portalStatus: { type: string, enum: [received, under_review, accepted] }
+              supersedesPortalReference:
+                type: string
+                minLength: 1
+                maxLength: 120
+                description: Exact current AR portal reference required only when recording a corrected AP revision with a new reference.
     PortalExceptionRequest:
       type: object
       additionalProperties: false
