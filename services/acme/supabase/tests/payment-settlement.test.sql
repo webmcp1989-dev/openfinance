@@ -35,11 +35,11 @@ select ok(
   'authenticated suppliers can reach the scoped status function'
 );
 select ok(
-  not has_table_privilege('authenticated', 'public.payment_settlements', 'select')
+  has_table_privilege('authenticated', 'public.payment_settlements', 'select')
   and not has_table_privilege('authenticated', 'public.payment_settlements', 'insert')
   and not has_table_privilege('authenticated', 'public.payment_settlements', 'update')
   and not has_table_privilege('authenticated', 'public.payment_settlements', 'delete'),
-  'authenticated callers cannot forge or modify payment settlements'
+  'authenticated callers can read RLS-scoped remittance but cannot forge or modify settlements'
 );
 select ok(
   not has_table_privilege('authenticated', 'private.payment_simulator_state', 'select'),
@@ -83,7 +83,7 @@ select public.submit_invoice_batch(
       'document', jsonb_build_object(
         'fileName', 'INV-PAYTEST-01.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+        'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
         'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
     ),
@@ -96,7 +96,7 @@ select public.submit_invoice_batch(
       'document', jsonb_build_object(
         'fileName', 'INV-PAYTEST-02.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+        'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
         'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
     )

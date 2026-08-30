@@ -52,6 +52,16 @@ describe("authentication recovery messages", () => {
       expect(source).toContain("Use a different account");
     });
   }
+
+  test("both workspaces resolve membership before loading tenant data", async () => {
+    for (const page of ["apps/openfinance-ar/app/page.tsx", "apps/acme-ap/app/page.tsx"]) {
+      const source = await readFile(join(root, page), "utf8");
+      const membershipFailure = source.indexOf('redirect("/login?error=profile_missing")');
+      const workspaceQueries = source.indexOf("await Promise.all", membershipFailure);
+      expect(membershipFailure).toBeGreaterThan(-1);
+      expect(workspaceQueries).toBeGreaterThan(membershipFailure);
+    }
+  });
 });
 
 describe("API authorization ordering", () => {
@@ -192,6 +202,7 @@ describe("database mutation boundaries", () => {
   test("AP verifies canonical structural PDFs and checksums before any invoice mutation", async () => {
     const legacyMigration = await readFile(join(root, "services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql"), "utf8");
     const migration = await readFile(join(root, "services/acme/supabase/migrations/202608300009_enforce_structural_pdf_contract.sql"), "utf8");
+    const repair = await readFile(join(root, "services/acme/supabase/migrations/202608300010_repair_binary_pdf_inspection.sql"), "utf8");
     const sqlTests = await readFile(join(root, "services/acme/supabase/tests/submission-wrapper.test.sql"), "utf8");
     expect(legacyMigration).toContain("Document checksum mismatch");
     expect(migration).toContain("create or replace function private.is_structurally_valid_pdf");
@@ -201,6 +212,8 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("private.is_canonical_structural_pdf");
     expect(migration).toContain("private.replace_rejected_invoice");
     expect(migration).toContain("invoice_attachments_pdf_structure_check");
+    expect(repair).toContain("pg_catalog.encode(p_bytes, 'escape')");
+    expect(repair).not.toContain("pg_catalog.replace(p_bytes");
     expect(sqlTests).toContain("header-and-EOF-only pseudo-PDF from the original defect");
   });
 
@@ -216,6 +229,7 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("revoke all on public.payment_settlements from public, anon, authenticated");
     expect(testSuite).toContain("exactly one of each committed invoice pair receives a settlement schedule");
     expect(testSuite).toContain("the read-only status function advances only the eligible second invoice to paid");
+    expect(testSuite).toContain("can read RLS-scoped remittance but cannot forge or modify settlements");
   });
 
   test("AR derives idempotency identity and compares canonical retry content in Postgres", async () => {
@@ -394,10 +408,16 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain('"/api/agent/submissions"');
     expect(ap).toContain('"/api/agent/status"');
     expect(ap).toContain("statusLookup.exceptions");
+    expect(ap).toContain("exception.resolutionGuidance");
+    expect(ap).toContain("statusLookup.inquiries");
     expect(ap).toContain('"/api/agent/exception-responses"');
     expect(ap).toContain('"/api/agent/replacements"');
     expect(ap).toContain('"/api/agent/inquiries"');
     expect(ap).toContain("submission.paymentReference");
+    expect(ap).toContain('"/api/agent/remittance"');
+    expect(ap).toContain("remittanceLookup.allocations");
+    expect(ap).toContain("submissionStatusFilter");
+    expect(ap).toContain("purchaseOrderLookup.lines");
     expect(ap).toContain("Resolve, correct, or ask AP");
     expect(ap).toContain("approve submission to Acme AP");
   });

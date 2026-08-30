@@ -70,6 +70,14 @@ nav a:hover { color: var(--blue); }
 .lookup-result { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 13px; border-radius: 11px; background: #f3f7fc; }
 .lookup-result p { grid-column: 1; margin: 0; }
 .lookup-result b { grid-column: 2; grid-row: 2; color: var(--navy); font-size: .85rem; }
+.lookup-card.remittance-lookup { grid-column: 1 / -1; }
+.detailed-result dl { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 8px 0 0; }
+.detailed-result dl div { display: grid; gap: 2px; padding: 8px; border: 1px solid #dbe4ee; border-radius: 8px; background: #fff; }
+.detailed-result dt { color: var(--muted); font-size: .65rem; font-weight: 750; text-transform: uppercase; }
+.detailed-result dd { margin: 0; color: var(--navy); font-size: .76rem; }
+.detailed-result ol { grid-column: 1 / -1; display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.detailed-result li { display: grid; gap: 2px; padding: 8px; border-left: 3px solid #b8cae4; background: #fff; }
+.detailed-result li span { color: var(--muted); font-size: .72rem; }
 .state { align-self: start; padding: 4px 7px; border-radius: 999px; color: var(--green); background: var(--green-soft); font-size: .67rem; font-weight: 760; text-transform: capitalize; }
 .state.closed { color: #8b4c1c; background: #fff0df; }
 .submission-workbench { display: grid; grid-template-columns: 1.15fr .85fr; margin-top: 16px; overflow: hidden; border: 1px solid #c7d5e8; border-radius: 18px; background: #fff; box-shadow: 0 12px 32px rgb(30 50 80 / 6%); }
@@ -117,6 +125,9 @@ nav a:hover { color: var(--blue); }
 .empty-state { padding: 30px; border: 1px dashed #cbd4df; border-radius: 16px; color: var(--muted); text-align: center; background: rgb(255 255 255 / 55%); }
 .empty-state p { margin: 6px 0 0; }
 .submission-list { display: grid; gap: 10px; }
+.submission-filters { display: flex; justify-content: flex-end; gap: 12px; margin: 0 0 14px; }
+.submission-filters label { display: grid; gap: 5px; color: var(--muted); font-size: .7rem; font-weight: 750; }
+.submission-filters input, .submission-filters select { min-height: 38px; padding: 8px 10px; border: 1px solid #cbd4df; border-radius: 9px; color: var(--ink); background: #fff; }
 .settlement-note { display: flex; align-items: baseline; gap: 12px; margin: 0 0 14px; padding: 12px 15px; border: 1px solid #c9e4dc; border-radius: 12px; background: #f2faf7; color: var(--navy); }
 .settlement-note p { margin: 0; color: var(--muted); font-size: .82rem; }
 .submission-list article { display: grid; grid-template-columns: 1fr auto; gap: 6px 24px; padding: 18px 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
@@ -155,6 +166,9 @@ nav a:hover { color: var(--blue); }
   .supplier { justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
   .intro { align-items: flex-start; flex-direction: column; padding-top: 34px; }
   .lookup-grid, .field-grid { grid-template-columns: 1fr; }
+  .lookup-card.remittance-lookup { grid-column: auto; }
+  .detailed-result dl { grid-template-columns: 1fr; }
+  .submission-filters { align-items: stretch; flex-direction: column; }
   .file-field { grid-column: auto; }
   .inline-field { grid-template-columns: 1fr; }
   .section-heading { align-items: flex-start; gap: 14px; }

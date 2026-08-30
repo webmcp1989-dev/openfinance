@@ -167,6 +167,10 @@ private and are not stored in this repository.
   structure, size, and checksum validation.
 - AP provides requirements, PO and receipt lookup, exact PDF preflight, a
   three-invoice review batch, and an explicit final submission confirmation.
+- AP also provides human-readable PO line/tolerance/evidence details,
+  status/PO invoice portfolio filters, complete exception/inquiry context, and
+  the exact remittance allocation returned by the same scoped backend used by
+  `get_payment_remittance`.
 - AP schedules every second committed invoice for a synthetic buyer payment
   signal after 10 seconds. The human UI performs one scheduled refresh and the
   existing read-only status tool returns the same backend-derived state.

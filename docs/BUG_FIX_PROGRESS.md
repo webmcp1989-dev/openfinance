@@ -139,15 +139,17 @@ and revocation; and independently authorized demo resets.
   combined independent post-implementation verification. F-004 was introduced
   and fixed during regression validation; it is included below for traceability.
 - Independent post-implementation verification: complete for repository code
-  and contracts. The final fresh run passes 115 tests and 479 expectations;
+  and contracts. The latest fresh run passes 118 tests and 494 expectations;
   both type-checks, both lints, both production builds, `bun audit`, OpenAPI
-  parsing, environment-tracking check, and `git diff --check` pass. Database
-  migration execution and rollback-only SQL suites remain blocked by the lack
-  of a local runtime and access to the live AP Supabase project.
-- Exact continuation point: apply AP migration `202608300009` to project
-  `lakrgujjrhydjsoyaiin`, run every AP rollback-only SQL suite, test the live
-  human upload and WebMCP pseudo-PDF rejection, then deploy the matching AP
-  build and repeat the challenge flow.
+  parsing, environment-tracking check, and `git diff --check` pass. The AP
+  structural-PDF migrations are now applied to the live project. The complete
+  rollback-only AP suite passes after independently correcting the bytea
+  inspection implementation, canonicalizing PDF fixtures, and aligning the
+  settlement privilege assertion with the current RLS-scoped read model.
+- Exact continuation point: deploy the current UI/auth changes, run the final
+  confirmed cross-site invoice transfer and submission, verify the resulting
+  AP status/remittance and AR writeback in both WebMCP and human UI, then
+  restore both independent demo workspaces.
 
 ## Current findings and remediation log
 
@@ -181,7 +183,7 @@ and revocation; and independently authorized demo resets.
 ### F-002 — AP accepts non-renderable pseudo-PDF invoice documents
 
 - Severity: Medium
-- Status: implemented in source; database application remains pending.
+- Status: resolved in source and live database; independently regression-tested.
 - Affected components: `apps/acme-ap/lib/services/submission-service.ts`
   (`inspectDocument`), `services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql`
   (`public.submit_invoice_batch`),
@@ -226,12 +228,12 @@ and revocation; and independently authorized demo resets.
   final repository suite (115 pass, 479 expectations), both type-checks,
   both lints, both production builds, `bun audit` (no vulnerabilities), and
   OpenAPI/environment/diff checks.
-- Database/manual verification: not yet executable here. The installed
-  Supabase CLI is authenticated to projects other than `lakrgujjrhydjsoyaiin`;
-  `psql` and a local Supabase runtime are unavailable. Applying the migration
-  and running all AP rollback-only SQL suites is required before release.
-- Exact next action: independently inspect the final migration and run it with
-  all AP SQL tests when authorized project access is available.
+- Database/manual verification: migrations `202608300009` and corrective
+  `202608300010` are applied to project `lakrgujjrhydjsoyaiin`. All five AP
+  rollback-only SQL suites pass. The live WebMCP preflight must still be
+  repeated after the current UI build deploys as part of the final workflow.
+- Exact next action: verify one approved live structural invoice package through
+  preflight and confirmed submission, then verify the remittance/UI state.
 
 ### F-003 — Judge-facing submission copy advertises an obsolete WebMCP inventory
 
@@ -275,3 +277,47 @@ and revocation; and independently authorized demo resets.
 - Files changed/tests/verification: `docs/openapi.yaml`; final suite now
   passes 115 tests and 479 expectations.
 - Exact next action: include OpenAPI parsing in the final combined verification.
+
+### F-005 — AP human UI omitted exact remittance and complete discovery context
+
+- Severity: Medium
+- Status: resolved in source; focused tests pass; live deployment verification pending.
+- Evidence: `get_payment_remittance` returned payment status, method, schedule,
+  exact allocation, and currency through `/api/agent/remittance`, but no human
+  control called that route. The invoice list had no WebMCP-equivalent status
+  or PO filters, and the status/PO cards omitted inquiry, resolution, allowed
+  action, tolerance, evidence, and line details already returned by services.
+- Remediation: added a read-only remittance lookup, supplier-portfolio filters,
+  complete PO detail, and complete status/exception/inquiry presentation using
+  existing authenticated routes and data. No business rule moved to the client.
+- Tests: added filter behavior tests and expanded the repository parity contract.
+
+### F-006 — Workspace queries could fail before membership recovery
+
+- Severity: Medium
+- Status: resolved in source; focused tests pass; live deployment verification pending.
+- Evidence: both production roots produced server errors while simple
+  authenticated API reads still succeeded. Each root launched tenant data
+  queries concurrently with its profile lookup and checked profile failure only
+  afterward, bypassing the intended `profile_missing` recovery boundary.
+- Remediation: both apps now resolve and validate profile plus organization or
+  supplier membership before starting parallel tenant-scoped workspace reads.
+- Tests: the production contract now enforces membership resolution ordering.
+
+### F-007 — Initial structural-PDF migration called a nonexistent bytea function
+
+- Severity: High
+- Status: resolved and applied to the live AP database; all AP SQL suites pass.
+- Evidence: after applying `202608300009`, a real valid structural PDF reached
+  `private.is_structurally_valid_pdf` and PostgreSQL raised `42883` because
+  `pg_catalog.replace(bytea, bytea, bytea)` does not exist. This blocked the
+  core invoice-submission transaction.
+- Root cause: static source assertions did not execute the new PL/pgSQL helper.
+- Remediation: forward migration `202608300010_repair_binary_pdf_inspection.sql`
+  uses PostgreSQL `encode(bytea, 'escape')`, preserving searchable ASCII PDF
+  structure while safely representing arbitrary binary bytes. Canonical SQL
+  fixtures now strip PostgreSQL base64 line wrapping. The payment suite now
+  asserts the current least-privilege model: supplier-scoped settlement SELECT
+  through RLS, with INSERT/UPDATE/DELETE denied.
+- Verification: live AP reset 14/14, exception-to-cash 16/16, payment 15/15,
+  RLS 15/15, and submission-wrapper 14/14 passed in rollback transactions.

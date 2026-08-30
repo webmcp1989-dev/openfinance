@@ -205,7 +205,7 @@ select public.submit_invoice_batch(
     'document', jsonb_build_object(
       'fileName', 'INV-RETRY-01.pdf',
       'mediaType', 'application/pdf',
-      'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+      'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
       'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
     )
   ))
@@ -224,7 +224,7 @@ select is(
       'document', jsonb_build_object(
         'fileName', 'INV-RETRY-01.pdf',
         'mediaType', 'application/pdf',
-        'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+        'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
         'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
     ))
@@ -253,7 +253,7 @@ select throws_ok(
         'document', jsonb_build_object(
           'fileName', 'INV-RETRY-01.pdf',
           'mediaType', 'application/pdf',
-          'contentBase64', encode(pg_temp.structural_pdf(), 'base64'),
+          'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
           'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
         )
       ))

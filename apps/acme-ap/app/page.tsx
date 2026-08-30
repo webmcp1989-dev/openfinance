@@ -23,17 +23,11 @@ export default async function AcmeHome() {
   const userId = authData?.claims?.sub;
   if (authError || typeof userId !== "string") redirect("/login");
 
-  const [{ data: profileData, error: profileError }, requirements, purchaseOrders, submissions, auditSnapshot] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("supplier_id")
-      .eq("user_id", userId)
-      .single(),
-    getRequirements(supabase),
-    listPurchaseOrders(supabase),
-    listSubmissions(supabase),
-    loadAuditSnapshot(supabase),
-  ]);
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("supplier_id")
+    .eq("user_id", userId)
+    .single();
   const profile = profileData as ProfileRow | null;
   if (profileError || !profile) redirect("/login?error=profile_missing");
 
@@ -44,6 +38,13 @@ export default async function AcmeHome() {
     .single();
   const supplier = supplierData as SupplierRow | null;
   if (supplierError || !supplier) redirect("/login?error=profile_missing");
+
+  const [requirements, purchaseOrders, submissions, auditSnapshot] = await Promise.all([
+    getRequirements(supabase),
+    listPurchaseOrders(supabase),
+    listSubmissions(supabase),
+    loadAuditSnapshot(supabase),
+  ]);
 
   return <AcmeWorkspace
     initialRequirements={requirements}

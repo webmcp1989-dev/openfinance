@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import type { SubmissionRequirements } from "@/lib/domain/submissions";
-import { fileDocument } from "./acme-workspace";
+import type { SubmissionRow } from "@/lib/services/submission-service";
+import { fileDocument, filterSubmissionRows } from "./acme-workspace";
 
 function renderStructuralPdf() {
   const prefix = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n";
@@ -37,5 +38,20 @@ describe("human invoice file preparation", () => {
     const file = new File(["not a PDF"], "invoice.txt", { type: "" });
 
     await expect(fileDocument(file, requirements)).rejects.toThrow("Choose a PDF invoice document.");
+  });
+});
+
+describe("human invoice portfolio filters", () => {
+  const submissions = [
+    { invoiceNumber: "INV-1", purchaseOrderNumber: "PO-100", status: "received" },
+    { invoiceNumber: "INV-2", purchaseOrderNumber: "PO-200", status: "paid" },
+  ] as SubmissionRow[];
+
+  test("combines status and normalized purchase-order filters", () => {
+    expect(filterSubmissionRows(submissions, "paid", "po-2").map((item) => item.invoiceNumber)).toEqual(["INV-2"]);
+  });
+
+  test("returns the full supplier portfolio when filters are empty", () => {
+    expect(filterSubmissionRows(submissions, "all", "")).toHaveLength(2);
   });
 });

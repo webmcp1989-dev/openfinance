@@ -23,17 +23,11 @@ export default async function OpenFinanceHome() {
   const userId = authData?.claims?.sub;
   if (authError || typeof userId !== "string") redirect("/login");
 
-  const [{ data: profileData, error: profileError }, invoices, followups, auditSnapshot] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name, organization_id")
-      .eq("user_id", userId)
-      .single(),
-    listInvoiceQueue(supabase),
-    listPortalFollowups(supabase),
-    loadAuditSnapshot(supabase),
-  ]);
-
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("full_name, organization_id")
+    .eq("user_id", userId)
+    .single();
   const profile = profileData as ProfileRow | null;
   if (profileError || !profile) redirect("/login?error=profile_missing");
 
@@ -44,6 +38,12 @@ export default async function OpenFinanceHome() {
     .single();
   const organization = organizationData as OrganizationRow | null;
   if (organizationError || !organization) redirect("/login?error=profile_missing");
+
+  const [invoices, followups, auditSnapshot] = await Promise.all([
+    listInvoiceQueue(supabase),
+    listPortalFollowups(supabase),
+    loadAuditSnapshot(supabase),
+  ]);
 
   return <OpenFinanceWorkspace
     initialInvoices={invoices}

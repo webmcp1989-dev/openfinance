@@ -25,6 +25,37 @@ type ValidationResult = Readonly<{
   issues: ValidationIssue[];
 }>;
 
+type PaymentRemittance = Readonly<{
+  invoiceNumber: string;
+  portalReference: string;
+  paymentStatus: "paid" | "scheduled" | "not_scheduled";
+  scheduledFor: string | null;
+  paidAt: string | null;
+  paymentReference: string | null;
+  amountMinor: number | null;
+  currency: string;
+  paymentMethod: string | null;
+  allocations: ReadonlyArray<Readonly<{
+    invoiceNumber: string;
+    amountMinor: number;
+    currency: string;
+  }>>;
+}>;
+
+type SubmissionStatusFilter = "all" | SubmissionRow["status"];
+
+export function filterSubmissionRows(
+  submissions: readonly SubmissionRow[],
+  status: SubmissionStatusFilter,
+  purchaseOrderNumber: string,
+) {
+  const normalizedPurchaseOrder = purchaseOrderNumber.trim().toUpperCase();
+  return submissions.filter((submission) =>
+    (status === "all" || submission.status === status) &&
+    (normalizedPurchaseOrder === "" || submission.purchaseOrderNumber.includes(normalizedPurchaseOrder)),
+  );
+}
+
 function auditSummary(event: AuditEvent) {
   if (event.action === "demo_state_reset") {
     return "Canonical synthetic AP data restored";
@@ -99,6 +130,9 @@ export function AcmeWorkspace({
   const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const [purchaseOrderLookup, setPurchaseOrderLookup] = useState<PurchaseOrder | null | undefined>(undefined);
   const [statusLookup, setStatusLookup] = useState<SubmissionRow | null | undefined>(undefined);
+  const [remittanceLookup, setRemittanceLookup] = useState<PaymentRemittance | null | undefined>(undefined);
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState<SubmissionStatusFilter>("all");
+  const [submissionPurchaseOrderFilter, setSubmissionPurchaseOrderFilter] = useState("");
   const [candidatePurchaseOrder, setCandidatePurchaseOrder] = useState("");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [validatedBatch, setValidatedBatch] = useState<InvoiceCandidate[]>([]);
@@ -151,6 +185,10 @@ export function AcmeWorkspace({
     () => validatedBatch.reduce((sum, candidate) => sum + candidate.amountMinor, 0),
     [validatedBatch],
   );
+  const filteredSubmissions = useMemo(
+    () => filterSubmissionRows(submissions, submissionStatusFilter, submissionPurchaseOrderFilter),
+    [submissionPurchaseOrderFilter, submissionStatusFilter, submissions],
+  );
 
   function clearFeedback() {
     setNotice(null);
@@ -189,6 +227,24 @@ export function AcmeWorkspace({
       if (!result.submission) setNotice(`${invoiceNumber} has no portal receipt yet.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Invoice status lookup failed");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function findPaymentRemittance(formData: FormData) {
+    clearFeedback();
+    setPendingAction("remittance");
+    try {
+      const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
+      const result = await apiRequest<PaymentRemittance>("/api/agent/remittance", {
+        method: "POST",
+        body: JSON.stringify({ invoiceNumber }),
+      });
+      setRemittanceLookup(result);
+    } catch (cause) {
+      setRemittanceLookup(undefined);
+      setError(cause instanceof Error ? cause.message : "Payment remittance lookup failed");
     } finally {
       setPendingAction(null);
     }
@@ -429,14 +485,26 @@ export function AcmeWorkspace({
           <form className="lookup-card" action={(formData) => void findPurchaseOrder(formData)}>
             <div><span className="step-number">1</span><div><strong>Find a purchase order</strong><p>Confirm live status and available balance.</p></div></div>
             <label><span>PO number</span><div className="inline-field"><input name="purchaseOrderNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="PO-8821" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "po" ? "Finding…" : "Find PO"}</button></div></label>
-            {purchaseOrderLookup && <div className="lookup-result"><strong>{purchaseOrderLookup.purchaseOrderNumber}</strong><span className={`state ${purchaseOrderLookup.status}`}>{purchaseOrderLookup.status}</span><p>{purchaseOrderLookup.description}</p><b>{money.format(purchaseOrderLookup.remainingAmountMinor / 100)} remaining</b></div>}
+            {purchaseOrderLookup && <div className="lookup-result detailed-result"><strong>{purchaseOrderLookup.purchaseOrderNumber}</strong><span className={`state ${purchaseOrderLookup.status}`}>{purchaseOrderLookup.status}</span><p>{purchaseOrderLookup.description}</p><b>{money.format(purchaseOrderLookup.remainingAmountMinor / 100)} remaining</b>
+              <dl><div><dt>Authorized</dt><dd>{money.format(purchaseOrderLookup.authorizedAmountMinor / 100)} {purchaseOrderLookup.currency}</dd></div><div><dt>Payment terms</dt><dd>{purchaseOrderLookup.paymentTerms}</dd></div><div><dt>Receipt</dt><dd>{purchaseOrderLookup.receiptRequired ? `${money.format(purchaseOrderLookup.receivedAmountMinor / 100)} received` : "Not required"}</dd></div><div><dt>Service entry</dt><dd>{purchaseOrderLookup.serviceEntryStatus.replaceAll("_", " ")}</dd></div><div><dt>Price tolerance</dt><dd>{purchaseOrderLookup.priceToleranceBasisPoints / 100}% + {money.format(purchaseOrderLookup.amountToleranceMinor / 100)}</dd></div><div><dt>Evidence</dt><dd>{purchaseOrderLookup.requiredAttachmentKinds.join(", ") || "None required"}</dd></div></dl>
+              <ol>{purchaseOrderLookup.lines.map((line) => <li key={line.lineNumber}><strong>Line {line.lineNumber}</strong><span>{line.description} · {line.receivedQuantity}/{line.orderedQuantity} {line.unitOfMeasure} received · {money.format(line.invoicedAmountMinor / 100)} invoiced</span></li>)}</ol>
+            </div>}
           </form>
           <form className="lookup-card" action={(formData) => void findInvoiceStatus(formData)}>
             <div><span className="step-number neutral">4</span><div><strong>Track an invoice</strong><p>Retrieve its current receipt and status.</p></div></div>
             <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "status" ? "Checking…" : "Check status"}</button></div></label>
             {statusLookup && <div className="lookup-result"><strong>{statusLookup.invoiceNumber}</strong><span className={`state ${statusLookup.status}`}>{statusLookup.status}</span><p>{statusLookup.paymentReference ?? statusLookup.portalReference}</p><b>{money.format(statusLookup.amountMinor / 100)}</b>
               {statusLookup.timeline && statusLookup.timeline.length > 0 && <ol>{statusLookup.timeline.map((event) => <li key={`${event.eventCode}-${event.createdAt}`}><small>{event.status.replaceAll("_", " ")} · {event.message}</small></li>)}</ol>}
-              {statusLookup.exceptions && statusLookup.exceptions.length > 0 && <ul>{statusLookup.exceptions.map((exception) => <li key={exception.exceptionCode}><small><strong>{exception.exceptionCode}</strong> · {exception.owner.replaceAll("_", " ")} · {exception.message}</small></li>)}</ul>}
+              {statusLookup.exceptions && statusLookup.exceptions.length > 0 && <ul>{statusLookup.exceptions.map((exception) => <li key={exception.exceptionCode}><small><strong>{exception.exceptionCode}</strong> · {exception.owner.replaceAll("_", " ")} · {exception.message}<br />Resolution: {exception.resolutionGuidance}<br />Allowed: {exception.allowedActions.join(", ") || "No supplier action"}{exception.requiredDocumentKind ? ` · Evidence: ${exception.requiredDocumentKind.replaceAll("_", " ")}` : ""}</small></li>)}</ul>}
+              {statusLookup.inquiries && statusLookup.inquiries.length > 0 && <ul>{statusLookup.inquiries.map((inquiry) => <li key={inquiry.caseReference}><small><strong>{inquiry.caseReference}</strong> · {inquiry.inquiryType.replaceAll("_", " ")} · {inquiry.status}<br />{inquiry.subject}</small></li>)}</ul>}
+            </div>}
+          </form>
+          <form className="lookup-card remittance-lookup" action={(formData) => void findPaymentRemittance(formData)}>
+            <div><span className="step-number neutral">5</span><div><strong>View payment remittance</strong><p>Read the exact payment allocation returned for a portal invoice.</p></div></div>
+            <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "remittance" ? "Loading…" : "View remittance"}</button></div></label>
+            {remittanceLookup && <div className="lookup-result detailed-result"><strong>{remittanceLookup.invoiceNumber}</strong><span className={`state ${remittanceLookup.paymentStatus}`}>{remittanceLookup.paymentStatus.replaceAll("_", " ")}</span><p>{remittanceLookup.paymentReference ?? remittanceLookup.portalReference}</p><b>{remittanceLookup.amountMinor === null ? "No payment yet" : money.format(remittanceLookup.amountMinor / 100)}</b>
+              <dl><div><dt>Method</dt><dd>{remittanceLookup.paymentMethod?.toUpperCase() ?? "Not available"}</dd></div><div><dt>Scheduled</dt><dd>{remittanceLookup.scheduledFor ? timestamp.format(new Date(remittanceLookup.scheduledFor)) : "Not scheduled"}</dd></div><div><dt>Paid</dt><dd>{remittanceLookup.paidAt ? timestamp.format(new Date(remittanceLookup.paidAt)) : "Not paid"}</dd></div><div><dt>Currency</dt><dd>{remittanceLookup.currency}</dd></div></dl>
+              {remittanceLookup.allocations.length > 0 && <ol>{remittanceLookup.allocations.map((allocation) => <li key={allocation.invoiceNumber}><strong>{allocation.invoiceNumber}</strong><span>{money.format(allocation.amountMinor / 100)} {allocation.currency}</span></li>)}</ol>}
             </div>}
           </form>
         </div>
@@ -533,8 +601,12 @@ export function AcmeWorkspace({
       <section className="submissions" id="submissions" aria-labelledby="submissions-title">
         <div className="section-heading"><div><p className="kicker">Portal receipts</p><h2 id="submissions-title">Invoice submissions</h2></div><span>{submissions.length} received</span></div>
         <div className="settlement-note"><strong>Synthetic buyer payment signal</strong><p>For this challenge demo, every second committed invoice settles 10 seconds after receipt. The portal and agent read the same live AP status.</p></div>
+        <div className="submission-filters" aria-label="Invoice submission filters">
+          <label><span>Status</span><select value={submissionStatusFilter} onChange={(event) => setSubmissionStatusFilter(event.target.value as SubmissionStatusFilter)}><option value="all">All statuses</option><option value="received">Received</option><option value="under_review">Under review</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="disputed">Disputed</option><option value="voided">Voided</option><option value="paid">Paid</option></select></label>
+          <label><span>Purchase order</span><input value={submissionPurchaseOrderFilter} onChange={(event) => setSubmissionPurchaseOrderFilter(event.target.value.toUpperCase())} placeholder="Filter PO" /></label>
+        </div>
         {submissions.length === 0 ? <div className="empty-state"><strong>No invoices submitted yet</strong><p>Validated invoices will appear here immediately after confirmed submission.</p></div> : (
-          <div className="submission-list">{submissions.map((submission) => (
+          filteredSubmissions.length === 0 ? <div className="empty-state"><strong>No matching invoices</strong><p>Adjust the status or purchase-order filter.</p></div> : <div className="submission-list">{filteredSubmissions.map((submission) => (
             <article key={submission.portalReference}>
               <div><strong>{submission.invoiceNumber}</strong><span className={submission.status}>{submission.status}</span></div>
               <p>{submission.portalReference} · {submission.purchaseOrderNumber}</p>

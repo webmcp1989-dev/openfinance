@@ -29,6 +29,18 @@ select set_config(
 );
 set local role authenticated;
 
+create function pg_temp.structural_pdf()
+returns bytea
+language plpgsql
+immutable
+as $$
+declare
+  v_prefix text := E'%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n';
+begin
+  return convert_to(v_prefix || E'xref\n0 4\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n' || octet_length(convert_to(v_prefix, 'UTF8')) || E'\n%%EOF\n', 'UTF8');
+end;
+$$;
+
 select plan(15);
 select has_table('public', 'suppliers', 'suppliers exists');
 select has_table('public', 'purchase_orders', 'purchase orders exist');
@@ -68,8 +80,8 @@ select throws_ok(
         'document', jsonb_build_object(
           'fileName', 'INV-FOREIGN-01.pdf',
           'mediaType', 'application/pdf',
-          'contentBase64', encode(convert_to('%PDF-foreign-test', 'UTF8'), 'base64'),
-          'sha256', encode(extensions.digest(convert_to('%PDF-foreign-test', 'UTF8'), 'sha256'), 'hex')
+          'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+          'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
         )
       ))
     )
