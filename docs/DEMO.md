@@ -63,3 +63,9 @@ For the all-human fallback, select any ready invoice in the OpenFinance queue an
 - Thoughtful WebMCP: narrow site-native tools expose capabilities rather than UI coordinates.
 - Human-agent experience: the agent prepares and explains; the human controls the irreversible step and can inspect the visible result in both systems.
 - Authority: 19 site tools expose rich capabilities but neither application can write the other's state; the agent explicitly knows when work belongs to the buyer.
+
+## Demo line bank
+
+Keep these lines available for the final demo script. Preserve their meaning when editing for timing.
+
+1. “Integration is a per-partner project, so only the largest relationships get one. The exception is framed as working capital—caught in seconds, not four weeks later as a rejected invoice and a payment that never arrived.”
