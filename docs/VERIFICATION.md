@@ -108,6 +108,34 @@ mapping, idempotency, and documentation coverage.
 
 ## In-app browser WebMCP verification
 
+The final post-portfolio rehearsal completed the expanded authority-to-cash
+workflow against both production applications on August 30, 2026:
+
+- Independent human resets established 24 AR invoices with seven ready and the
+  AP baseline of nine POs plus two historical exception submissions.
+- The human-approved `INV-10482` ($18,420 / `PO-8821`) and `INV-10491`
+  ($7,250 / `PO-8844`) PDFs transferred from AR, passed live AP validation, and
+  committed atomically. AP returned stable references and AR recorded both.
+- The exact checksum-verified `INV-10417-proof-of-delivery.pdf` resolved the
+  supplier-owned evidence action to `responded` without changing the
+  buyer-owned exception.
+- `INV-10463` retained `buyer_receiving` ownership, displayed “This isn't mine
+  to fix,” and created tracked case `CASE-20260830-B64B4F7B` rather than
+  claiming supplier resolution.
+- A temporary buyer-authorized replacement condition exercised
+  `replace_rejected_invoice`; `INV-10482` became revision 2, superseded the
+  original AP receipt atomically, and preserved the $5,580 PO balance. AR
+  correctly rejected an attempted overwrite of its already-recorded receipt as
+  a stale state transition.
+- AP completed the deterministic second-invoice ACH for `INV-10491` with
+  reference `PAY-20260830-3BF11174`; AR recorded the exact $7,250 allocation and
+  reached zero remaining due.
+- Before cleanup, the human UIs visibly showed six AP audit events and three AR
+  audit events covering submission, exception response, inquiry, replacement,
+  portal result, and remittance. Final independent resets restored seven ready
+  AR invoices, two open AP exception fixtures with no inquiries, and exactly
+  one reset audit event in each application.
+
 The canonical workflow was completed three times from a freshly reset state in
 ChatGPT's in-app browser using only the tools exposed by the two live sites.
 
