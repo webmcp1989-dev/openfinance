@@ -433,6 +433,21 @@ describe("WebMCP safety contracts", () => {
     expect(demo).toContain("informed transfer confirmation");
     expect(demo).toContain("separate submission confirmation");
   });
+
+  test("judge-facing docs keep the optional remote MCP outside the browser challenge story", async () => {
+    const [readme, demo, submission, remoteMcp] = await Promise.all([
+      readFile(join(root, "README.md"), "utf8"),
+      readFile(join(root, "docs/DEMO.md"), "utf8"),
+      readFile(join(root, "docs/SUBMISSION.md"), "utf8"),
+      readFile(join(root, "docs/MCP.md"), "utf8"),
+    ]);
+
+    expect(readme).toContain("The primary submission, video, live prompt, and **19-tool** count cover only the browser-mediated WebMCP workflow");
+    expect(demo).toContain("Do not show the AR remote-MCP endpoint");
+    expect(submission).toContain("Do not include the optional AR remote MCP");
+    expect(remoteMcp).toContain("not counted among the 19 browser WebMCP tools");
+    expect(remoteMcp).toContain("never an AR-to-AP bridge");
+  });
 });
 
 describe("OpenAPI contract coverage", () => {

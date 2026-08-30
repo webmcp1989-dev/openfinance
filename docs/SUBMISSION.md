@@ -11,6 +11,10 @@ This file contains judge-facing copy and the recording plan for the OpenFinance 
 - **Public repository:** https://github.com/webmcp1989-dev/openfinance
 - **Demo prompt:** “Submit all Acme invoices that are ready for their AP portal.”
 
+## Submission scope boundary
+
+Keep the title, description, screenshots, video, live run, and 19-tool inventory focused on browser WebMCP across the independently authenticated AR and AP applications. Do not include the optional AR remote MCP, OAuth connector setup, or its tool inventory in the primary contest narrative. That separate own-system interface may be mentioned only as an additional technical extension if a reviewer asks; it cannot access Acme and is not the interoperability layer demonstrated by the submission.
+
 ## Ready-to-paste description
 
 ### Why this is a strong fit for WebMCP

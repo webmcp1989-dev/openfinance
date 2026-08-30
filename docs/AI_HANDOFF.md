@@ -9,6 +9,7 @@ This file records only non-obvious continuation context. Repository-wide rules a
 - The apps use separate Vercel projects, Supabase projects, authentication sessions, databases, and migration histories. WebMCP through the human-directed browser remains the only cross-application runtime bridge. AR remote MCP is an additional own-system interface and has no AP access.
 - The browser challenge surface is seven AR tools and twelve AP tools. Every capability also has a human UI path through the same authenticated backend contract.
 - The product names the authority boundary explicitly: 19 browser tools and zero cross-writes. AR tools write only AR, AP tools only AP, and the human approves every cross-site transfer or reconciliation.
+- Judge-facing scope deliberately excludes the optional AR remote MCP: do not show its connector/OAuth flow or count its tools in the primary video, submission copy, or live run. Keep it documented as a separate own-system extension with no AP access.
 
 ## Meaningful implementation decisions
 

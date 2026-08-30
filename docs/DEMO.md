@@ -4,6 +4,10 @@
 
 An AR operator has several invoices ready in OpenFinance but Acme requires submission through its own independently authenticated supplier portal. There is no API integration between the companies. The human asks one agent to bridge both sites through WebMCP while retaining approval of the consequential submission.
 
+## Scope discipline
+
+The primary contest demonstration uses only the browser WebMCP capabilities registered by the two authenticated sites. Do not show the AR remote-MCP endpoint, OAuth consent flow, connector setup, or remote tool inventory in the main video or live run. Those are optional own-system capabilities and are not part of the 19 browser tools. If a reviewer asks, describe the remote MCP only as a separately documented extension that cannot access Acme and does not alter the WebMCP interoperability claim.
+
 ## Starting state
 
 - OpenFinance shows a realistic 24-invoice AR portfolio. Seven invoices are locally ready: `INV-10482`, `INV-10491`, `INV-10507`, `INV-10522`, `INV-10538`, `INV-10544`, and `INV-10561`.

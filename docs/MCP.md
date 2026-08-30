@@ -1,5 +1,7 @@
 # OpenFinance AR remote MCP
 
+> **Contest scope:** This is an optional own-system capability, not part of the primary WebMCP challenge demo. It is not used by the main prompt or video, is not counted among the 19 browser WebMCP tools, and is never an AR-to-AP bridge.
+
 OpenFinance AR exposes a production Streamable HTTP MCP resource at:
 
 ```text
@@ -7,6 +9,12 @@ https://openfinance-ar.vercel.app/mcp
 ```
 
 It lets an AR team's OpenAI or Claude agent operate its own OpenFinance workspace. It is not a direct AR-to-AP integration: customer AP discovery, validation, transfer, and submission remain browser-mediated WebMCP actions under separate human approval.
+
+## Why it remains in the project
+
+The remote MCP demonstrates how an AR team could connect its own agent to its own governed workspace using standard OAuth and the same tenant- and role-scoped backend. It adds product maturity and a reusable own-system access surface without changing the contest architecture.
+
+For judge-facing material, lead with the two independently authenticated web applications, browser WebMCP, informed human approvals, exception ownership, and cash reconciliation. Do not show the remote-MCP connection flow or describe its tools as part of the 19-tool challenge inventory. Mention this capability only as an optional technical extension if a reviewer asks about broader deployment.
 
 ## OAuth 2.1 flow
 

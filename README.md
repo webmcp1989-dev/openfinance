@@ -3,18 +3,22 @@
 OpenFinance demonstrates agent-mediated interoperability between two independently authenticated B2B finance applications for the [OpenAI WebMCP Challenge](https://openai.com/webmcp-challenge/).
 
 ```text
-AR team's agent  <-- OAuth remote MCP -->  OpenFinance AR
-                                           |
-OpenFinance AR  <-- site tools -->  ChatGPT + human  <-- site tools -->  Acme AP
+OpenFinance AR  <-- WebMCP site tools -->  browser agent + human
+                                                   |
+Acme AP         <-- WebMCP site tools --------------+
 ```
 
 There is no shared database, credential, session, or point-to-point application integration. The browser agent works through each site's narrow, authenticated WebMCP tools. The human explicitly approves the destination and exact invoice packages before cross-site validation, then separately confirms the exact valid batch before the consequential AP submission tool runs.
 
-OpenFinance AR also provides an OAuth-protected remote MCP server at `https://openfinance-ar.vercel.app/mcp` for an AR team's own OpenAI or Claude agent. Supabase OAuth 2.1 supplies consent, PKCE, dynamic client registration, resource-bound access tokens, and revocation while existing RLS preserves user, tenant, and role boundaries. This does not create a private bridge to Acme: customer-portal interoperability still happens through the human-directed browser and Acme WebMCP. See [Remote MCP](docs/MCP.md).
-
 Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. Beyond governed upload, the applications expose line/receipt/service-entry PO context, invoice timelines, structured exception ownership, evidence-backed responses, corrected revisions, AP inquiries, payment remittance, and AR follow-up reconciliation. A human can download a verified, detailed invoice PDF and supporting evidence, then use Acme's governed submission and resolution flows. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
 
 The authority model is deliberately asymmetric: **19 browser tools, zero cross-writes**. Seven OpenFinance tools write only AR; twelve Acme tools write only AP. The agent can reconcile both authenticated views, but only the human authorizes the financial data transferred between them. Buyer-owned blockers are explicitly named as outside supplier authority and routed into tracked AP cases.
+
+### Contest scope
+
+The primary submission, video, live prompt, and **19-tool** count cover only the browser-mediated WebMCP workflow above. The separate AR remote MCP is intentionally excluded from that judge-facing story because it is an own-system connector, not the cross-company interoperability mechanism being demonstrated.
+
+OpenFinance AR also provides an optional OAuth-protected remote MCP server at `https://openfinance-ar.vercel.app/mcp` for an AR team's own OpenAI or Claude agent. Supabase OAuth 2.1 supplies consent, PKCE, dynamic client registration, resource-bound access tokens, and revocation while existing RLS preserves user, tenant, and role boundaries. It cannot access Acme and never creates a private AR-to-AP bridge. See [Optional AR remote MCP](docs/MCP.md).
 
 ## Demo workflow
 
@@ -63,7 +67,7 @@ Copy `.env.example` to each app's `.env.local` and use only that app's Supabase 
 - [System architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY.md)
 - [WebMCP tool inventory](docs/WEBMCP.md)
-- [Remote MCP and OAuth](docs/MCP.md)
+- [Optional AR remote MCP and OAuth](docs/MCP.md)
 - [Demo runbook](docs/DEMO.md)
 - [Verification record](docs/VERIFICATION.md)
 - [Challenge submission package](docs/SUBMISSION.md)
