@@ -30,19 +30,21 @@ mapping, idempotency, and documentation coverage.
   `INV-10417`. Its reset suite passed 15 assertions, ERP sync passed 19 after
   independently catching and fixing the missing due-date default, invoice PDF
   coverage passed 16, and exception-to-cash/evidence passed 13.
-- The hosted AP project contains nine supplier-visible POs and exactly two
-  seeded disputed submissions: supplier-owned `missing_delivery_proof` and
-  buyer-owned `missing_goods_receipt`. Its reset suite passed 19 assertions and
-  exception-authority suite passed 16, including rejection of buyer-owned
-  supplier responses and rejection of supplier responses without the required
-  evidence.
+- The hosted AP project contains nine supplier-visible POs and exactly three
+  seeded exception submissions: supplier-owned `missing_delivery_proof`,
+  buyer-owned `missing_goods_receipt`, and supplier-owned
+  `tax_total_mismatch` with `replace_invoice`. Its reset suite passed 20
+  assertions and exception-to-cash suite passed 26, including replacement
+  authorization, rejection of buyer-owned supplier responses, and rejection
+  of supplier responses without the required evidence.
 - The current database baseline therefore supports six valid submissions from
-  seven locally ready AR packages, plus both authority-asymmetry exception
+  seven locally ready AR packages, plus three authority-aware exception
   stories. The buyer-owned path exposes “This isn't mine to fix” and only the
-  tracked inquiry action; the supplier-owned path requires the exact proof.
+  tracked inquiry action; the supplier-owned paths require exact evidence or
+  an explicitly authorized corrected revision.
 
 - The OpenFinance RLS suite passed 13 assertions and its delivery transaction
-  suite passed 11 assertions in the live AR project.
+  suite passed 17 assertions in the live AR project.
 - The OpenFinance ERP sync suite passed 17 assertions in the live AR project,
   covering internal-table isolation, privilege boundaries, `2 -> 0 -> 2`
   alternation, idempotent replay, unique inserts, and auditing.
@@ -50,7 +52,7 @@ mapping, idempotency, and documentation coverage.
   project. The exact repaired download also passed strict `pypdf`, Poppler
   `pdfinfo`, text extraction, SHA-256 comparison, and visual page rendering.
 - The Acme RLS suite passed 15 assertions and its submission transaction suite
-  passed 13 assertions in the independent live AP project.
+  passed 14 assertions in the independent live AP project.
 - The Acme deterministic payment-settlement suite passed 15 assertions in the
   live AP project, covering direct-table denial, wrapper privileges, serialized
   pair selection, 10-second maturity, payment references, and auditing.
@@ -199,6 +201,31 @@ because its replacement guard allowed only a locally submitted state; migration
 state mismatch while retaining the exact prior-reference concurrency token.
 The live AR write-back then succeeded, replayed idempotently, rejected changed
 key reuse, and the human workspace displayed the same revision-2 AP reference.
+
+A final independent judge-style rehearsal then exercised all 19 deployed
+browser tools from the restored portfolio. All seven ready AR packages were
+transferred for preflight; six invoices totaling $49,585 passed, while
+`INV-10507` was excluded for insufficient PO balance, missing receipt, and a
+pending service entry. Two confirmed three-invoice batches committed and AR
+recorded the six exact references plus the verified exception. The three
+historical branches then produced a checksum-verified evidence response for
+`INV-10417`, a buyer-receiving case for `INV-10463`, and revision 2 for
+`INV-10479`, whose exact new reference reconciled back to AR. AP subsequently
+reported three deterministic ACH payments; AR recorded all three exact
+allocations and each invoice reached zero remaining due. Identical batch,
+response, inquiry, replacement, result, and remittance retries replayed their
+original results. Changed replacement and remittance retries failed closed,
+and a supplier response to the buyer-owned receipt blocker was rejected with
+the documented authority-boundary message. Both live UIs showed matching
+references, payment state, controls, and audit events. Separate human resets
+then restored seven ready AR invoices, three AP fixtures with no inquiries,
+the open `replace_invoice` action on `INV-10479`, no rehearsal references, and
+exactly one reset audit event per application.
+
+The public remote MCP boundary was also smoke-tested after deployment: both
+OAuth metadata documents returned `200`, and an unauthenticated `tools/list`
+request returned `401` with the canonical RFC 9728 protected-resource metadata
+challenge. No OAuth client, token, or credential was created for this smoke test.
 
 ## Human workspace coverage
 
