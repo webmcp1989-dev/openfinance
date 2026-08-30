@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 120 tests passed with 501 expectations.
+- `bun test`: 121 tests passed with 502 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -124,9 +124,12 @@ workflow against both production applications on August 30, 2026:
   claiming supplier resolution.
 - A temporary buyer-authorized replacement condition exercised
   `replace_rejected_invoice`; `INV-10482` became revision 2, superseded the
-  original AP receipt atomically, and preserved the $5,580 PO balance. AR
-  correctly rejected an attempted overwrite of its already-recorded receipt as
-  a stale state transition.
+  original AP receipt atomically, and preserved the $5,580 PO balance. The
+  first run exposed that AR had no explicit replacement-reference transition.
+  Migration `202608300010_record_portal_replacement_results.sql` fixed that gap
+  with an exact `supersedesPortalReference` concurrency token. A fresh deployed
+  run then reconciled AP revision 2 into AR, and both human workspaces displayed
+  the same new reference while implicit and stale replacements remained denied.
 - AP completed the deterministic second-invoice ACH for `INV-10491` with
   reference `PAY-20260830-3BF11174`; AR recorded the exact $7,250 allocation and
   reached zero remaining due.
