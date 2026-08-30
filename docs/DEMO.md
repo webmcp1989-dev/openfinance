@@ -69,3 +69,4 @@ For the all-human fallback, select any ready invoice in the OpenFinance queue an
 Keep these lines available for the final demo script. Preserve their meaning when editing for timing.
 
 1. “Integration is a per-partner project, so only the largest relationships get one. The exception is framed as working capital—caught in seconds, not four weeks later as a rejected invoice and a payment that never arrived.”
+2. “OpenFinance demonstrates what becomes possible when independently operated B2B portals expose secure WebMCP capabilities. We implemented both sides to prove the complete workflow today.”
