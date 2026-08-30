@@ -112,7 +112,7 @@ The final post-portfolio rehearsal completed the expanded authority-to-cash
 workflow against both production applications on August 30, 2026:
 
 - Independent human resets established 24 AR invoices with seven ready and the
-  AP baseline of nine POs plus two historical exception submissions.
+  AP baseline of nine POs plus three historical exception submissions.
 - The human-approved `INV-10482` ($18,420 / `PO-8821`) and `INV-10491`
   ($7,250 / `PO-8844`) PDFs transferred from AR, passed live AP validation, and
   committed atomically. AP returned stable references and AR recorded both.
@@ -136,7 +136,7 @@ workflow against both production applications on August 30, 2026:
 - Before cleanup, the human UIs visibly showed six AP audit events and three AR
   audit events covering submission, exception response, inquiry, replacement,
   portal result, and remittance. Final independent resets restored seven ready
-  AR invoices, two open AP exception fixtures with no inquiries, and exactly
+  AR invoices, three open AP exception fixtures with no inquiries, and exactly
   one reset audit event in each application.
 
 The canonical workflow was completed three times from a freshly reset state in
@@ -181,12 +181,24 @@ ChatGPT's in-app browser using only the tools exposed by the two live sites.
 
 After the portfolio deployment, both independent reset transactions succeeded.
 The public judge state is now 24 AR invoices with seven ready and no `ERP-*`
-imports, plus nine AP purchase orders and exactly two historical disputed
-fixtures (`INV-10417` supplier-owned, `INV-10463` buyer-owned). Each application
+imports, plus nine AP purchase orders and exactly three historical exception
+fixtures (`INV-10417` evidence, `INV-10463` buyer-owned, and `INV-10479`
+replacement-authorized). Each application
 retains its own audit and authorization boundary.
 Both synthetic judge passwords were then rotated to unique strong values and
 verified through fresh, independent live sign-ins. The credentials remain
 private and are not stored in this repository.
+
+The seeded replacement branch was then independently exercised end to end.
+`get_invoice_exception` returned `replace_invoice` for rejected `INV-10479`;
+the AP write created revision 2 with a new `ACME-*` reference and voided the
+superseded revision. An identical retry returned the original result and a
+changed-payload retry failed closed. AR initially rejected the verified result
+because its replacement guard allowed only a locally submitted state; migration
+`202608300015_accept_rejected_replacement_results.sql` corrected that narrow
+state mismatch while retaining the exact prior-reference concurrency token.
+The live AR write-back then succeeded, replayed idempotently, rejected changed
+key reuse, and the human workspace displayed the same revision-2 AP reference.
 
 ## Human workspace coverage
 

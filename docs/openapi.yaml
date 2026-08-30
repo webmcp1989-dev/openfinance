@@ -1082,8 +1082,8 @@ components:
       required: [restoredPurchaseOrderCount, seededSubmissionCount, seededExceptionCount, deletedSubmissionCount, deletedBatchCount, resetAt]
       properties:
         restoredPurchaseOrderCount: { type: integer, const: 9 }
-        seededSubmissionCount: { type: integer, const: 2 }
-        seededExceptionCount: { type: integer, const: 2 }
+        seededSubmissionCount: { type: integer, const: 3 }
+        seededExceptionCount: { type: integer, const: 3 }
         deletedSubmissionCount: { type: integer, minimum: 0 }
         deletedBatchCount: { type: integer, minimum: 0 }
         resetAt: { type: string, format: date-time }

@@ -12,7 +12,7 @@ An AR operator has several invoices ready in OpenFinance but Acme requires submi
 - Acme: `PO-8844` has $7,250 remaining.
 - Acme: `PO-8890` has $10,000 remaining, less than the $12,900 on `INV-10507`.
 - Acme also has four fully received open POs matching the additional ready invoices, so six of the seven ready packages can pass independent AP validation.
-- Acme starts with two historical disputed invoices: `INV-10417` is supplier-owned and needs proof of delivery; `INV-10463` is owned by `buyer_receiving` because Acme has not posted the goods receipt.
+- Acme starts with three historical exception invoices: `INV-10417` is supplier-owned and needs proof of delivery; `INV-10463` is owned by `buyer_receiving` because Acme has not posted the goods receipt; rejected `INV-10479` is supplier-owned and explicitly permits a corrected replacement revision.
 
 Restore this state with the separate two-step human controls in each app or the reviewed administrative scripts in [setup](SETUP.md#restore-the-synthetic-demo-state). Resets are independently authorized and audited, and are not available to the browser agent.
 
@@ -27,10 +27,11 @@ Restore this state with the separate two-step human controls in each app or the 
 7. It shows the six valid invoice numbers, POs, amounts, the $49,585 total, the excluded invoice, and the two required AP batches. The human separately approves that exact consequential submission plan.
 8. The agent calls `submit_invoice_batch` twice, with at most three invoices and a different idempotency key per atomic batch.
 9. Acme immediately shows six new receipts and reduced PO balances. OpenFinance receives only the six returned portal references and the verified `INV-10507` exception through its own idempotent tools.
-10. The agent inspects the two seeded disputed invoices. For `INV-10417`, it obtains the exact AR proof-of-delivery PDF, previews it, obtains approval, and sends a supplier response through AP.
+10. The agent inspects the three seeded exception invoices. For `INV-10417`, it obtains the exact AR proof-of-delivery PDF, previews it, obtains approval, and sends a supplier response through AP.
 11. For `INV-10463`, the exception output says `supplierCanResolve: false`. The agent states: **“This isn't mine to fix. Acme receiving owns this blocker; I can open a tracked AP case.”** After approval it opens an `invoice_inquiry`; it never fabricates a receipt or claims the blocker is resolved.
-12. After 10 seconds, the agent checks the new receipts. The deterministic simulator makes every second newly committed invoice paid; reads do not advance payment state.
-13. The workflow ends on cash, not submission: the agent calls `get_payment_remittance` for each paid invoice, previews the exact AP references and allocations, and after approval calls `record_payment_remittance` in AR. OpenFinance then shows the reconciled balances and remittance audit events.
+12. For rejected `INV-10479`, AP reports supplier ownership and `replace_invoice`. The agent previews the corrected PDF, PO, amount, and superseded reference, obtains separate approval, and submits revision 2 through `replace_rejected_invoice`.
+13. After 10 seconds, the agent checks the new receipts. The deterministic simulator makes every second newly committed invoice paid; reads do not advance payment state.
+14. The workflow ends on cash, not submission: the agent calls `get_payment_remittance` for each paid invoice, previews the exact AP references and allocations, and after approval calls `record_payment_remittance` in AR. OpenFinance then shows the reconciled balances and remittance audit events.
 
 A compact contest prompt covering the full story is: **“Submit all Acme invoices that can be paid, resolve supplier-owned exceptions, open cases for buyer-owned blockers, and reconcile approved payments back into OpenFinance.”**
 
@@ -50,6 +51,7 @@ The trust model should be said out loud: **19 browser tools across two apps and 
 - Remittance is written to AR only after the exact AP allocation is shown and approved; duplicate, excessive, or mismatched allocations fail transactionally.
 - Exception responses, invoice replacement, and buyer inquiries each require a separate exact human preview and approval.
 - AP rejects supplier responses to buyer-owned exceptions at the backend. Missing delivery proof requires the correct `proof_of_delivery` attachment; the missing receipt permits only a tracked buyer inquiry.
+- `INV-10479` is present in both systems, exposes only the supplier-owned `replace_invoice` correction, and produces one current revision 2 while resolving the original exception and preserving PO accounting.
 
 For the all-human fallback, select any ready invoice in the OpenFinance queue and use the download button that appears beside the selection count. A human can download immediately or inspect the protected package first, then use Acme's invoice form to upload, validate, review, confirm, and submit it. Multiple selections expose one explicit download per invoice so the browser never relies on ambiguous bulk-download behavior. This path uses the same tenant-scoped backend rules as the agent flow.
 

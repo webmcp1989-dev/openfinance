@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(21);
+select plan(26);
 select has_table('public', 'purchase_order_lines', 'purchase-order line context exists');
 select has_table('public', 'invoice_status_events', 'invoice status timeline exists');
 select has_table('public', 'invoice_exceptions', 'structured invoice exceptions exist');
@@ -35,6 +35,18 @@ select is(
 select ok(position('extensions.digest' in pg_get_functiondef('public.respond_to_invoice_exception(text,text,jsonb)'::regprocedure)) > 0, 'exception-response wrapper derives its request fingerprint in PostgreSQL');
 select ok(position('extensions.digest' in pg_get_functiondef('public.create_invoice_inquiry(text,text,jsonb)'::regprocedure)) > 0, 'inquiry wrapper derives its request fingerprint in PostgreSQL');
 select ok(position('extensions.digest' in pg_get_functiondef('public.replace_rejected_invoice(text,text,jsonb)'::regprocedure)) > 0, 'replacement wrapper derives its request fingerprint in PostgreSQL');
+select ok(exists (
+  select 1
+  from public.invoice_exceptions as exception
+  join public.invoice_submissions as submission
+    on submission.id = exception.invoice_submission_id
+  where submission.invoice_number = 'INV-10479'
+    and submission.status = 'rejected'
+    and submission.is_current
+    and exception.owner = 'supplier_ar'
+    and exception.status = 'open'
+    and exception.allowed_actions = array['replace_invoice']::text[]
+), 'baseline includes one supplier-owned rejected invoice authorized for replacement');
 
 select set_config(
   'request.jwt.claim.sub',
@@ -42,6 +54,18 @@ select set_config(
   true
 );
 set local role authenticated;
+
+create function pg_temp.structural_pdf()
+returns bytea
+language plpgsql
+immutable
+as $$
+declare
+  v_prefix text := E'%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n';
+begin
+  return convert_to(v_prefix || E'xref\n0 4\n0000000000 65535 f \ntrailer\n<< /Root 1 0 R /Size 4 >>\nstartxref\n' || octet_length(convert_to(v_prefix, 'UTF8')) || E'\n%%EOF\n', 'UTF8');
+end;
+$$;
 
 select lives_ok(
   $$
@@ -64,6 +88,44 @@ select throws_ok(
   '23505',
   'Idempotency key reused with different payload',
   'a forged repeated caller fingerprint cannot hide a changed inquiry payload'
+);
+
+select lives_ok(
+  $$
+    select public.replace_rejected_invoice(
+      'replacement-fixture-test-0001',
+      repeat('b', 64),
+      jsonb_build_object(
+        'invoiceNumber', 'INV-10479',
+        'invoiceDate', '2026-08-30',
+        'amountMinor', 410000,
+        'currency', 'USD',
+        'purchaseOrderNumber', 'PO-8955',
+        'document', jsonb_build_object(
+          'fileName', 'INV-10479-corrected.pdf',
+          'mediaType', 'application/pdf',
+          'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+          'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+        )
+      )
+    )
+  $$,
+  'authorized supplier can replace the seeded rejected invoice'
+);
+select is(
+  (select revision::text from public.invoice_submissions where invoice_number = 'INV-10479' and is_current),
+  '2',
+  'replacement creates current revision two'
+);
+select is(
+  (select status from public.invoice_submissions where id = '80000000-0000-4000-8000-000000000003'::uuid),
+  'voided'::public.invoice_submission_status,
+  'replacement voids the superseded rejected revision'
+);
+select is(
+  (select exception.status from public.invoice_exceptions as exception where exception.id = '81000000-0000-4000-8000-000000000003'::uuid),
+  'resolved',
+  'replacement resolves the authorizing exception'
 );
 
 select * from finish();

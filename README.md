@@ -22,7 +22,7 @@ Ask the agent:
 
 > Submit all Acme invoices that are ready for their AP portal.
 
-The default seed is a realistic 24-invoice AR portfolio with seven locally ready invoices and two independently seeded AP exceptions. The intended result is deliberately non-trivial:
+The default seed is a realistic 24-invoice AR portfolio with seven locally ready invoices and three independently seeded AP exceptions. The intended result is deliberately non-trivial:
 
 1. OpenFinance exposes seven locally ready invoice packages among accepted, submitted, rejected, paid, and blocked history.
 2. The agent previews the exact packages and Acme destination; the human approves their transfer for read-only validation.
@@ -31,7 +31,7 @@ The default seed is a realistic 24-invoice AR portfolio with seven locally ready
 5. The agent presents the six valid invoices, the $49,585 total, the exception, and two bounded AP batches, then obtains a separate submission approval.
 6. Acme atomically submits only the confirmed valid invoices in groups of at most three and returns portal references.
 7. OpenFinance records those references and the exception, updating the human-visible queue.
-8. For a seeded supplier-owned missing-delivery-proof exception, the agent can send the verified AR evidence after approval. For a buyer-owned missing receipt, it says “This isn't mine to fix” and offers an approved tracked case.
+8. For a seeded supplier-owned missing-delivery-proof exception, the agent can send verified AR evidence after approval. For a buyer-owned missing receipt, it says “This isn't mine to fix” and offers an approved tracked case. For rejected `INV-10479`, it can submit an approved corrected revision because AP explicitly permits `replace_invoice`.
 9. Ten seconds later, Acme's deterministic buyer simulation marks every second new committed invoice paid; UI and read-only status tools expose the same references.
 10. After exact human review, the agent reads AP remittance and writes those allocations back to AR. The story ends on reconciled cash, not document submission.
 

@@ -359,7 +359,7 @@ The map is expandable if investigation discovers another subsystem or boundary.
   without a session, `401` plus the RFC 9728 challenge for a malformed MCP bearer, and
   `403` for a cross-origin MCP request.
 - Both applications were restored through their human reset controls. The final
-  baseline exposes seven ready AR invoices, two historical AP submissions, no
+  baseline exposes seven ready AR invoices, three historical AP submissions, no
   `INV-10482` AP submission, seven AR WebMCP tools, twelve AP WebMCP tools, one reset
   audit event per application, and no connected OAuth agent.
 

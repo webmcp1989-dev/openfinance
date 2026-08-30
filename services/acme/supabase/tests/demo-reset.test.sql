@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(19);
+select plan(20);
 select has_function('public', 'reset_demo_state', array[]::text[], 'public demo reset wrapper exists');
 select has_function('private', 'reset_demo_state', array[]::text[], 'private demo reset implementation exists');
 select ok(not (select prosecdef from pg_proc where oid = 'public.reset_demo_state()'::regprocedure), 'public reset wrapper is security invoker');
@@ -70,12 +70,13 @@ select throws_ok(
   'supplier-owned delivery exception requires the exact evidence document'
 );
 reset role;
-select is((select count(*)::text from public.invoice_submissions), '2', 'reset restores two independent historical exception submissions');
+select is((select count(*)::text from public.invoice_submissions), '3', 'reset restores three independent historical exception submissions');
 select is((select count(*)::text from public.submission_batches), '1', 'reset restores the seeded exception batch only');
-select is((select count(*)::text from public.purchase_orders where remaining_amount_minor = authorized_amount_minor and status = 'open'), '7', 'seven purchase orders retain full available balances');
-select is((select count(*)::text from public.invoice_exceptions where status = 'open'), '2', 'reset restores two open owned exceptions');
+select is((select count(*)::text from public.purchase_orders where remaining_amount_minor = authorized_amount_minor and status = 'open'), '6', 'six purchase orders retain full available balances');
+select is((select count(*)::text from public.invoice_exceptions where status = 'open'), '3', 'reset restores three open owned exceptions');
 select is((select count(*)::text from public.invoice_exceptions where owner = 'supplier_ar' and required_document_kind = 'proof_of_delivery'), '1', 'one supplier-owned blocker requires delivery proof');
 select is((select count(*)::text from public.invoice_exceptions where owner = 'buyer_receiving' and allowed_actions = array['create_invoice_inquiry']::text[]), '1', 'one buyer-owned receipt blocker allows only a tracked inquiry');
+select is((select count(*)::text from public.invoice_exceptions where owner = 'supplier_ar' and allowed_actions = array['replace_invoice']::text[]), '1', 'one supplier-owned rejected invoice allows an approved replacement');
 select is((select count(*)::text from public.audit_events where action = 'demo_state_reset'), '1', 'reset remains visibly auditable');
 select is((select next_sequence::text from private.payment_simulator_state), '1', 'reset restores deterministic payment sequence');
 

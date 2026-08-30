@@ -462,7 +462,7 @@ export function AcmeWorkspace({
         {!resetOpen ? <button className="portal-button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
           Restore demo start
         </button> : <div className="reset-confirmation" role="group" aria-label="Confirm Acme demo reset">
-          <p><strong>Restore the synthetic AP portfolio?</strong><span>Current receipts, payment signals, and workflow events will be replaced by nine canonical POs and two historical exception cases.</span></p>
+          <p><strong>Restore the synthetic AP portfolio?</strong><span>Current receipts, payment signals, and workflow events will be replaced by nine canonical POs and three historical exception cases.</span></p>
           <div>
             <button className="portal-button quiet" type="button" onClick={() => setResetOpen(false)} disabled={pendingAction !== null}>Cancel</button>
             <button className="portal-button danger" type="button" onClick={() => void restoreDemo()} disabled={pendingAction !== null}>

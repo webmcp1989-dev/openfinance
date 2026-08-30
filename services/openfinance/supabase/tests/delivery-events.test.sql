@@ -20,7 +20,7 @@ insert into public.invoices (
 ) values (
   '10000000-0000-4000-8000-000000000001',
   '20000000-0000-4000-8000-000000000001',
-  'TEST-REPLACE-01', current_date, 25000, 'USD', 'PO-TEST-02', 'submitted',
+  'TEST-REPLACE-01', current_date, 25000, 'USD', 'PO-TEST-02', 'rejected',
   'test-replace-01.pdf', 'application/pdf', 'JVBERi0xLjQK', repeat('b', 64),
   'ACME-ORIGINAL-01', 'received'
 );
@@ -160,8 +160,8 @@ select throws_ok(
     )
   $$,
   '23514',
-  'Portal reference cannot change after submission',
-  'a submitted reference cannot change without an explicit superseded reference'
+  'Invoice state does not allow a portal result',
+  'a rejected reference cannot change without an explicit superseded reference'
 );
 
 select throws_ok(
