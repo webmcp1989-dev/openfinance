@@ -481,7 +481,18 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/InvoiceNumberRequest" }
       responses:
-        "200": { description: Invoice exception details }
+        "200":
+          description: Invoice exception details with stored ownership and supplier authority boundary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [invoiceNumber, portalReference, exceptions]
+                properties:
+                  invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+                  portalReference: { type: string }
+                  exceptions: { type: array, items: { $ref: "#/components/schemas/InvoiceException" } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -503,7 +514,11 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "409":
+          description: Idempotency conflict, inactive exception, buyer-owned authority boundary, or missing required evidence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
   /api/agent/replacements:
@@ -966,6 +981,25 @@ components:
         entityId: { type: string }
         details: { type: object, additionalProperties: true }
         createdAt: { type: string, format: date-time }
+    InvoiceException:
+      type: object
+      additionalProperties: false
+      required: [exceptionCode, category, owner, status, message, resolutionGuidance, allowedActions, requiredDocumentKind, supplierCanResolve, authorityBoundary, createdAt, updatedAt]
+      properties:
+        exceptionCode: { type: string, pattern: "^[a-z][a-z0-9_]{1,63}$" }
+        category: { type: string, enum: [supplier_data, purchase_order, receiving, tax, document, duplicate, payment, other] }
+        owner: { type: string, enum: [supplier_ar, buyer_ap, buyer_procurement, buyer_receiving, shared] }
+        status: { type: string, enum: [open, responded, resolved, cancelled] }
+        message: { type: string }
+        resolutionGuidance: { type: string }
+        allowedActions: { type: array, uniqueItems: true, items: { type: string } }
+        requiredDocumentKind: { type: [string, "null"], enum: [proof_of_delivery, service_acceptance, timesheet, tax_document, contract, other, null] }
+        supplierCanResolve: { type: boolean }
+        authorityBoundary:
+          type: string
+          description: Explicit trust statement. Buyer-owned blockers tell the supplier agent that the work is not within its authority and recommend a tracked AP case.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     SubmissionReceipt:
       type: object
       required: [invoiceNumber, portalReference, purchaseOrderNumber, amountMinor, currency, status, createdAt, settlementExpectedAt, paidAt, paymentReference]
@@ -995,7 +1029,7 @@ components:
               message: { type: string }
               actorKind: { type: string, enum: [supplier, buyer, system] }
               createdAt: { type: string, format: date-time }
-        exceptions: { type: array, items: { type: object, additionalProperties: true } }
+        exceptions: { type: array, items: { $ref: "#/components/schemas/InvoiceException" } }
         inquiries: { type: array, items: { type: object, additionalProperties: true } }
     InvoiceStatusResult:
       type: object
@@ -1028,9 +1062,10 @@ components:
     OpenFinanceDemoResetResult:
       type: object
       additionalProperties: false
-      required: [restoredInvoiceCount, deletedDeliveryEventCount, deletedRemittanceEventCount, deletedErpEventCount, deletedErpInvoiceCount, resetAt]
+      required: [restoredInvoiceCount, readyInvoiceCount, deletedDeliveryEventCount, deletedRemittanceEventCount, deletedErpEventCount, deletedErpInvoiceCount, resetAt]
       properties:
-        restoredInvoiceCount: { type: integer, const: 4 }
+        restoredInvoiceCount: { type: integer, const: 24 }
+        readyInvoiceCount: { type: integer, const: 7 }
         deletedDeliveryEventCount: { type: integer, minimum: 0 }
         deletedRemittanceEventCount: { type: integer, minimum: 0 }
         deletedErpEventCount: { type: integer, minimum: 0 }
@@ -1039,9 +1074,11 @@ components:
     AcmeDemoResetResult:
       type: object
       additionalProperties: false
-      required: [restoredPurchaseOrderCount, deletedSubmissionCount, deletedBatchCount, resetAt]
+      required: [restoredPurchaseOrderCount, seededSubmissionCount, seededExceptionCount, deletedSubmissionCount, deletedBatchCount, resetAt]
       properties:
-        restoredPurchaseOrderCount: { type: integer, const: 3 }
+        restoredPurchaseOrderCount: { type: integer, const: 9 }
+        seededSubmissionCount: { type: integer, const: 2 }
+        seededExceptionCount: { type: integer, const: 2 }
         deletedSubmissionCount: { type: integer, minimum: 0 }
         deletedBatchCount: { type: integer, minimum: 0 }
         resetAt: { type: string, format: date-time }

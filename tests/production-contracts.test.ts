@@ -271,16 +271,22 @@ describe("database mutation boundaries", () => {
   test("demo resets are scoped, transactional, and assert their fixed row counts", async () => {
     const arReset = await readFile(join(root, "services/openfinance/supabase/demo/reset.sql"), "utf8");
     const apReset = await readFile(join(root, "services/acme/supabase/demo/reset.sql"), "utf8");
+    const arPortfolio = await readFile(join(root, "services/openfinance/supabase/migrations/202608300008_seed_realistic_invoice_portfolio.sql"), "utf8");
+    const apPortfolio = await readFile(join(root, "services/acme/supabase/migrations/202608300011_seed_exception_portfolio.sql"), "utf8");
     for (const reset of [arReset, apReset]) {
-      expect(reset).toStartWith("-- Administrative demo reset");
+      expect(reset).toStartWith("-- Administrative fallback");
       expect(reset).toContain("begin;");
-      expect(reset).toContain("pg_advisory_xact_lock");
-      expect(reset).toContain("get diagnostics v_updated = row_count");
-      expect(reset).toContain("raise exception");
+      expect(reset).toContain("select private.reset_demo_state();");
+      expect(reset).toContain("request.jwt.claim.sub");
       expect(reset).toContain("commit;");
     }
-    expect(arReset).toContain("v_updated <> 4");
-    expect(apReset).toContain("v_updated <> 3");
+    for (const migration of [arPortfolio, apPortfolio]) {
+      expect(migration).toContain("pg_advisory_xact_lock");
+      expect(migration).toContain("get diagnostics");
+      expect(migration).toContain("raise exception");
+    }
+    expect(arPortfolio).toContain("v_updated_invoices <> 24");
+    expect(apPortfolio).toContain("v_updated_orders <> 9");
   });
 
   test("human demo resets are separately authorized, audited, and absent from WebMCP", async () => {

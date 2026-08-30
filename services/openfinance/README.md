@@ -18,6 +18,8 @@ This directory belongs only to the OpenFinance AR Supabase project.
 - `supabase/migrations/202608300005_validate_supporting_document_pdfs.sql` enforces PDF signature and terminal-marker integrity for supporting evidence at the database boundary.
 - `supabase/migrations/202608300006_serialize_remittance_idempotency.sql` serializes organization-scoped remittance retries so concurrent identical calls replay one result and conflicting reuse fails closed.
 - `supabase/migrations/202608300007_render_proof_of_delivery_fixture.sql` replaces the initial evidence placeholder with a distinct, standards-compliant synthetic proof-of-delivery PDF.
+- `supabase/migrations/202608300008_seed_realistic_invoice_portfolio.sql` expands the canonical tenant-owned portfolio to 24 invoices with seven ready packages, realistic historical states, and an invoice-specific proof-of-delivery fixture for the supplier-owned AP exception. It does not read or write Acme AP.
+- `supabase/migrations/202608300009_default_invoice_due_date.sql` enforces the canonical Net-30 fallback for adapter-created invoices at the database boundary, including synthetic ERP sync imports.
 - `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign organization and proves its invoices cannot be read or mutated.
 - `supabase/tests/delivery-events.test.sql` exercises duplicate rejection, direct-RPC field validation, legal state transitions, database-derived idempotency identity, identical retry replay, single state mutation, and changed-payload rejection using the same caller fingerprint.
 - `supabase/tests/erp-sync.test.sql` proves the `2 → 0 → 2` sequence, idempotent replay, internal-state isolation, wrapper privilege boundaries, and audit creation.

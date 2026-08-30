@@ -55,11 +55,13 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - Keep UI, HTTP, service, domain, data-access, and integration concerns separate. Do not leak Next.js, Supabase, Vercel, or browser details into domain modules.
 - Reuse bounded helpers within one application. Do not create shared business schemas or code that secretly couples AR and AP.
 - All 19 browser WebMCP capabilities have human UI paths backed by the same services. Preserve the seven AR and twelve AP tools as clear non-overlapping business capabilities; reset remains human-only.
+- Preserve the authority asymmetry as a product and security claim: 19 browser tools, zero cross-writes. AR tools can write only AR, AP tools only AP, and only the human authorizes data crossing between them. Buyer-owned blockers must be named as outside supplier authority and routed through a tracked buyer case rather than falsely resolved.
 - ERP invoice sync is available in the human UI and AR remote MCP, but remains outside the browser WebMCP inventory; see `docs/MCP.md`.
 - The AR remote MCP is an own-system access surface only. Preserve exact Supabase OAuth resource/audience validation, RLS-bound bearer access, consent/revocation, OAuth audit attribution, and the technical prohibition on OAuth demo reset. Never let it call AP directly.
 - Preserve the Custom Access Token hook: hosted Supabase currently does not map RFC 8707 `resource` into `aud`, so the hook binds OAuth tokens to the exact MCP URL while leaving portal sessions unchanged.
 - Synthetic invoice files must remain genuinely renderable, credible invoices, not signature/EOF placeholders. Preserve the private database renderer, authoritative supplier/customer/invoice/date/PO/amount fields, deterministic Net-30 due date, explicit synthetic-data label, exact cross-reference offsets, parser/render tests, and authenticated download validation.
 - AP's challenge payment signal is deterministic backend simulation: every second committed supplier invoice settles after 10 seconds. Preserve its serialized, idempotent, read-only-discovery design; do not replace it with client timers that author state, random behavior, or hidden AR/AP integration.
+- The canonical portfolio contains 24 AR invoices, seven locally ready invoices, nine AP purchase orders, and two historical AP exception submissions. One exception is supplier-fixable with exact delivery evidence; the buyer-receiving exception is case-only. Keep the primary story ending at AP remittance discovery and approved AR reconciliation, not at submission.
 
 ## Authentication, isolation, and security
 

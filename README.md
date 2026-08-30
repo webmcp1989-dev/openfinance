@@ -14,23 +14,26 @@ OpenFinance AR also provides an OAuth-protected remote MCP server at `https://op
 
 Both portals are also complete human workspaces: every WebMCP capability can be performed through accessible UI controls backed by the same authenticated services. Beyond governed upload, the applications expose line/receipt/service-entry PO context, invoice timelines, structured exception ownership, evidence-backed responses, corrected revisions, AP inquiries, payment remittance, and AR follow-up reconciliation. A human can download a verified, detailed invoice PDF and supporting evidence, then use Acme's governed submission and resolution flows. OpenFinance AR additionally includes a tenant-scoped `Sync invoices now` simulation that alternates between importing two synthetic ERP invoices and finding no new invoices.
 
+The authority model is deliberately asymmetric: **19 browser tools, zero cross-writes**. Seven OpenFinance tools write only AR; twelve Acme tools write only AP. The agent can reconcile both authenticated views, but only the human authorizes the financial data transferred between them. Buyer-owned blockers are explicitly named as outside supplier authority and routed into tracked AP cases.
+
 ## Demo workflow
 
 Ask the agent:
 
 > Submit all Acme invoices that are ready for their AP portal.
 
-The intended result is deliberately non-trivial:
+The default seed is a realistic 24-invoice AR portfolio with seven locally ready invoices and two independently seeded AP exceptions. The intended result is deliberately non-trivial:
 
-1. OpenFinance exposes three locally ready invoice packages and one missing-PO exception.
-2. The agent previews the three packages and Acme destination; the human approves their transfer for read-only validation.
+1. OpenFinance exposes seven locally ready invoice packages among accepted, submitted, rejected, paid, and blocked history.
+2. The agent previews the exact packages and Acme destination; the human approves their transfer for read-only validation.
 3. Acme validates each approved package against its independently stored PO data.
-4. Two invoices pass; `INV-10507` exceeds the remaining balance on `PO-8890`.
-5. The agent presents the exact valid batch and exception, then obtains a separate submission approval.
-6. Acme atomically submits only the confirmed valid invoices and returns portal references.
+4. Six invoices pass; `INV-10507` exceeds the remaining balance and lacks accepted service entry on `PO-8890`.
+5. The agent presents the six valid invoices, the $49,585 total, the exception, and two bounded AP batches, then obtains a separate submission approval.
+6. Acme atomically submits only the confirmed valid invoices in groups of at most three and returns portal references.
 7. OpenFinance records those references and the exception, updating the human-visible queue.
-8. Ten seconds later, Acme's deterministic buyer simulation marks one of the two committed invoices paid; the UI and read-only status tool expose the same payment reference.
-9. After exact human review, the agent writes that payment allocation back to AR, closing the invoice's remaining balance without any private AR-to-AP connection.
+8. For a seeded supplier-owned missing-delivery-proof exception, the agent can send the verified AR evidence after approval. For a buyer-owned missing receipt, it says “This isn't mine to fix” and offers an approved tracked case.
+9. Ten seconds later, Acme's deterministic buyer simulation marks every second new committed invoice paid; UI and read-only status tools expose the same references.
+10. After exact human review, the agent reads AP remittance and writes those allocations back to AR. The story ends on reconciled cash, not document submission.
 
 ## Applications
 

@@ -450,7 +450,7 @@ export function AcmeWorkspace({
 
       <section className="agent-guide" aria-label="Human and agent workflow">
         <span className="pulse" aria-hidden="true" />
-        <div><strong>One workspace, two ways to work</strong><p>Complete every operation yourself below, or delegate discovery and preparation to your agent while retaining submission approval.</p></div>
+        <div><strong>19 tools, zero cross-writes</strong><p>Acme&apos;s 12 tools read and write only this AP portal; OpenFinance&apos;s 7 write only AR. Your agent can reconcile both, but only you authorize the data crossing between them.</p></div>
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">
@@ -462,7 +462,7 @@ export function AcmeWorkspace({
         {!resetOpen ? <button className="portal-button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
           Restore demo start
         </button> : <div className="reset-confirmation" role="group" aria-label="Confirm Acme demo reset">
-          <p><strong>Delete synthetic AP activity?</strong><span>Receipts, payment signals, and workflow audit events will be replaced by the canonical purchase-order balances.</span></p>
+          <p><strong>Restore the synthetic AP portfolio?</strong><span>Current receipts, payment signals, and workflow events will be replaced by nine canonical POs and two historical exception cases.</span></p>
           <div>
             <button className="portal-button quiet" type="button" onClick={() => setResetOpen(false)} disabled={pendingAction !== null}>Cancel</button>
             <button className="portal-button danger" type="button" onClick={() => void restoreDemo()} disabled={pendingAction !== null}>
@@ -495,12 +495,12 @@ export function AcmeWorkspace({
             <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "status" ? "Checking…" : "Check status"}</button></div></label>
             {statusLookup && <div className="lookup-result"><strong>{statusLookup.invoiceNumber}</strong><span className={`state ${statusLookup.status}`}>{statusLookup.status}</span><p>{statusLookup.paymentReference ?? statusLookup.portalReference}</p><b>{money.format(statusLookup.amountMinor / 100)}</b>
               {statusLookup.timeline && statusLookup.timeline.length > 0 && <ol>{statusLookup.timeline.map((event) => <li key={`${event.eventCode}-${event.createdAt}`}><small>{event.status.replaceAll("_", " ")} · {event.message}</small></li>)}</ol>}
-              {statusLookup.exceptions && statusLookup.exceptions.length > 0 && <ul>{statusLookup.exceptions.map((exception) => <li key={exception.exceptionCode}><small><strong>{exception.exceptionCode}</strong> · {exception.owner.replaceAll("_", " ")} · {exception.message}<br />Resolution: {exception.resolutionGuidance}<br />Allowed: {exception.allowedActions.join(", ") || "No supplier action"}{exception.requiredDocumentKind ? ` · Evidence: ${exception.requiredDocumentKind.replaceAll("_", " ")}` : ""}</small></li>)}</ul>}
+              {statusLookup.exceptions && statusLookup.exceptions.length > 0 && <ul>{statusLookup.exceptions.map((exception) => <li key={exception.exceptionCode}><small><strong>{exception.exceptionCode}</strong> · {exception.owner.replaceAll("_", " ")} · {exception.message}<br /><b>{exception.authorityBoundary}</b><br />Resolution: {exception.resolutionGuidance}<br />Allowed: {exception.allowedActions.join(", ") || "No supplier action"}{exception.requiredDocumentKind ? ` · Evidence: ${exception.requiredDocumentKind.replaceAll("_", " ")}` : ""}</small></li>)}</ul>}
               {statusLookup.inquiries && statusLookup.inquiries.length > 0 && <ul>{statusLookup.inquiries.map((inquiry) => <li key={inquiry.caseReference}><small><strong>{inquiry.caseReference}</strong> · {inquiry.inquiryType.replaceAll("_", " ")} · {inquiry.status}<br />{inquiry.subject}</small></li>)}</ul>}
             </div>}
           </form>
           <form className="lookup-card remittance-lookup" action={(formData) => void findPaymentRemittance(formData)}>
-            <div><span className="step-number neutral">5</span><div><strong>View payment remittance</strong><p>Read the exact payment allocation returned for a portal invoice.</p></div></div>
+            <div><span className="step-number neutral">5</span><div><strong>Finish on cash</strong><p>Read the exact AP allocation, then record that verified remittance in OpenFinance AR.</p></div></div>
             <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "remittance" ? "Loading…" : "View remittance"}</button></div></label>
             {remittanceLookup && <div className="lookup-result detailed-result"><strong>{remittanceLookup.invoiceNumber}</strong><span className={`state ${remittanceLookup.paymentStatus}`}>{remittanceLookup.paymentStatus.replaceAll("_", " ")}</span><p>{remittanceLookup.paymentReference ?? remittanceLookup.portalReference}</p><b>{remittanceLookup.amountMinor === null ? "No payment yet" : money.format(remittanceLookup.amountMinor / 100)}</b>
               <dl><div><dt>Method</dt><dd>{remittanceLookup.paymentMethod?.toUpperCase() ?? "Not available"}</dd></div><div><dt>Scheduled</dt><dd>{remittanceLookup.scheduledFor ? timestamp.format(new Date(remittanceLookup.scheduledFor)) : "Not scheduled"}</dd></div><div><dt>Paid</dt><dd>{remittanceLookup.paidAt ? timestamp.format(new Date(remittanceLookup.paidAt)) : "Not paid"}</dd></div><div><dt>Currency</dt><dd>{remittanceLookup.currency}</dd></div></dl>

@@ -30,10 +30,13 @@ This is collaboration, not invisible automation.
 | States the business intent | Discovers available tools and relevant page state | Authenticate and authorize their own users |
 | Reviews and approves the exact cross-site transfer scope | Collects candidate invoice packages without transferring them | Enforce business rules server-side |
 | Resolves ambiguity and exercises judgment | Explains why each invoice is ready or blocked | Expose narrow structured capabilities |
+| Owns the cross-application authority boundary | States when buyer-owned work is “not mine to fix” and proposes a tracked case | Reject writes outside their own system and stored business owner |
 | Separately confirms consequential submissions | Validates and executes only the corresponding approved sets | Update visible state and retain audit history |
-| Can inspect and correct the result | Returns references, status, and recovery guidance | Remain usable through their normal human UI |
+| Can inspect and correct the result | Returns references, status, recovery guidance, and completed remittance | Remain usable through their normal human UI |
 
 The agent should save effort and handle cross-system complexity. The human should retain authority and understand what will happen before it happens.
+
+The concise authority claim is: **19 browser tools, zero cross-writes.** Richer tools do not grant hidden integration authority. Seven AR tools terminate in AR, twelve AP tools terminate in AP, and only the human spans the two sessions. The business story should also end at verified cash reconciliation, not merely successful document submission.
 
 ## Why WebMCP is essential
 

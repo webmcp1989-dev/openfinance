@@ -143,7 +143,7 @@ export function AcmeSiteTools() {
       {
         name: "get_invoice_exception",
         title: "Get invoice exception",
-        description: "Read structured exceptions for one supplier invoice, including code, category, responsible owner, resolution guidance, permitted actions, and required evidence. This does not change the exception.",
+        description: "Read structured exceptions for one supplier invoice, including owner, whether supplier AR has authority to resolve it, an explicit authority-boundary statement, permitted actions, and required evidence. For a buyer-owned blocker, state plainly that it is not yours to fix and offer to open a tracked AP case. This does not change the exception.",
         inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: (input, options) => apiRequest("/api/agent/exceptions", {
@@ -197,7 +197,7 @@ export function AcmeSiteTools() {
       {
         name: "create_invoice_inquiry",
         title: "Create invoice inquiry",
-        description: "CONSEQUENTIAL WRITE: open a tracked buyer AP case for a payment question, invoice question, expedite request, payment-terms issue, or invoice-entry assistance. Show the exact case type, subject, and message and obtain human approval first.",
+        description: "CONSEQUENTIAL WRITE: open a tracked buyer AP case for a payment question, invoice question, expedite request, payment-terms issue, invoice-entry assistance, or buyer-owned blocker. When exception ownership is buyer_receiving, buyer_procurement, or buyer_ap, say 'This isn't mine to fix', name the buyer owner, then show the exact case type, subject, and message and obtain human approval first.",
         inputSchema: {
           type: "object", additionalProperties: false,
           required: ["idempotencyKey", "invoiceNumber", "inquiryType", "subject", "message"],
@@ -221,7 +221,7 @@ export function AcmeSiteTools() {
       {
         name: "get_payment_remittance",
         title: "Get payment remittance",
-        description: "Read the payment schedule and, once paid, the exact payment reference, method, amount, currency, and invoice allocation for one supplier invoice. This does not trigger or change payment.",
+        description: "Read the payment schedule and, once paid, the exact payment reference, method, amount, currency, and invoice allocation for one supplier invoice. Use the completed allocation to finish the workflow by proposing an approved record_payment_remittance write in AR. This AP read does not trigger payment and cannot write to AR.",
         inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: (input, options) => apiRequest("/api/agent/remittance", {

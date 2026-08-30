@@ -4,7 +4,13 @@ import { describe, expect, mock, test } from "bun:test";
 import type { InvoiceCandidate } from "@/lib/domain/submissions";
 
 mock.module("server-only", () => ({}));
-const { getInvoiceStatus, submitInvoiceBatch, validateInvoice } = await import("./submission-service");
+const {
+  describeExceptionAuthority,
+  getInvoiceStatus,
+  respondToInvoiceException,
+  submitInvoiceBatch,
+  validateInvoice,
+} = await import("./submission-service");
 
 function renderStructuralPdf() {
   const objects = [
@@ -71,6 +77,41 @@ function fakeSupabase(options: {
 }
 
 describe("Acme invoice validation", () => {
+  test("states the supplier authority boundary for buyer-owned receiving work", () => {
+    expect(describeExceptionAuthority("buyer_receiving")).toEqual({
+      supplierCanResolve: false,
+      authorityBoundary: "This isn't mine to fix. Acme receiving owns this blocker; I can open a tracked AP case.",
+    });
+    expect(describeExceptionAuthority("supplier_ar")).toEqual(expect.objectContaining({
+      supplierCanResolve: true,
+    }));
+  });
+
+  test("returns an actionable conflict when AP rejects a buyer-owned response", async () => {
+    const client = {
+      rpc() {
+        return Promise.resolve({
+          data: null,
+          error: {
+            code: "P0001",
+            message: "This isn't mine to fix. The buyer owns this blocker; open a tracked AP inquiry instead.",
+          },
+        });
+      },
+    };
+
+    await expect(respondToInvoiceException(client as never, {
+      idempotencyKey: "buyer-owner-test-20260830",
+      invoiceNumber: "INV-10463",
+      exceptionCode: "missing_goods_receipt",
+      message: "Resolved.",
+      attachments: [],
+    })).rejects.toMatchObject({
+      status: 409,
+      code: "buyer_owned_exception",
+    });
+  });
+
   test("accepts a valid checksum-protected PDF within the PO balance", async () => {
     const { client } = fakeSupabase();
     const result = await validateInvoice(client as never, invoice());

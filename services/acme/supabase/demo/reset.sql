@@ -1,52 +1,20 @@
--- Administrative demo reset for the independent Acme AP project only.
--- This is not a migration or runtime integration. It removes only the fixed
--- synthetic supplier's challenge receipts and restores its three seeded POs.
--- Review the project selector in Supabase before running it.
-
+-- Administrative fallback for the synthetic Acme AP project only.
+-- The private function is the canonical reset implementation. SQL-editor
+-- execution supplies the existing demo submitter identity explicitly.
 begin;
 
-select pg_advisory_xact_lock(hashtextextended('acme-ap-demo-reset', 0));
+select set_config(
+  'request.jwt.claim.sub',
+  (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
+  true
+);
 
-delete from public.audit_events
-where supplier_id = '50000000-0000-4000-8000-000000000001';
-
-delete from public.invoice_submissions
-where supplier_id = '50000000-0000-4000-8000-000000000001';
-
-delete from public.submission_batches
-where supplier_id = '50000000-0000-4000-8000-000000000001';
-
-update private.payment_simulator_state
-set next_sequence = 1
-where supplier_id = '50000000-0000-4000-8000-000000000001';
-
-do $$
-declare
-  v_updated integer;
-begin
-  update public.purchase_orders
-  set remaining_amount_minor = authorized_amount_minor,
-      status = 'open'::public.purchase_order_status,
-      version = 1,
-      updated_at = now()
-  where supplier_id = '50000000-0000-4000-8000-000000000001'
-    and id in (
-      '60000000-0000-4000-8000-000000000001',
-      '60000000-0000-4000-8000-000000000002',
-      '60000000-0000-4000-8000-000000000003'
-    );
-
-  get diagnostics v_updated = row_count;
-  if v_updated <> 3 then
-    raise exception 'Acme demo reset expected 3 purchase orders but updated %', v_updated;
-  end if;
-end;
-$$;
+select private.reset_demo_state();
 
 commit;
 
 select purchase_order_number, status, authorized_amount_minor,
-       remaining_amount_minor, version
+       remaining_amount_minor, received_amount_minor, version
 from public.purchase_orders
 where supplier_id = '50000000-0000-4000-8000-000000000001'
 order by purchase_order_number;
@@ -56,8 +24,8 @@ select
    where supplier_id = '50000000-0000-4000-8000-000000000001') as submission_batch_count,
   (select count(*) from public.invoice_submissions
    where supplier_id = '50000000-0000-4000-8000-000000000001') as invoice_submission_count,
-  (select count(*) from public.payment_settlements
-   where supplier_id = '50000000-0000-4000-8000-000000000001') as payment_settlement_count,
+  (select count(*) from public.invoice_exceptions
+   where supplier_id = '50000000-0000-4000-8000-000000000001' and status = 'open') as open_exception_count,
   (select count(*) from public.audit_events
    where supplier_id = '50000000-0000-4000-8000-000000000001') as audit_event_count,
   (select next_sequence from private.payment_simulator_state

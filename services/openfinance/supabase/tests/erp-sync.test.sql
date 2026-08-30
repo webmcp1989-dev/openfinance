@@ -21,7 +21,7 @@ select set_config(
 );
 set local role authenticated;
 
-select plan(17);
+select plan(19);
 select has_table('public', 'erp_sync_state', 'ERP sync state exists');
 select has_table('public', 'erp_sync_events', 'ERP sync idempotency events exist');
 select is((select relrowsecurity from pg_class where oid = 'public.erp_sync_state'::regclass), true, 'ERP sync state has RLS enabled');
@@ -37,6 +37,19 @@ select is(
   'first sync imports two invoices'
 );
 select is((select count(*)::text from public.invoices where invoice_number like 'ERP-%'), '2', 'first sync inserts exactly two tenant invoices');
+select is(
+  (select count(*)::text from public.invoices where invoice_number like 'ERP-%' and due_date = invoice_date + 30),
+  '2',
+  'ERP invoices receive the canonical Net 30 due date'
+);
+select is(
+  (select count(*)::text from pg_trigger
+    where tgrelid = 'public.invoices'::regclass
+      and tgname = 'apply_default_invoice_due_date_before_write'
+      and not tgisinternal),
+  '1',
+  'invoice due-date default is enforced at the database boundary'
+);
 select is(
   (public.sync_invoices_from_erp('erp-sync-test-first-0001')->>'importedCount'),
   '2',

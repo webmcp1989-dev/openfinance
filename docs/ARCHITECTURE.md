@@ -41,6 +41,8 @@ Shared hashing and typed-error primitives live in framework-free `http-core` mod
 
 Every one of the 19 browser WebMCP operations also has a first-class human UI path. Those controls call the same same-origin routes and services as the tools; the UI adds guidance and informed confirmation but never replaces backend authorization or validation.
 
+The inventory has zero cross-writes by construction. The seven AR site tools can mutate only the AR database and the twelve AP tools only the AP database. Matching synthetic invoice and PO identifiers are independently seeded fixtures, not shared records or a synchronization channel. The browser agent may compare them, but only an informed human approval authorizes moving a package or recording the independently verified result.
+
 ## AR ERP sync simulation
 
 The AR workspace includes **Sync invoices now**, which models an inbound ERP connector without turning customer interoperability into a hidden integration. It is available through the human UI and the separately authenticated AR remote MCP, while browser WebMCP exposes only the AR/AP capabilities needed for the human-agent workflow. Its same-origin UI route and MCP tool both reach the same authoritative service/RPC. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
@@ -77,7 +79,11 @@ The browser schedules a single refresh for the next known settlement time, avoid
 
 AP purchase orders expose supplier-scoped line, receipt, service-entry, tolerance, attachment, and payment-term context. AP status events, structured exceptions, supplier responses, verified evidence, corrected invoice revisions, tracked inquiries, and payment remittance remain durable tenant-owned records. Exception responses, inquiries, and replacements are idempotent database transactions; replacement is allowed only for a current rejected or disputed invoice whose open exception explicitly permits it, and PO balance release/reallocation is atomic.
 
+The canonical AP portfolio includes one supplier-owned missing-delivery-proof exception and one `buyer_receiving` missing-receipt exception. The service adds an explicit `supplierCanResolve` boolean and authority statement to the stored owner. A guarded backend exception-response function permits only `supplier_ar` or shared owners with the declared action, and requires the exact supporting-document kind when AP names one. Buyer-owned work cannot be converted into a supplier response; it is routed through a separately approved inquiry. This makes “This isn't mine to fix” an enforced authority boundary rather than only agent copy.
+
 AR stores evidence independently and never reads AP records directly. Its follow-up service derives actionable status-stale, overdue, blocked, rejected, and partially paid work from AR state. Verified remittance writeback is an idempotent transaction that requires an existing portal receipt, enforces invoice currency and remaining balance, and supports partial allocations without accepting overpayment.
+
+The default reset restores 24 AR invoices with seven locally ready packages, nine AP purchase orders, and two AP historical exception submissions. Six ready packages have independently valid AP capacity; `INV-10507` retains the deliberate buyer-side PO/service-entry blocker. AP payment discovery followed by approved AR remittance writeback is the terminal business outcome.
 
 ## Data transfer
 

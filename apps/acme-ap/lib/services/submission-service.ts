@@ -125,6 +125,26 @@ function mapSubmission(row: SubmissionDatabaseRow): SubmissionRow {
   };
 }
 
+export function describeExceptionAuthority(owner: InvoiceException["owner"]) {
+  if (owner === "supplier_ar" || owner === "shared") {
+    return {
+      supplierCanResolve: true,
+      authorityBoundary: owner === "shared"
+        ? "Supplier AR can contribute to this shared resolution."
+        : "Supplier AR owns this blocker and can resolve it with the permitted action.",
+    } as const;
+  }
+  const ownerLabel = owner === "buyer_receiving"
+    ? "Acme receiving"
+    : owner === "buyer_procurement"
+      ? "Acme procurement"
+      : "Acme AP";
+  return {
+    supplierCanResolve: false,
+    authorityBoundary: `This isn't mine to fix. ${ownerLabel} owns this blocker; I can open a tracked AP case.`,
+  } as const;
+}
+
 export async function listPurchaseOrders(supabase: SupabaseClient) {
   const { data, error } = await supabase.from("purchase_orders")
     .select(`purchase_order_number, description, currency, authorized_amount_minor,
@@ -288,18 +308,22 @@ export async function getInvoiceStatus(supabase: SupabaseClient, invoiceNumber: 
       actorKind: "system", createdAt: submission.paidAt,
     });
   }
-  const exceptions: InvoiceException[] = exceptionResult.data.map((exception) => ({
-    exceptionCode: exception.exception_code,
-    category: exception.category as InvoiceException["category"],
-    owner: exception.owner as InvoiceException["owner"],
-    status: exception.status as InvoiceException["status"],
-    message: exception.message,
-    resolutionGuidance: exception.resolution_guidance,
-    allowedActions: exception.allowed_actions,
-    requiredDocumentKind: exception.required_document_kind,
-    createdAt: exception.created_at,
-    updatedAt: exception.updated_at,
-  }));
+  const exceptions: InvoiceException[] = exceptionResult.data.map((exception) => {
+    const owner = exception.owner as InvoiceException["owner"];
+    return {
+      exceptionCode: exception.exception_code,
+      category: exception.category as InvoiceException["category"],
+      owner,
+      status: exception.status as InvoiceException["status"],
+      message: exception.message,
+      resolutionGuidance: exception.resolution_guidance,
+      allowedActions: exception.allowed_actions,
+      requiredDocumentKind: exception.required_document_kind,
+      ...describeExceptionAuthority(owner),
+      createdAt: exception.created_at,
+      updatedAt: exception.updated_at,
+    };
+  });
   return {
     ...submission,
     revision: identity.revision,
@@ -342,7 +366,13 @@ export async function respondToInvoiceException(
     p_payload: payload,
   });
   if (error?.code === "42501") throw new HttpError(403, "submitter_access_required", "Submitter access is required");
+  if (error?.code === "P0001" && error.message?.startsWith("This isn't mine to fix.")) {
+    throw new HttpError(409, "buyer_owned_exception", error.message);
+  }
   if (error?.code === "23505") throw new HttpError(409, "idempotency_conflict", "Idempotency key conflicts with an earlier response");
+  if (error?.code === "23514" && error.message?.startsWith("The required supporting document")) {
+    throw new HttpError(409, "required_evidence_missing", error.message);
+  }
   if (error?.code === "23514") throw new HttpError(409, "exception_not_actionable", "The exception is no longer actionable");
   if (error?.code === "P0002") throw new HttpError(404, "exception_not_found", "Open invoice exception was not found");
   if (error) throw new HttpError(422, "exception_response_rejected", "Exception response could not be recorded");
@@ -411,6 +441,8 @@ export async function getPaymentRemittance(supabase: SupabaseClient, invoiceNumb
 
 export type DemoResetResult = Readonly<{
   restoredPurchaseOrderCount: number;
+  seededSubmissionCount: number;
+  seededExceptionCount: number;
   deletedSubmissionCount: number;
   deletedBatchCount: number;
   resetAt: string;

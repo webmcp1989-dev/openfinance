@@ -16,7 +16,11 @@ select ok(not has_table_privilege('authenticated', 'public.invoice_status_events
 select ok(not (select prosecdef from pg_proc where oid = 'public.respond_to_invoice_exception(text,text,jsonb)'::regprocedure), 'public exception-response wrapper uses caller privileges');
 select ok(not (select prosecdef from pg_proc where oid = 'public.replace_rejected_invoice(text,text,jsonb)'::regprocedure), 'public replacement wrapper uses caller privileges');
 select ok(position('pg_advisory_xact_lock' in pg_get_functiondef('private.create_invoice_inquiry(text,text,jsonb)'::regprocedure)) > 0, 'concurrent inquiry retries are serialized');
-select ok(position('pg_advisory_xact_lock' in pg_get_functiondef('private.respond_to_invoice_exception(text,text,jsonb)'::regprocedure)) > 0, 'concurrent exception-response retries are serialized');
+select ok(
+  position('owner not in' in pg_get_functiondef('private.respond_to_invoice_exception(text,text,jsonb)'::regprocedure)) > 0
+  and position('pg_advisory_xact_lock' in pg_get_functiondef('private.respond_to_invoice_exception_unchecked(text,text,jsonb)'::regprocedure)) > 0,
+  'exception responses enforce owner authority before the serialized mutation'
+);
 select ok(exists (
   select 1 from pg_constraint
   where conrelid = 'public.invoice_attachments'::regclass

@@ -84,14 +84,14 @@ select is(
    join public.organizations as organization on organization.id = invoice.organization_id
    join public.customers as customer on customer.id = invoice.customer_id
    where invoice.organization_id = '10000000-0000-4000-8000-000000000001'
-     and invoice.invoice_number in ('INV-10482', 'INV-10491', 'INV-10503', 'INV-10507')
+     and invoice.invoice_number like 'INV-%'
      and decode(replace(invoice.document_content_base64, E'\n', ''), 'base64') =
        private.render_synthetic_invoice_pdf(
          invoice.invoice_number, invoice.invoice_date, invoice.amount_minor, invoice.currency,
          invoice.purchase_order_number, organization.name, customer.name
        )),
-  4,
-  'all four core demo invoices contain the exact detailed document'
+  24,
+  'all canonical demo invoices contain the exact detailed document'
 );
 
 select is(

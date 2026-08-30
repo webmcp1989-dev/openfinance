@@ -315,7 +315,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
 
       <section className="agent-guide" aria-label="Suggested agent task">
         <span className="agent-dot" aria-hidden="true" />
-        <div><strong>Prefer delegation?</strong><p>Use browser site tools for the customer workflow, or connect your own AR agent through the governed remote MCP.</p></div>
+        <div><strong>19 tools, zero cross-writes</strong><p>These 7 site tools write only OpenFinance AR; Acme&apos;s 12 write only its AP portal. Your agent reconciles both live views, and you alone authorize data crossing between them.</p></div>
         <div className="agent-links"><a href="/mcp-info">Connect an agent</a><a href="/connections">Manage access</a><span className="agent-ready">7 site + 11 remote tools</span></div>
       </section>
 
@@ -328,7 +328,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
         {!resetOpen ? <button className="button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
           Restore demo start
         </button> : <div className="reset-confirmation" role="group" aria-label="Confirm OpenFinance demo reset">
-          <p><strong>Delete synthetic AR activity?</strong><span>Portal results, imported ERP invoices, and workflow audit events will be replaced by the canonical starting data.</span></p>
+          <p><strong>Restore the synthetic AR portfolio?</strong><span>Portal results, imported ERP invoices, remittance writebacks, and workflow events will be replaced by the canonical 24-invoice queue with seven ready packages.</span></p>
           <div>
             <button className="button quiet" type="button" onClick={() => setResetOpen(false)} disabled={pendingAction !== null}>Cancel</button>
             <button className="button danger" type="button" onClick={() => void restoreDemo()} disabled={pendingAction !== null}>
@@ -350,7 +350,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
         </div>
         <div className="selection-hint">
           <div className="selection-copy">
-            <span className="selection-count">{selectedReady.length} of 3 ready invoices selected</span>
+            <span className="selection-count">{selectedReady.length} of {metrics.ready} ready invoices selected</span>
             <span>{selectedReady.length === 0
               ? "Select a ready invoice to reveal its human download."
               : "Download now, or review the protected package before portal submission."}</span>
@@ -442,7 +442,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
             </div>}
           </div>
           <form className="outcome-form" action={(formData) => void recordRemittance(formData)}>
-            <div><h3>Record verified remittance</h3><p>Use only after the customer portal returns the completed payment allocation.</p></div>
+            <div><h3>Finish on cash</h3><p>Use only after get_payment_remittance returns the customer&apos;s completed allocation. Recording it here closes the AR balance; AP cannot write this state.</p></div>
             <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select submitted invoice</option>{invoices.filter((invoice) => invoice.portalReference).map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber} · {money.format((invoice.amountMinor - invoice.paidAmountMinor) / 100)} due</option>)}</select></label>
             <label><span>Payment reference</span><input name="paymentReference" required maxLength={120} placeholder="PAY-20260830-AB12CD34" /></label>
             <label><span>Paid amount</span><input name="amount" required inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="18420.00" /></label>

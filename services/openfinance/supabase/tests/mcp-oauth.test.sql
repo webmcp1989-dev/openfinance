@@ -49,7 +49,7 @@ select set_config(
   true
 );
 set local role authenticated;
-select is((public.reset_demo_state()->>'restoredInvoiceCount'), '4', 'human portal operator can still reset the demo');
+select is((public.reset_demo_state()->>'restoredInvoiceCount'), '24', 'human portal operator can still reset the complete portfolio');
 reset role;
 select is(
   (select details ->> 'actorChannel' from public.audit_events where action = 'demo_state_reset' order by id desc limit 1),

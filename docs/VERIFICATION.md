@@ -6,7 +6,7 @@ to the documented starting state after testing.
 
 ## Automated gates
 
-- `bun test`: 108 tests passed with 464 expectations.
+- `bun test`: 120 tests passed with 501 expectations.
 - `bun run typecheck`: both applications passed.
 - `bun run lint`: both applications passed with zero warnings.
 - `bun run build`: both production builds completed successfully.
@@ -14,13 +14,8 @@ to the documented starting state after testing.
 - Both documented development-server commands reached Ready on ports 3000 and
   3001. Next.js agent-file generation is disabled, so they do not create
   duplicate nested instructions.
-- A fresh clone of public GitHub commit `3c6286f` completed frozen install,
-  type-check, zero-warning lint, all 108 tests, and both production builds using
-  only the documented variables with safe build-time placeholders; its
-  dependency audit found no vulnerabilities.
-- GitHub Actions CI run 52 completed successfully for expanded WebMCP commit
-  `3c6286f`. Both Vercel production applications served that release during the
-  independent live browser verification.
+- The dependency audit found no vulnerabilities. No dependency or infrastructure
+  change was required for the portfolio expansion.
 
 The test suite covers strict request contracts, authentication ordering,
 security headers, responsive authentication controls, PDF structure and
@@ -29,6 +24,22 @@ lifecycle and annotations, authenticated human downloads, payment-aware status
 mapping, idempotency, and documentation coverage.
 
 ## Live database and security verification
+
+- The hosted AR project contains exactly 24 canonical invoices, seven ready
+  packages, and one checksum-verified proof-of-delivery fixture for
+  `INV-10417`. Its reset suite passed 15 assertions, ERP sync passed 19 after
+  independently catching and fixing the missing due-date default, invoice PDF
+  coverage passed 16, and exception-to-cash/evidence passed 13.
+- The hosted AP project contains nine supplier-visible POs and exactly two
+  seeded disputed submissions: supplier-owned `missing_delivery_proof` and
+  buyer-owned `missing_goods_receipt`. Its reset suite passed 19 assertions and
+  exception-authority suite passed 16, including rejection of buyer-owned
+  supplier responses and rejection of supplier responses without the required
+  evidence.
+- The current database baseline therefore supports six valid submissions from
+  seven locally ready AR packages, plus both authority-asymmetry exception
+  stories. The buyer-owned path exposes “This isn't mine to fix” and only the
+  tracked inquiry action; the supplier-owned path requires the exact proof.
 
 - The OpenFinance RLS suite passed 13 assertions and its delivery transaction
   suite passed 11 assertions in the live AR project.
@@ -134,13 +145,14 @@ ChatGPT's in-app browser using only the tools exposed by the two live sites.
   retries replayed exactly, while changed-payload reuse was rejected. The
   current revision remained visible and PO balance was not double-consumed.
 - The same run verified every human action is present in the live workspaces.
-  Both human reset controls then restored three ready AR invoices, no AP
-  submissions, and canonical PO balances.
+  Both human reset controls then restored the earlier three-ready baseline;
+  the portfolio migration below intentionally superseded that state.
 
-After the final capability deployment, both independent two-step human reset
-controls succeeded. The public judge state is now three ready AR invoices, one
-local missing-PO exception, full AP purchase-order balances, no AP receipts,
-and one visible `demo_state_reset` audit event in each application.
+After the portfolio deployment, both independent reset transactions succeeded.
+The public judge state is now 24 AR invoices with seven ready and no `ERP-*`
+imports, plus nine AP purchase orders and exactly two historical disputed
+fixtures (`INV-10417` supplier-owned, `INV-10463` buyer-owned). Each application
+retains its own audit and authorization boundary.
 Both synthetic judge passwords were then rotated to unique strong values and
 verified through fresh, independent live sign-ins. The credentials remain
 private and are not stored in this repository.

@@ -62,6 +62,10 @@ Read tools are accurately annotated. Before an invoice PDF crosses from OpenFina
 
 All 19 browser WebMCP capabilities also have human UI controls backed by the same authenticated routes and authoritative services. Client-side validation and confirmation improve usability; they do not establish authorization, isolation, or business correctness.
 
+The 19 browser tools have zero cross-write authority: AR mutations terminate in AR and AP mutations terminate in AP. Matching fixture identifiers are not shared storage. A browser agent can propose a transfer or reconciliation, but the exact cross-site data movement requires the human approval boundaries documented in `WEBMCP.md`.
+
+AP exception ownership is enforced at the database boundary. Supplier responses are accepted only for `supplier_ar` or shared exceptions that explicitly allow `respond_to_exception`; named required evidence must be present. A `buyer_receiving`, `buyer_procurement`, or `buyer_ap` blocker cannot be answered as though the supplier resolved it and must use a separately approved tracked inquiry.
+
 ## Known production hardening beyond the contest slice
 
 - Add distributed rate limiting and abuse telemetry at the edge.

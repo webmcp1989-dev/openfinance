@@ -19,10 +19,10 @@ select set_config(
 set local role authenticated;
 
 select is((public.sync_invoices_from_erp('reset-test-sync-20260829')->>'importedCount'), '2', 'test setup creates two ERP invoices');
-select is((public.reset_demo_state()->>'restoredInvoiceCount'), '4', 'authorized operator restores all four canonical invoices');
+select is((public.reset_demo_state()->>'restoredInvoiceCount'), '24', 'authorized operator restores the full canonical invoice portfolio');
 reset role;
 select is((select count(*)::text from public.invoices where invoice_number like 'ERP-%'), '0', 'reset removes synthetic ERP imports');
-select is((select count(*)::text from public.invoices where status = 'ready'), '3', 'reset restores three ready invoices');
+select is((select count(*)::text from public.invoices where status = 'ready'), '7', 'reset restores seven portal-ready invoices');
 select is((select count(*)::text from public.invoices where invoice_number = 'INV-10503' and status = 'needs_attention' and exception_code = 'missing_purchase_order'), '1', 'reset restores the deliberate missing-PO exception');
 select is((select count(*)::text from public.audit_events where action = 'demo_state_reset'), '1', 'reset remains visibly auditable');
 select is((select next_invoice_sequence::text || ':' || next_sync_has_invoices::text from public.erp_sync_state), '1:true', 'reset restores deterministic ERP sync state');

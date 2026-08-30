@@ -385,7 +385,9 @@ export async function syncInvoicesFromErp(
 
 export type DemoResetResult = Readonly<{
   restoredInvoiceCount: number;
+  readyInvoiceCount: number;
   deletedDeliveryEventCount: number;
+  deletedRemittanceEventCount: number;
   deletedErpEventCount: number;
   deletedErpInvoiceCount: number;
   resetAt: string;

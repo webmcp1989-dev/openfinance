@@ -120,6 +120,8 @@ export type InvoiceException = Readonly<{
   resolutionGuidance: string;
   allowedActions: string[];
   requiredDocumentKind: string | null;
+  supplierCanResolve: boolean;
+  authorityBoundary: string;
   createdAt: string;
   updatedAt: string;
 }>;
