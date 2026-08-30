@@ -31,7 +31,7 @@ select set_config(
 );
 set local role authenticated;
 
-select plan(13);
+select plan(16);
 select has_table('public', 'organizations', 'organizations exists');
 select has_table('public', 'invoices', 'invoices exists');
 select is((select relrowsecurity from pg_class where oid = 'public.invoices'::regclass), true, 'invoice RLS is enabled');
@@ -67,6 +67,10 @@ select throws_ok(
   'Invoice not found',
   'delivery writeback cannot mutate a foreign organization invoice'
 );
+
+select ok(coalesce(not has_function_privilege('public', to_regprocedure('public.rls_auto_enable()'), 'execute'), true), 'PUBLIC cannot invoke the platform RLS event-trigger helper');
+select ok(coalesce(not has_function_privilege('anon', to_regprocedure('public.rls_auto_enable()'), 'execute'), true), 'anonymous callers cannot invoke the platform RLS event-trigger helper');
+select ok(coalesce(not has_function_privilege('authenticated', to_regprocedure('public.rls_auto_enable()'), 'execute'), true), 'authenticated callers cannot invoke the platform RLS event-trigger helper');
 
 select * from finish();
 rollback;

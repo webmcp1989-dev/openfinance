@@ -12,6 +12,7 @@ This file records only non-obvious continuation context. Repository-wide rules a
 
 ## Meaningful implementation decisions
 
+- The 2026-08-30 independent security review disabled public signup in both hosted Supabase projects, revoked direct application-role execution of the platform `rls_auto_enable()` helper, and made every exception-to-cash public mutation wrapper derive canonical request fingerprints in PostgreSQL. The corresponding migrations are applied live; see `docs/security/SECURITY_REVIEW_PROGRESS.md` for evidence and test results.
 - AR **Sync invoices now** is available through UI and the separately OAuth-authenticated AR remote MCP, but is intentionally not an eighth browser WebMCP challenge tool.
 - The remote MCP uses the official TypeScript SDK and Streamable HTTP at `/mcp`, RFC 9728 metadata, Supabase OAuth authorization-code + PKCE/DCR, a custom `/oauth/consent` page, grant revocation at `/connections`, strict ES256 issuer/audience/client validation, and an unprivileged bearer Supabase client so existing RLS remains authoritative. Its eleven tools are documented in `docs/MCP.md`; reset is excluded.
 - Supabase authorization request IDs are opaque URL-safe values, not UUIDs. `authorizationIdSchema` bounds their length and character set; do not narrow this protocol identifier to a database UUID.

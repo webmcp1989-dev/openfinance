@@ -41,7 +41,7 @@ begin
 end;
 $$;
 
-select plan(15);
+select plan(18);
 select has_table('public', 'suppliers', 'suppliers exists');
 select has_table('public', 'purchase_orders', 'purchase orders exist');
 select has_table('public', 'invoice_submissions', 'invoice submissions exist');
@@ -90,6 +90,10 @@ select throws_ok(
   'Purchase order is not open for this supplier',
   'submission cannot consume a foreign supplier purchase order'
 );
+
+select ok(coalesce(not has_function_privilege('public', to_regprocedure('public.rls_auto_enable()'), 'execute'), true), 'PUBLIC cannot invoke the platform RLS event-trigger helper');
+select ok(coalesce(not has_function_privilege('anon', to_regprocedure('public.rls_auto_enable()'), 'execute'), true), 'anonymous callers cannot invoke the platform RLS event-trigger helper');
+select ok(coalesce(not has_function_privilege('authenticated', to_regprocedure('public.rls_auto_enable()'), 'execute'), true), 'authenticated callers cannot invoke the platform RLS event-trigger helper');
 
 select * from finish();
 rollback;

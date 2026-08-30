@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(13);
+select plan(16);
 select has_table('public', 'invoice_supporting_documents', 'supporting documents exist');
 select has_table('public', 'payment_remittance_events', 'remittance events exist');
 select is((select relrowsecurity from pg_class where oid = 'public.invoice_supporting_documents'::regclass), true, 'supporting documents enforce RLS');
@@ -36,6 +36,37 @@ select ok(exists (
     and document.sha256 = encode(extensions.digest(decode(document.content_base64, 'base64'), 'sha256'), 'hex')
     and document.sha256 <> invoice.document_sha256
 ), 'supplier-owned exception has an exact integrity-verified delivery proof');
+select ok(position('extensions.digest' in pg_get_functiondef('public.record_payment_remittance(text,text,jsonb)'::regprocedure)) > 0, 'remittance wrapper derives its request fingerprint in PostgreSQL');
+
+select set_config(
+  'request.jwt.claim.sub',
+  (select id::text from auth.users where lower(email) = 'demo@openfinance.dev'),
+  true
+);
+set local role authenticated;
+
+select lives_ok(
+  $$
+    select public.record_payment_remittance(
+      'security-remittance-fingerprint-0001',
+      repeat('a', 64),
+      '{"invoiceNumber":"INV-10311","paymentReference":"SEC-PAY-0001","amountMinor":100,"currency":"USD","paymentMethod":"ach","paidAt":"2026-08-30T12:00:00Z"}'::jsonb
+    )
+  $$,
+  'a direct authenticated remittance call accepts its first canonical payload'
+);
+select throws_ok(
+  $$
+    select public.record_payment_remittance(
+      'security-remittance-fingerprint-0001',
+      repeat('a', 64),
+      '{"invoiceNumber":"INV-10311","paymentReference":"SEC-PAY-CHANGED","amountMinor":200,"currency":"USD","paymentMethod":"ach","paidAt":"2026-08-30T12:01:00Z"}'::jsonb
+    )
+  $$,
+  '23505',
+  'Idempotency key reused with different payload',
+  'a forged repeated caller fingerprint cannot hide changed remittance fields'
+);
 
 select * from finish();
 rollback;

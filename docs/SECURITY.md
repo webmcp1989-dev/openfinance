@@ -10,10 +10,12 @@
 ## Authentication and authorization
 
 - Supabase SSR stores sessions in project-specific cookies and refreshes them through Next.js `proxy.ts`.
+- Both hosted projects disable public user signup. The independently authenticated challenge users are administratively provisioned fixed accounts; existing email/password login remains enabled.
 - Protected pages and routes use `auth.getClaims()`, not an unverified cookie session object.
 - Mutating routes reject wrong-origin or wrong-content-type requests, then authenticate the caller before parsing the untrusted request body.
 - Every exposed table has RLS enabled and anonymous grants revoked.
 - Authenticated grants are read-only; writes are available only through explicitly granted RPC wrappers.
+- Supabase's owner-managed `public.rls_auto_enable()` event trigger remains installed for platform DDL, but `PUBLIC`, `anon`, and `authenticated` cannot execute its `SECURITY DEFINER` helper directly.
 - Tenant identity is derived from `auth.uid()` through a profile row. Caller-supplied organization, buyer, or supplier IDs are never trusted.
 - Rollback-only pgTAP suites create foreign organization and supplier fixtures, then prove authenticated demo users cannot read or mutate those records.
 - The runtime has only the publishable key. Service-role keys and database passwords are prohibited.
@@ -26,7 +28,7 @@
 
 - AP submission is one atomic Postgres transaction and locks PO rows before checking and decrementing balances.
 - AP synthetic settlement scheduling runs in the same transaction as a committed receipt. Its per-supplier sequence is serialized, every eligible second invoice receives one immutable schedule, and an idempotent submission retry cannot create a second payment signal.
-- Idempotency is scoped by tenant or supplier and bound to a SHA-256 fingerprint. The AP public wrapper derives its fingerprint from the canonical Postgres JSON payload rather than trusting the caller's digest. Transaction-scoped advisory locks serialize concurrent retries for the same scoped key; a repeated identical request reaches the transaction and returns its original response without a duplicate preflight blocking it, while a key reused for a different payload fails.
+- Idempotency is scoped by tenant or supplier and bound to a SHA-256 fingerprint. Public financial mutation wrappers derive fingerprints from canonical Postgres JSON rather than trusting a caller's digest, including submission, exception response, inquiry, correction, AR delivery, and remittance writeback. Transaction-scoped advisory locks serialize concurrent retries for the same scoped key; a repeated identical request returns its original response without duplicate side effects, while a key reused for a different payload fails.
 - AR result and exception recording enforces exact payload fields, legal portal statuses, field bounds, purchase-order presence, and allowed invoice state transitions inside Postgres—not only in the HTTP layer.
 - AR ERP sync derives the organization and authorized operator from `auth.uid()`, whether invoked by the UI or OAuth MCP, serializes a tenant-scoped idempotency key, row-locks the alternating sync state, and records the exact stored response and audit event in the same transaction. Its state and event tables have RLS enabled and no direct authenticated grants.
 - AP exception responses validate the current supplier, actionable exception state, bounded message, attachment type, canonical PDF payload, decoded size, and SHA-256 before committing the response, evidence, status event, and audit event together.
@@ -53,7 +55,7 @@
 - APIs return stable public error codes and do not expose raw database errors.
 - Recent-audit reads are optional display data. If one fails, the workspace explicitly marks the audit panel unavailable instead of misreporting zero events or taking down the core tenant-scoped financial view.
 - The AP public effective-status function is `security_invoker`; its private implementation derives supplier scope from `auth.uid()` and the profile table. Authenticated suppliers have RLS-scoped read access to their own settlement allocation so the remittance UI and tool share one source of truth, but no application role can insert, update, or delete settlements. The private sequence table has no application grant. Payment references remain hidden until database time reaches the synthetic schedule, and reads never mutate payment state.
-- AR delivery writebacks and AP submissions derive authoritative idempotency identity in PostgreSQL. Reusing a key with changed event type, payload, or invoice content is rejected even if a direct caller supplies the same forged fingerprint.
+- AR delivery/remittance writebacks and AP submission/exception/inquiry/correction mutations derive authoritative idempotency identity in PostgreSQL. Reusing a key with changed event type, payload, or invoice content is rejected even if a direct caller supplies the same forged fingerprint.
 - Production responses set a restrictive CSP, deny framing and MIME sniffing, disable unused browser capabilities, isolate cross-origin resources, and suppress referrer data.
 - Login failures do not reveal whether an email exists. A separately authenticated account whose tenant profile is missing receives an actionable workspace-assignment message instead of a misleading credential error, plus a local-session sign-out action for safely switching accounts. Membership remains mandatory and no cross-tenant details are revealed.
 
