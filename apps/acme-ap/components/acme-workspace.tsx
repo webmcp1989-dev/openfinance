@@ -58,7 +58,8 @@ type PaymentRemittance = Readonly<{
 
 type SubmissionStatusFilter = "all" | SubmissionRow["status"];
 
-export const AP_AGENT_STARTER_PROMPT = "Submit all Acme invoices that can be paid.";
+export const AP_AGENT_STARTER_PROMPT =
+  "Use the Acme Supplier Portal at https://openfinance-ap.vercel.app to review and process my invoices.";
 
 export function filterSubmissionRows(
   submissions: readonly SubmissionRow[],
@@ -483,7 +484,10 @@ export function AcmeWorkspace({
     <main className="portal-shell">
       <AcmeSiteTools />
       <header className="portal-header">
-        <div className="wordmark"><span className="mark">A</span><span>Acme Supplier Portal</span></div>
+        <div className="openfinance-lockup portal-openfinance-lockup" aria-label="OpenFinance Supplier Portal">
+          <span className="openfinance-logo portal-openfinance-logo" aria-hidden="true">OF</span>
+          <span><strong>OpenFinance</strong><small>Supplier Portal · Acme</small></span>
+        </div>
         <nav aria-label="Primary navigation"><a href="#operations">Submit invoice</a><a href="#orders">Purchase orders</a><a href="#submissions">Receipts</a></nav>
         <div className="supplier"><div><small>Signed in as</small><strong>{supplierName}</strong><span>{supplierCode}</span></div><form action={signOutAction}><button className="signout" type="submit">Sign out</button></form></div>
       </header>
@@ -492,7 +496,7 @@ export function AcmeWorkspace({
         <div className="webmcp-hero-copy">
           <p className="kicker">Agent-ready supplier workspace</p>
           <h1 id="webmcp-support-title">WebMCP fully supported</h1>
-          <p>Open this portal and your OpenFinance AR workspace in a WebMCP-capable agent, then start with one clear instruction.</p>
+          <p>Open this supplier portal in a WebMCP-enabled browser, sign in, and give your agent the instruction shown here.</p>
         </div>
         <div className="agent-starter">
           <span>Say to your agent</span>
@@ -510,14 +514,14 @@ export function AcmeWorkspace({
 
       <section className="agent-guide" aria-label="Human and agent workflow">
         <span className="pulse" aria-hidden="true" />
-        <div><strong>19 tools, zero cross-writes</strong><p>Acme&apos;s 12 tools read and write only this AP portal; OpenFinance&apos;s 7 write only AR. Your agent can reconcile both, but only you authorize the data crossing between them.</p></div>
+        <div><strong>12 authenticated tools, one governed portal</strong><p>Every tool operates only within this supplier portal and follows the same validation, authorization, and human-approval rules as the interface.</p></div>
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">
         <div>
           <p className="kicker">Synthetic challenge environment</p>
           <h2 id="demo-controls-title">Need a fresh demo run?</h2>
-          <p>Restore only this AP workspace, then restore OpenFinance AR separately.</p>
+          <p>Restore this AP workspace to its canonical synthetic starting state.</p>
         </div>
         {!resetOpen ? <button className="portal-button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
           Restore demo start
@@ -560,7 +564,7 @@ export function AcmeWorkspace({
             </div>}
           </form>
           <form className="lookup-card remittance-lookup" action={(formData) => void findPaymentRemittance(formData)}>
-            <div><span className="step-number neutral">5</span><div><strong>Finish on cash</strong><p>Read the exact AP allocation, then record that verified remittance in OpenFinance AR.</p></div></div>
+            <div><span className="step-number neutral">5</span><div><strong>Finish on cash</strong><p>Read the exact AP allocation and confirm the payment reference, method, and amount.</p></div></div>
             <label><span>Invoice number</span><div className="inline-field"><input name="invoiceNumber" required pattern="[A-Z0-9][A-Z0-9-]{1,39}" placeholder="INV-10482" /><button type="submit" disabled={pendingAction !== null}>{pendingAction === "remittance" ? "Loading…" : "View remittance"}</button></div></label>
             {remittanceLookup && <div className="lookup-result detailed-result"><strong>{remittanceLookup.invoiceNumber}</strong><span className={`state ${remittanceLookup.paymentStatus}`}>{remittanceLookup.paymentStatus.replaceAll("_", " ")}</span><p>{remittanceLookup.paymentReference ?? remittanceLookup.portalReference}</p><b>{remittanceLookup.amountMinor === null ? "No payment yet" : money.format(remittanceLookup.amountMinor / 100)}</b>
               <dl><div><dt>Method</dt><dd>{remittanceLookup.paymentMethod?.toUpperCase() ?? "Not available"}</dd></div><div><dt>Scheduled</dt><dd>{remittanceLookup.scheduledFor ? timestamp.format(new Date(remittanceLookup.scheduledFor)) : "Not scheduled"}</dd></div><div><dt>Paid</dt><dd>{remittanceLookup.paidAt ? timestamp.format(new Date(remittanceLookup.paidAt)) : "Not paid"}</dd></div><div><dt>Currency</dt><dd>{remittanceLookup.currency}</dd></div></dl>

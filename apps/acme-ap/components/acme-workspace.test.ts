@@ -57,5 +57,8 @@ describe("human invoice portfolio filters", () => {
 });
 
 test("presents the canonical short instruction for starting the agent workflow", () => {
-  expect(AP_AGENT_STARTER_PROMPT).toBe("Submit all Acme invoices that can be paid.");
+  expect(AP_AGENT_STARTER_PROMPT).toBe(
+    "Use the Acme Supplier Portal at https://openfinance-ap.vercel.app to review and process my invoices.",
+  );
+  expect(AP_AGENT_STARTER_PROMPT).not.toContain("OpenFinance AR");
 });
