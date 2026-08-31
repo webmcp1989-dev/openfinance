@@ -51,6 +51,7 @@ function fakeSupabase(options: {
   rpcResult?: unknown;
 } = {}) {
   const calls: Array<{ name: string; args: unknown }> = [];
+  const filters: Array<{ table: string; column: string; value: unknown }> = [];
   const purchaseOrder = {
     purchase_order_number: "PO-8821",
     description: "Product implementation",
@@ -63,7 +64,11 @@ function fakeSupabase(options: {
   const client = {
     from(table: string) {
       const chain = {
-        select() { return chain; }, eq() { return chain; },
+        select() { return chain; },
+        eq(column: string, value: unknown) {
+          filters.push({ table, column, value });
+          return chain;
+        },
         maybeSingle() {
           if (table === "purchase_orders") return Promise.resolve({ data: purchaseOrder, error: null });
           return Promise.resolve({ data: options.duplicate ? { id: "existing" } : null, error: null });
@@ -76,7 +81,7 @@ function fakeSupabase(options: {
       return Promise.resolve({ data: options.rpcResult ?? { batchId: "batch-1", items: [] }, error: null });
     },
   };
-  return { client, calls };
+  return { client, calls, filters };
 }
 
 describe("Acme invoice validation", () => {
@@ -245,10 +250,15 @@ describe("Acme invoice validation", () => {
   });
 
   test("accepts a valid checksum-protected PDF within the PO balance", async () => {
-    const { client } = fakeSupabase();
+    const { client, filters } = fakeSupabase();
     const result = await validateInvoice(client as never, invoice());
     expect(result.valid).toBe(true);
     expect(result.issues).toEqual([]);
+    expect(filters).toContainEqual({
+      table: "invoice_submissions",
+      column: "is_current",
+      value: true,
+    });
   });
 
   test("reports the deliberate remaining-balance exception without mutating", async () => {

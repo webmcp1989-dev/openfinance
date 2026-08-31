@@ -268,7 +268,11 @@ function inspectDocument(invoice: InvoiceCandidate): ValidationIssue | null {
 export async function validateInvoice(supabase: SupabaseClient, invoice: InvoiceCandidate) {
   const [purchaseOrder, duplicateResult] = await Promise.all([
     findPurchaseOrder(supabase, invoice.purchaseOrderNumber),
-    supabase.from("invoice_submissions").select("id").eq("invoice_number", invoice.invoiceNumber).maybeSingle(),
+    supabase.from("invoice_submissions")
+      .select("id")
+      .eq("invoice_number", invoice.invoiceNumber)
+      .eq("is_current", true)
+      .maybeSingle(),
   ]);
   if (duplicateResult.error) throw new HttpError(500, "duplicate_check_failed", "Invoice uniqueness could not be checked");
 
