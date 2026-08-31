@@ -1,8 +1,9 @@
 # YouTube publication package
 
-Use this copy for the public OpenFinance challenge video. The reviewed upload
-artifact is `artifacts/demo-video/openfinance-demo.webm` (2:47, 1600x900,
-VP9 + Opus). Upload the file without transcoding it locally.
+Use this copy for the public OpenFinance challenge video. The latest optimized
+upload candidate is `artifacts/openfinance-contest-optimized.mp4` (2:27.4,
+1280x720, with video and audio tracks). Keep generated review artifacts local
+and upload the selected file without another local transcode.
 
 ## Title
 
@@ -14,20 +15,29 @@ OpenFinance lets independently authenticated AR and AP applications complete
 invoice-delivery workflows through WebMCP, without a custom point-to-point
 integration or shared credentials.
 
-One natural-language request starts the demo: “Submit all Acme invoices that
-are ready for their AP portal.” The browser agent discovers capabilities in
-both applications, finds three locally ready invoices, excludes an invoice
-that is missing a PO, and previews the exact documents, amounts, POs, and Acme
-destination before anything crosses sites. After the human approves that
-read-only transfer, the agent checks Acme's live portal requirements and PO
-balances. It detects that INV-10507 exceeds PO-8890's remaining balance, then
-asks for a separate confirmation before submitting only the valid $25,670
-batch. Acme returns two portal references, which the agent records back in
-OpenFinance together with the actionable exception.
+The first natural-language request is: “Submit all Acme invoices that can be
+paid.” The browser agent discovers capabilities in both applications, reads
+the supplier's AR portfolio, checks Acme's independently authenticated portal
+requirements and live PO context, excludes an invoice that fails buyer-side
+checks, and previews the exact documents, amounts, POs, destination, and total.
+Only after the human approves does Acme atomically commit the valid $25,670
+batch. An idempotent retry returns the original result instead of submitting
+anything twice.
+
+The demo then follows the harder work after submission. The agent sends
+verified delivery proof for a supplier-owned exception only after another
+human approval, replaces a rejected supplier-owned invoice with an explicitly
+reviewed revision, and refuses to claim authority over a buyer-owned missing
+receipt—saying “This isn't mine to fix” and opening a tracked buyer case. It
+finishes on cash by reading exact AP remittance and, after approval, recording
+that result in OpenFinance AR.
 
 The human provides intent, judgment, and approval. The agent discovers,
 reconciles, explains, and executes. Both applications visibly update their own
-authoritative state and audit trail.
+authoritative state and audit trail. OpenFinance demonstrates 19 browser tools
+across two independently authenticated companies with zero cross-writes: each
+portal writes only its own ledger, and only the human authorizes information
+crossing between them.
 
 This challenge demo uses synthetic companies, users, invoices, purchase
 orders, and documents.

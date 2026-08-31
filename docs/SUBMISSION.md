@@ -52,7 +52,7 @@ Include both live URLs and state that the sessions are intentionally independent
 
 Also tell reviewers that each workspace has a separate two-step **Restore demo start** control. They should restore AP and AR independently before a fresh run; the controls affect only synthetic data, remain outside WebMCP, and leave a visible reset audit event.
 
-## Video plan — target 2:47
+## Video plan — 2:27 optimized candidate
 
 The final video must be public on YouTube, include clear audio, and remain under three minutes.
 
@@ -60,53 +60,45 @@ Use the reviewed title, description, tags, visibility settings, and publication
 checks in [`docs/YOUTUBE.md`](YOUTUBE.md). The generated 16:9 upload thumbnail
 is `scripts/demo-video/assets/youtube-thumbnail.png`.
 
-A reproducible local renderer is available in `scripts/demo-video`. The current
-owner-review artifact is `artifacts/demo-video/openfinance-demo.webm`: 1600×900,
-VP9 + Opus, 167.145 seconds, and 54.16 MB. The WebM remains untracked; follow the
-renderer README to reproduce it from the committed deployed-app screenshots and
-narration manifest, then upload the reviewed file to YouTube.
+A reproducible source renderer is available in `scripts/demo-video`. The latest
+optimized upload candidate is `artifacts/openfinance-contest-optimized.mp4`:
+1280×720, 147.4 seconds, 19,810,624 bytes, with separate video and audio tracks.
+Generated review files remain untracked; publish only the entrant-reviewed
+candidate selected for submission.
 
-### 0:00–0:18 — Problem and outcome
+### Problem and product
 
-Show the OpenFinance AR queue.
+Establish the repetitive supplier-AR burden across buyer portals, then show the
+authenticated OpenFinance AR workspace and the first human instruction:
+“Submit all Acme invoices that can be paid.” Make clear that the two companies
+have no point-to-point integration or shared credentials.
 
-> Supplier AR teams lose time re-entering invoices into customer portals and copying the results back. OpenFinance lets independently authenticated AR and AP applications complete that workflow through WebMCP—without a custom integration or shared credentials.
+### Validation, control, and submission
 
-### 0:18–0:32 — Independence proof
+Show the agent reading both authenticated applications, checking Acme's live PO
+and evidence rules, and excluding the invoice that fails buyer-side checks.
+Hold on the exact invoices, destination, total, and exclusion before showing the
+human's separate submission approval. Acme then commits the valid $25,670 batch
+atomically and an identical retry returns the original result.
 
-Briefly show both origins and signed-in identities.
+### Exception ownership
 
-> These are separate applications, sessions, authorization boundaries, and databases. The browser agent is the bridge, using only the tools each page deliberately exposes.
+Show the second human instruction: “Resolve supplier-owned exceptions, open
+cases for buyer-owned blockers, and reconcile approved payments back into
+OpenFinance.” Demonstrate all three authority branches:
 
-### 0:32–0:55 — Discovery and transfer approval
+- verified delivery proof crosses companies only after human approval;
+- a corrected supplier-owned revision supersedes the rejected reference only
+  after human review; and
+- the buyer-owned missing receipt produces “This isn't mine to fix” and a
+  tracked buyer case rather than a false resolution.
 
-Enter the canonical prompt. Show tool discovery, the three ready packages, the excluded missing-PO invoice, and the informed Acme transfer preview. Confirm the exact three packages for read-only validation on camera.
+### Cash and authority conclusion
 
-> One invoice is already excluded because it has no PO. Before any PDF crosses sites, I approve these exact three packages and the Acme destination for read-only validation.
-
-### 0:55–1:20 — Reconciliation
-
-Show AP requirements, purchase orders, and the three validation results.
-
-> The agent validates only the transfer-approved packages against live Acme data. Two pass; INV-10507 exceeds PO-8890’s ten-thousand-dollar remaining balance.
-
-### 1:20–1:42 — Submission approval
-
-Hold on the confirmation preview long enough to read both valid invoices, POs, amounts, the $25,670 total, destination, and exceptions. Confirm on camera.
-
-> The agent prepares and explains; the human retains authority. The validation approval did not authorize submission. I separately approve only these two valid invoices now.
-
-### 1:42–2:20 — Execution and writeback
-
-Show the Acme submission, two portal references, updated PO balances, then the OpenFinance writeback.
-
-> Acme commits the approved batch atomically and returns verifiable references. The agent records those references and the rejected invoice’s actionable exception back in OpenFinance.
-
-### 2:20–2:47 — Visible proof and implication
-
-Show both audit trails and final states side by side.
-
-> Both applications now show the same completed business outcome through their own authoritative state and audit trail. This is the WebMCP-native future of OpenFinance: human-controlled interoperability across the B2B web.
+End on exact payment remittance recorded back in AR with remaining due zero.
+Show both audit trails, then state the product and authority claim: 19 tools, two
+independently authenticated companies, and zero cross-writes. Each portal writes
+only its own ledger; the agent carries only information the human approves.
 
 ## Final submission gate
 

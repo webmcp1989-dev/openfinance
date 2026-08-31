@@ -286,11 +286,20 @@ bounded size, and public-safe YouTube copy.
 The repeatable-reset capability did not modify the renderer, screenshots,
 narration, thumbnail, generated WebM artifact, or create another video.
 
+The later optimized upload candidate is
+`artifacts/openfinance-contest-optimized.mp4`. A container-level media check on
+August 31 verified a 147.4-second duration, 1280x720 dimensions, and separate
+video and audio tracks. The file is 19,810,624 bytes and its SHA-256 digest is
+`7FF79D2130B9083CB26FD9530D69CCFA95AA4AB660BB8D1A6D112284DF7FE6D9`.
+It remains a local entrant-controlled artifact and has not been published by
+an AI agent.
+
 ## Submission-only tasks
 
-All local, database, deployment, OAuth/MCP, cross-application rehearsal,
-reset, and security gates are complete, and both applications are restored to
-the judge baseline. The entrant must still enter the two private judge
+All local, database, deployment, OAuth/MCP, cross-application rehearsal, and
+security gates are complete. The August 31 readiness check found that both
+applications still require one final independent restore to the canonical
+judge baseline described below. The entrant must also enter the two private judge
 passwords in Devpost, publish the existing reviewed narrated demo video using
 [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and submit
 before September 3, 2026 at 1:00 p.m. PDT.
