@@ -142,23 +142,29 @@ export function AcmeWorkspace({
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const activeStatusInvoiceNumber = statusLookup?.invoiceNumber;
 
   const refresh = useCallback(async () => {
-    const body = await apiRequest<{
-      purchaseOrders: PurchaseOrder[];
-      submissions: SubmissionRow[];
-      auditEvents: AuditEvent[];
-      auditAvailable: boolean;
-    }>("/api/agent/workspace", { cache: "no-store" });
+    const [body, refreshedStatus] = await Promise.all([
+      apiRequest<{
+        purchaseOrders: PurchaseOrder[];
+        submissions: SubmissionRow[];
+        auditEvents: AuditEvent[];
+        auditAvailable: boolean;
+      }>("/api/agent/workspace", { cache: "no-store" }),
+      activeStatusInvoiceNumber
+        ? apiRequest<{ found: boolean; submission: SubmissionRow | null }>("/api/agent/status", {
+            method: "POST",
+            body: JSON.stringify({ invoiceNumber: activeStatusInvoiceNumber }),
+          })
+        : Promise.resolve(undefined),
+    ]);
     setPurchaseOrders(body.purchaseOrders);
     setSubmissions(body.submissions);
-    setStatusLookup((current) => {
-      if (!current) return current;
-      return body.submissions.find((submission) => submission.invoiceNumber === current.invoiceNumber) ?? current;
-    });
+    if (refreshedStatus) setStatusLookup(refreshedStatus.submission);
     setAuditEvents(body.auditEvents);
     setAuditAvailable(body.auditAvailable);
-  }, []);
+  }, [activeStatusInvoiceNumber]);
 
   useEffect(() => {
     const handleDataChanged = () => void refresh().catch(() => undefined);

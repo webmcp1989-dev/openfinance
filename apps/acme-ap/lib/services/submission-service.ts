@@ -391,7 +391,9 @@ export async function replaceRejectedInvoice(
   });
   if (error?.code === "42501") throw new HttpError(403, "submitter_access_required", "Submitter access is required");
   if (error?.code === "23505") throw new HttpError(409, "idempotency_conflict", "Idempotency key conflicts with an earlier replacement");
-  if (error?.code === "23514") throw new HttpError(409, "replacement_conflict", error.message || "The invoice cannot be replaced in its current state");
+  if (error?.code === "23514") {
+    throw new HttpError(409, "replacement_conflict", "The invoice cannot be replaced in its current state");
+  }
   if (error?.code === "P0002") throw new HttpError(404, "invoice_not_found", "Current invoice submission was not found");
   if (error) throw new HttpError(422, "replacement_rejected", "Replacement invoice was not accepted");
   return data;

@@ -426,6 +426,8 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain("purchaseOrderLookup.lines");
     expect(ap).toContain("Resolve, correct, or ask AP");
     expect(ap).toContain("approve submission to Acme AP");
+    expect(ap).toContain("activeStatusInvoiceNumber");
+    expect(ap).toContain("if (refreshedStatus) setStatusLookup(refreshedStatus.submission)");
   });
 
   test("the demo runbook requires separate transfer and submission confirmations", async () => {
@@ -435,11 +437,12 @@ describe("WebMCP safety contracts", () => {
   });
 
   test("judge-facing docs keep the optional remote MCP outside the browser challenge story", async () => {
-    const [readme, demo, submission, remoteMcp] = await Promise.all([
+    const [readme, demo, submission, remoteMcp, arWorkspace] = await Promise.all([
       readFile(join(root, "README.md"), "utf8"),
       readFile(join(root, "docs/DEMO.md"), "utf8"),
       readFile(join(root, "docs/SUBMISSION.md"), "utf8"),
       readFile(join(root, "docs/MCP.md"), "utf8"),
+      readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8"),
     ]);
 
     expect(readme).toContain("The primary submission, video, live prompt, and **19-tool** count cover only the browser-mediated WebMCP workflow");
@@ -447,6 +450,7 @@ describe("WebMCP safety contracts", () => {
     expect(submission).toContain("Do not include the optional AR remote MCP");
     expect(remoteMcp).toContain("not counted among the 19 browser WebMCP tools");
     expect(remoteMcp).toContain("never an AR-to-AP bridge");
+    expect(arWorkspace).not.toContain("7 site + 11 remote tools");
   });
 });
 

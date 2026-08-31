@@ -319,7 +319,6 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
       <section className="agent-guide" aria-label="Suggested agent task">
         <span className="agent-dot" aria-hidden="true" />
         <div><strong>19 tools, zero cross-writes</strong><p>These 7 site tools write only OpenFinance AR; Acme&apos;s 12 write only its AP portal. Your agent reconciles both live views, and you alone authorize data crossing between them.</p></div>
-        <div className="agent-links"><a href="/mcp-info">Connect an agent</a><a href="/connections">Manage access</a><span className="agent-ready">7 site + 11 remote tools</span></div>
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">

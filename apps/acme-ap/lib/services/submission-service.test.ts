@@ -7,6 +7,7 @@ mock.module("server-only", () => ({}));
 const {
   describeExceptionAuthority,
   getInvoiceStatus,
+  replaceRejectedInvoice,
   respondToInvoiceException,
   submitInvoiceBatch,
   validateInvoice,
@@ -109,6 +110,30 @@ describe("Acme invoice validation", () => {
     })).rejects.toMatchObject({
       status: 409,
       code: "buyer_owned_exception",
+    });
+  });
+
+  test("does not expose database details when a replacement conflicts", async () => {
+    const client = {
+      rpc() {
+        return Promise.resolve({
+          data: null,
+          error: {
+            code: "23514",
+            message: "new row violates check constraint private_internal_state",
+          },
+        });
+      },
+    };
+
+    await expect(replaceRejectedInvoice(
+      client as never,
+      "replacement-error-test-20260831",
+      invoice(),
+    )).rejects.toMatchObject({
+      status: 409,
+      code: "replacement_conflict",
+      message: "The invoice cannot be replaced in its current state",
     });
   });
 
