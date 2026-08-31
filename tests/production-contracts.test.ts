@@ -149,6 +149,7 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608300006_serialize_invoice_inquiries.sql");
     expect(setup).toContain("202608300007_serialize_exception_responses.sql");
     expect(setup).toContain("202608300008_name_postgrest_rpc_arguments.sql");
+    expect(setup).toContain("202608310001_complete_exception_workflow.sql");
   });
 
   test("expanded exception-to-cash records remain tenant-scoped and database-enforced", async () => {
@@ -160,6 +161,7 @@ describe("database mutation boundaries", () => {
     const arIdempotency = await readFile(join(root, "services/openfinance/supabase/migrations/202608300006_serialize_remittance_idempotency.sql"), "utf8");
     const apInquiryIdempotency = await readFile(join(root, "services/acme/supabase/migrations/202608300006_serialize_invoice_inquiries.sql"), "utf8");
     const apResponseIdempotency = await readFile(join(root, "services/acme/supabase/migrations/202608300007_serialize_exception_responses.sql"), "utf8");
+    const completeApWorkflow = await readFile(join(root, "services/acme/supabase/migrations/202608310001_complete_exception_workflow.sql"), "utf8");
 
     for (const migration of [ar, ap]) {
       expect(migration).toContain("enable row level security");
@@ -172,6 +174,10 @@ describe("database mutation boundaries", () => {
     expect(replacement).toContain("for update");
     expect(replacement).toContain("Replacement exceeds purchase order balance");
     expect(replacement).toContain("is_current = false");
+    expect(completeApWorkflow).toContain("other_exception.status in ('open', 'responded')");
+    expect(completeApWorkflow).toContain("set status = 'accepted'");
+    expect(completeApWorkflow).toContain("exception.supplier_id = (select private.current_supplier_id())");
+    expect(completeApWorkflow).toContain("security invoker");
     for (const migration of [arPdf, apPdf]) {
       expect(migration).toContain("convert_to('%PDF-', 'UTF8')");
       expect(migration).toContain("convert_to('%%EOF', 'UTF8')");
@@ -449,6 +455,9 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain("if (refreshedStatus) setStatusLookup(refreshedStatus.submission)");
     expect(ap).toContain('event.action === "rejected_invoice_replaced"');
     expect(ap).toContain('event.action === "invoice_exception_responded"');
+    expect(ap).toContain('event.action === "invoice_exception_resolved"');
+    expect(ap).toContain("Invoice exception queue");
+    expect(ap).toContain("workflowPresentation(item)");
   });
 
   test("the demo runbook requires separate transfer and submission confirmations", async () => {
@@ -522,5 +531,8 @@ describe("OpenAPI contract coverage", () => {
     expect(document.components.responses).toHaveProperty("UnsupportedMediaType");
     expect(document.components.schemas).toHaveProperty("DeliveryEventResult");
     expect(document.components.schemas).toHaveProperty("InvoiceStatusResult");
+    expect(document.components.schemas).toHaveProperty("ExceptionResponseResult");
+    expect(document.components.schemas).toHaveProperty("InvoiceInquiryResult");
+    expect(document.components.schemas).toHaveProperty("InvoiceWorkflowItem");
   });
 });

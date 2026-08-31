@@ -10,7 +10,7 @@ import type {
   ValidationIssue,
 } from "@/lib/domain/submissions";
 import type { AuditEvent } from "@/lib/services/audit-service";
-import type { SubmissionRow } from "@/lib/services/submission-service";
+import type { InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
 import { hasStructuralPdf } from "@/lib/pdf-structure";
 import { AcmeSiteTools } from "./acme-site-tools";
 
@@ -73,6 +73,51 @@ export function filterSubmissionRows(
   );
 }
 
+function workflowOwnerLabel(owner: InvoiceWorkflowItem["exception"]["owner"]) {
+  if (owner === "supplier_ar") return "Supplier";
+  if (owner === "buyer_receiving") return "Acme receiving";
+  if (owner === "buyer_procurement") return "Acme procurement";
+  if (owner === "buyer_ap") return "Acme AP";
+  return "Shared";
+}
+
+export function workflowPresentation(item: InvoiceWorkflowItem) {
+  const owner = workflowOwnerLabel(item.exception.owner);
+  if (item.exception.status === "resolved" && item.invoiceStatus === "accepted") {
+    return {
+      label: "Approved", tone: "approved", owner,
+      title: "Required evidence verified",
+      detail: "Acme verified the required supplier evidence, cleared the exception, and approved the invoice.",
+    } as const;
+  }
+  if (item.latestInquiry && (item.latestInquiry.status === "open" || item.latestInquiry.status === "in_progress")) {
+    return {
+      label: "Case open", tone: "case-open", owner,
+      title: `${item.latestInquiry.caseReference} · Awaiting buyer action`,
+      detail: `${owner} owns this blocker. The invoice remains on hold while the tracked case is open.`,
+    } as const;
+  }
+  if (item.exception.status === "resolved") {
+    return {
+      label: "Resolved", tone: "approved", owner,
+      title: "Exception resolved",
+      detail: "The portal has completed this exception workflow.",
+    } as const;
+  }
+  if (item.exception.status === "responded") {
+    return {
+      label: "Evidence received", tone: "responded", owner,
+      title: "Awaiting buyer review",
+      detail: "The supplier response is recorded, but the portal has not approved the invoice.",
+    } as const;
+  }
+  return {
+    label: "Action required", tone: "action-required", owner,
+    title: `${owner} owns the next action`,
+    detail: item.exception.resolutionGuidance,
+  } as const;
+}
+
 function auditSummary(event: AuditEvent) {
   if (event.action === "demo_state_reset") {
     return "Canonical synthetic AP data restored";
@@ -86,6 +131,9 @@ function auditSummary(event: AuditEvent) {
     const exceptionCode = typeof event.details.exceptionCode === "string" ? event.details.exceptionCode.replaceAll("_", " ") : "exception";
     const attachmentCount = typeof event.details.attachmentCount === "number" ? event.details.attachmentCount : 0;
     return `${invoiceNumber} · ${exceptionCode} · ${attachmentCount} attachment${attachmentCount === 1 ? "" : "s"}`;
+  }
+  if (event.action === "invoice_exception_resolved" && invoiceNumber) {
+    return `${invoiceNumber} · required evidence verified · approved`;
   }
   if (event.action === "invoice_inquiry_created" && invoiceNumber) {
     return `${invoiceNumber} · ${event.entityId}`;
@@ -142,11 +190,12 @@ export async function fileDocument(file: File, requirements: SubmissionRequireme
 }
 
 export function AcmeWorkspace({
-  initialRequirements, initialPurchaseOrders, initialSubmissions, initialAuditEvents, initialAuditAvailable, supplierName, supplierCode, signOutAction,
+  initialRequirements, initialPurchaseOrders, initialSubmissions, initialWorkflows, initialAuditEvents, initialAuditAvailable, supplierName, supplierCode, signOutAction,
 }: {
   initialRequirements: SubmissionRequirements;
   initialPurchaseOrders: PurchaseOrder[];
   initialSubmissions: SubmissionRow[];
+  initialWorkflows: InvoiceWorkflowItem[];
   initialAuditEvents: AuditEvent[];
   initialAuditAvailable: boolean;
   supplierName: string;
@@ -156,6 +205,7 @@ export function AcmeWorkspace({
   const [requirements] = useState(initialRequirements);
   const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
   const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [workflows, setWorkflows] = useState(initialWorkflows);
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const [purchaseOrderLookup, setPurchaseOrderLookup] = useState<PurchaseOrder | null | undefined>(undefined);
@@ -180,6 +230,7 @@ export function AcmeWorkspace({
       apiRequest<{
         purchaseOrders: PurchaseOrder[];
         submissions: SubmissionRow[];
+        workflows: InvoiceWorkflowItem[];
         auditEvents: AuditEvent[];
         auditAvailable: boolean;
       }>("/api/agent/workspace", { cache: "no-store" }),
@@ -192,6 +243,7 @@ export function AcmeWorkspace({
     ]);
     setPurchaseOrders(body.purchaseOrders);
     setSubmissions(body.submissions);
+    setWorkflows(body.workflows);
     if (refreshedStatus) setStatusLookup(refreshedStatus.submission);
     setAuditEvents(body.auditEvents);
     setAuditAvailable(body.auditAvailable);
@@ -374,7 +426,7 @@ export function AcmeWorkspace({
         documentKind: String(formData.get("documentKind") ?? "other"),
       }] : [];
       const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
-      await apiRequest("/api/agent/exception-responses", {
+      const result = await apiRequest<{ exceptionStatus: string; invoiceStatus: string }>("/api/agent/exception-responses", {
         method: "POST",
         body: JSON.stringify({
           idempotencyKey: idempotencyKey("ui-exception-response"),
@@ -385,7 +437,9 @@ export function AcmeWorkspace({
         }),
       });
       await refresh();
-      setNotice(`${invoiceNumber} exception response was sent with ${attachments.length} supporting document${attachments.length === 1 ? "" : "s"}.`);
+      setNotice(result.exceptionStatus === "resolved" && result.invoiceStatus === "accepted"
+        ? `${invoiceNumber} evidence was verified, the exception cleared, and the invoice was approved.`
+        : `${invoiceNumber} exception response was sent with ${attachments.length} supporting document${attachments.length === 1 ? "" : "s"}.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Exception response could not be sent");
     } finally {
@@ -488,7 +542,7 @@ export function AcmeWorkspace({
           <span className="openfinance-logo portal-openfinance-logo" aria-hidden="true">OF</span>
           <span><strong>OpenFinance</strong><small>Supplier Portal · Acme</small></span>
         </div>
-        <nav aria-label="Primary navigation"><a href="#operations">Submit invoice</a><a href="#orders">Purchase orders</a><a href="#submissions">Receipts</a></nav>
+        <nav aria-label="Primary navigation"><a href="#operations">Submit invoice</a><a href="#exceptions">Exceptions</a><a href="#orders">Purchase orders</a><a href="#submissions">Receipts</a></nav>
         <div className="supplier"><div><small>Signed in as</small><strong>{supplierName}</strong><span>{supplierCode}</span></div><form action={signOutAction}><button className="signout" type="submit">Sign out</button></form></div>
       </header>
 
@@ -515,6 +569,29 @@ export function AcmeWorkspace({
       <section className="agent-guide" aria-label="Human and agent workflow">
         <span className="pulse" aria-hidden="true" />
         <div><strong>12 authenticated tools, one governed portal</strong><p>Every tool operates only within this supplier portal and follows the same validation, authorization, and human-approval rules as the interface.</p></div>
+      </section>
+
+      <section className="workflow-board" id="exceptions" aria-labelledby="workflow-board-title">
+        <div className="section-heading">
+          <div><p className="kicker">Exception ownership</p><h2 id="workflow-board-title">Invoice exception queue</h2></div>
+          <span>{workflows.filter((item) => item.exception.status === "open").length} requiring action</span>
+        </div>
+        {workflows.length === 0 ? <div className="empty-state"><strong>No invoice exceptions</strong><p>New buyer or supplier action items will appear here.</p></div> : (
+          <div className="workflow-grid">{workflows.map((item) => {
+            const presentation = workflowPresentation(item);
+            return <article className={`workflow-card ${presentation.tone}`} key={`${item.invoiceNumber}-${item.exception.exceptionCode}`}>
+              <header>
+                <div><strong>{item.invoiceNumber}</strong><span>{item.portalReference}</span></div>
+                <span className="workflow-state">{presentation.label}</span>
+              </header>
+              <div className="workflow-meta"><span>{money.format(item.amountMinor / 100)} {item.currency}</span><span>Owner: {presentation.owner}</span></div>
+              <h3>{presentation.title}</h3>
+              <p>{presentation.detail}</p>
+              <small>{item.exception.exceptionCode.replaceAll("_", " ")} · {item.exception.message}</small>
+              {item.latestInquiry && <div className="case-reference"><strong>{item.latestInquiry.caseReference}</strong><span>{item.latestInquiry.subject} · {item.latestInquiry.status.replaceAll("_", " ")}</span></div>}
+            </article>;
+          })}</div>
+        )}
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">

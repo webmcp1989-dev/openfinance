@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(26);
+select plan(41);
 select has_table('public', 'purchase_order_lines', 'purchase-order line context exists');
 select has_table('public', 'invoice_status_events', 'invoice status timeline exists');
 select has_table('public', 'invoice_exceptions', 'structured invoice exceptions exist');
@@ -15,6 +15,10 @@ select ok(not has_table_privilege('authenticated', 'public.invoice_exceptions', 
 select ok(not has_table_privilege('authenticated', 'public.invoice_status_events', 'insert'), 'authenticated callers cannot forge status events');
 select ok(not (select prosecdef from pg_proc where oid = 'public.respond_to_invoice_exception(text,text,jsonb)'::regprocedure), 'public exception-response wrapper uses caller privileges');
 select ok(not (select prosecdef from pg_proc where oid = 'public.replace_rejected_invoice(text,text,jsonb)'::regprocedure), 'public replacement wrapper uses caller privileges');
+select has_function('public', 'get_invoice_workflow_items', array[]::text[], 'tenant-scoped exception workflow read model exists');
+select ok(not (select prosecdef from pg_proc where oid = 'public.get_invoice_workflow_items()'::regprocedure), 'public workflow read wrapper uses caller privileges');
+select ok(not has_function_privilege('anon', 'public.get_invoice_workflow_items()', 'execute'), 'anonymous callers cannot read exception workflows');
+select ok(has_function_privilege('authenticated', 'public.get_invoice_workflow_items()', 'execute'), 'authenticated suppliers can read their exception workflows');
 select ok(position('pg_advisory_xact_lock' in pg_get_functiondef('private.create_invoice_inquiry(text,text,jsonb)'::regprocedure)) > 0, 'concurrent inquiry retries are serialized');
 select ok(
   position('owner not in' in pg_get_functiondef('private.respond_to_invoice_exception(text,text,jsonb)'::regprocedure)) > 0
@@ -55,6 +59,12 @@ select set_config(
 );
 set local role authenticated;
 
+select is(
+  (public.reset_demo_state()->>'seededExceptionCount'),
+  '3',
+  'security and workflow tests start from the canonical three-exception baseline'
+);
+
 create function pg_temp.structural_pdf()
 returns bytea
 language plpgsql
@@ -72,7 +82,7 @@ select lives_ok(
     select public.create_invoice_inquiry(
       'security-inquiry-fingerprint-0001',
       repeat('a', 64),
-      '{"invoiceNumber":"INV-10417","inquiryType":"invoice_inquiry","subject":"First request","message":"First canonical payload."}'::jsonb
+      '{"invoiceNumber":"INV-10463","inquiryType":"invoice_inquiry","subject":"Missing receipt follow-up","message":"Please ask Acme receiving to post the missing goods receipt."}'::jsonb
     )
   $$,
   'a direct authenticated inquiry call accepts its first canonical payload'
@@ -82,12 +92,99 @@ select throws_ok(
     select public.create_invoice_inquiry(
       'security-inquiry-fingerprint-0001',
       repeat('a', 64),
-      '{"invoiceNumber":"INV-10417","inquiryType":"invoice_inquiry","subject":"Changed request","message":"A changed payload must not inherit the first result."}'::jsonb
+      '{"invoiceNumber":"INV-10463","inquiryType":"invoice_inquiry","subject":"Changed request","message":"A changed payload must not inherit the first result."}'::jsonb
     )
   $$,
   '23505',
   'Idempotency key reused with different payload',
   'a forged repeated caller fingerprint cannot hide a changed inquiry payload'
+);
+
+select is(
+  (public.respond_to_invoice_exception(
+    'verified-evidence-test-0001', repeat('c', 64),
+    jsonb_build_object(
+      'invoiceNumber', 'INV-10417',
+      'exceptionCode', 'missing_delivery_proof',
+      'message', 'Attached is the verified proof of delivery requested by Acme.',
+      'attachments', jsonb_build_array(jsonb_build_object(
+        'documentKind', 'proof_of_delivery',
+        'fileName', 'INV-10417-proof.pdf',
+        'mediaType', 'application/pdf',
+        'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+      ))
+    )
+  )->>'exceptionStatus'),
+  'resolved',
+  'verified required supplier evidence resolves the exception'
+);
+select is(
+  (public.respond_to_invoice_exception(
+    'verified-evidence-test-0001', repeat('d', 64),
+    jsonb_build_object(
+      'invoiceNumber', 'INV-10417',
+      'exceptionCode', 'missing_delivery_proof',
+      'message', 'Attached is the verified proof of delivery requested by Acme.',
+      'attachments', jsonb_build_array(jsonb_build_object(
+        'documentKind', 'proof_of_delivery',
+        'fileName', 'INV-10417-proof.pdf',
+        'mediaType', 'application/pdf',
+        'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+      ))
+    )
+  )->>'invoiceStatus'),
+  'accepted',
+  'an identical retry returns the original accepted invoice outcome'
+);
+select is(
+  (select status from public.invoice_exceptions where id = '81000000-0000-4000-8000-000000000001'::uuid),
+  'resolved',
+  'the supplier-owned exception is persistently resolved'
+);
+select is(
+  (select status from public.invoice_submissions where id = '80000000-0000-4000-8000-000000000001'::uuid),
+  'accepted'::public.invoice_submission_status,
+  'the invoice is persistently approved after its only blocker resolves'
+);
+select is(
+  (select count(*)::text from public.invoice_status_events
+   where invoice_submission_id = '80000000-0000-4000-8000-000000000001'::uuid
+     and event_code = 'supplier_evidence_approved'),
+  '1',
+  'an identical retry cannot duplicate the approval timeline event'
+);
+select is(
+  (select count(*)::text from public.audit_events
+   where action = 'invoice_exception_resolved'
+     and details->>'invoiceNumber' = 'INV-10417'),
+  '1',
+  'an identical retry cannot duplicate the resolution audit event'
+);
+select is(
+  (select workflow.exception_status || '|' || workflow.invoice_status
+   from public.get_invoice_workflow_items() as workflow
+   where workflow.invoice_number = 'INV-10417'),
+  'resolved|accepted',
+  'the workflow read model exposes the approved supplier-owned outcome'
+);
+select is(
+  (select status from public.invoice_exceptions where id = '81000000-0000-4000-8000-000000000002'::uuid),
+  'open',
+  'opening a buyer case does not falsely resolve the buyer-owned exception'
+);
+select is(
+  (select status from public.invoice_submissions where id = '80000000-0000-4000-8000-000000000002'::uuid),
+  'disputed'::public.invoice_submission_status,
+  'opening a buyer case leaves the blocked invoice on hold'
+);
+select is(
+  (select workflow.case_status
+   from public.get_invoice_workflow_items() as workflow
+   where workflow.invoice_number = 'INV-10463'),
+  'open',
+  'the workflow read model exposes the tracked open buyer case'
 );
 
 select lives_ok(

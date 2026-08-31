@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import { AcmeWorkspace } from "@/components/acme-workspace";
 import { loadAuditSnapshot } from "@/lib/services/audit-service";
-import { getRequirements, listPurchaseOrders, listSubmissions } from "@/lib/services/submission-service";
+import { getRequirements, listInvoiceWorkflows, listPurchaseOrders, listSubmissions } from "@/lib/services/submission-service";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -39,10 +39,11 @@ export default async function AcmeHome() {
   const supplier = supplierData as SupplierRow | null;
   if (supplierError || !supplier) redirect("/login?error=profile_missing");
 
-  const [requirements, purchaseOrders, submissions, auditSnapshot] = await Promise.all([
+  const [requirements, purchaseOrders, submissions, workflows, auditSnapshot] = await Promise.all([
     getRequirements(supabase),
     listPurchaseOrders(supabase),
     listSubmissions(supabase),
+    listInvoiceWorkflows(supabase),
     loadAuditSnapshot(supabase),
   ]);
 
@@ -50,6 +51,7 @@ export default async function AcmeHome() {
     initialRequirements={requirements}
     initialPurchaseOrders={purchaseOrders}
     initialSubmissions={submissions}
+    initialWorkflows={workflows}
     initialAuditEvents={auditSnapshot.auditEvents}
     initialAuditAvailable={auditSnapshot.auditAvailable}
     supplierName={supplier.name}

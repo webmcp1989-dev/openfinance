@@ -261,7 +261,8 @@ paths:
       summary: Read the signed-in application's visible state and recent audit trail
       description: >-
         The response shape is origin-specific. OpenFinance returns invoices and delivery
-        audit events; Acme returns purchase orders, submissions, and submission audit events.
+        audit events; Acme returns purchase orders, submissions, current exception workflows,
+        and submission audit events.
       responses:
         "200":
           description: Tenant-scoped workspace state
@@ -509,7 +510,11 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ExceptionResponseRequest" }
       responses:
-        "200": { description: Durable exception response receipt }
+        "200":
+          description: Durable response receipt including the authoritative exception and invoice outcome
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExceptionResponseResult" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -559,7 +564,11 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/InvoiceInquiryRequest" }
       responses:
-        "200": { description: AP case reference and status }
+        "200":
+          description: Durable AP case reference and open status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceInquiryResult" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -819,6 +828,19 @@ components:
           type: array
           maxItems: 3
           items: { $ref: "#/components/schemas/SupportingDocument" }
+    ExceptionResponseResult:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, exceptionCode, exceptionStatus, invoiceStatus, respondedAt, attachmentCount, resolution]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        exceptionCode: { type: string, pattern: "^[a-z][a-z0-9_]{1,63}$" }
+        exceptionStatus: { type: string, enum: [responded, resolved] }
+        invoiceStatus: { type: string, enum: [received, under_review, accepted, rejected, disputed, voided, paid] }
+        respondedAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+        attachmentCount: { type: integer, minimum: 0, maximum: 3 }
+        resolution: { type: string, enum: [required_evidence_verified, buyer_review_required] }
     InvoiceInquiryRequest:
       type: object
       additionalProperties: false
@@ -829,6 +851,16 @@ components:
         inquiryType: { type: string, enum: [payment_inquiry, invoice_inquiry, expedite_payment, payment_terms, invoice_entry_assistance] }
         subject: { type: string, minLength: 1, maxLength: 160 }
         message: { type: string, minLength: 1, maxLength: 1000 }
+    InvoiceInquiryResult:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, caseReference, inquiryType, status, createdAt]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        caseReference: { type: string, pattern: "^CASE-[0-9]{8}-[A-F0-9]{8}$" }
+        inquiryType: { type: string, enum: [payment_inquiry, invoice_inquiry, expedite_payment, payment_terms, invoice_entry_assistance] }
+        status: { type: string, const: open }
+        createdAt: { type: string, format: date-time }
     PortalResultRequest:
       type: object
       additionalProperties: false
@@ -1005,6 +1037,28 @@ components:
           description: Explicit trust statement. Buyer-owned blockers tell the supplier agent that the work is not within its authority and recommend a tracked AP case.
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    InvoiceWorkflowItem:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, portalReference, amountMinor, currency, invoiceStatus, exception, latestInquiry]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        portalReference: { type: string }
+        amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        invoiceStatus: { type: string, enum: [received, under_review, accepted, rejected, disputed, voided, paid] }
+        exception: { $ref: "#/components/schemas/InvoiceException" }
+        latestInquiry:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [caseReference, status, subject, createdAt]
+              properties:
+                caseReference: { type: string, pattern: "^CASE-[0-9]{8}-[A-F0-9]{8}$" }
+                status: { type: string, enum: [open, in_progress, resolved, closed] }
+                subject: { type: string }
+                createdAt: { type: string, format: date-time }
+            - { type: "null" }
     SubmissionReceipt:
       type: object
       required: [invoiceNumber, portalReference, purchaseOrderNumber, amountMinor, currency, status, createdAt, settlementExpectedAt, paidAt, paymentReference]
@@ -1058,10 +1112,11 @@ components:
     AcmeWorkspaceState:
       type: object
       additionalProperties: false
-      required: [purchaseOrders, submissions, auditEvents, auditAvailable]
+      required: [purchaseOrders, submissions, workflows, auditEvents, auditAvailable]
       properties:
         purchaseOrders: { type: array, items: { $ref: "#/components/schemas/PurchaseOrder" } }
         submissions: { type: array, items: { $ref: "#/components/schemas/SubmissionReceipt" } }
+        workflows: { type: array, items: { $ref: "#/components/schemas/InvoiceWorkflowItem" } }
         auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
         auditAvailable: { type: boolean, description: False when the optional recent-audit read failed; auditEvents is then empty. }
     OpenFinanceDemoResetResult:

@@ -34,9 +34,9 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 | `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts; identical retries return the original result. |
 | `get_invoice_status` | read | Returns the current receipt and revision, complete timeline across revisions, current exceptions and inquiries, and completed payment reference. |
 | `get_invoice_exception` | read | Returns structured exception ownership, supplier authority, an explicit authority-boundary statement, guidance, evidence requirements, and permitted actions. |
-| `respond_to_invoice_exception` | consequential write, idempotent | Sends a reviewed supplier response and up to three verified supporting PDFs; the AP backend rejects buyer-owned blockers and enforces required evidence. |
+| `respond_to_invoice_exception` | consequential write, idempotent | Sends a reviewed supplier response and up to three verified supporting PDFs. Exact requested evidence resolves that exception and approves a disputed invoice only when no other actionable blocker remains; the result reports both authoritative states. Buyer-owned blockers are rejected. |
 | `replace_rejected_invoice` | consequential write, idempotent | Transactionally supersedes an eligible rejected invoice with a corrected revision and adjusts PO balances. |
-| `create_invoice_inquiry` | consequential write, idempotent | Opens a tracked payment, invoice, expedite, terms, entry-assistance, or buyer-owned-blocker case. |
+| `create_invoice_inquiry` | consequential write, idempotent | Opens a persistent tracked payment, invoice, expedite, terms, entry-assistance, or buyer-owned-blocker case and returns its `CASE-*` reference. It never resolves the buyer-owned exception or approves the invoice. |
 | `get_payment_remittance` | read | Returns scheduled or completed payment details and exact invoice allocations so the approved workflow can finish with AR reconciliation. |
 
 ## Contract principles
@@ -63,10 +63,10 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 7. Submit the valid batch exactly once with a unique idempotency key.
 8. Verify returned references and visible AP state.
 9. Record verified results and exceptions in OpenFinance.
-10. For open exceptions, follow the returned owner and `supplierCanResolve` boundary. Resolve supplier-owned evidence gaps after approval; for buyer-owned work say “This isn't mine to fix,” name the buyer owner, and offer an approved tracked inquiry.
+10. For open exceptions, follow the returned owner and `supplierCanResolve` boundary. Resolve supplier-owned evidence gaps after approval and verify the returned `exceptionStatus` and `invoiceStatus`; for buyer-owned work say “This isn't mine to fix,” name the buyer owner, and offer an approved tracked inquiry. Verify its returned case reference while leaving the blocker open.
 11. After AP marks an invoice paid, read its exact remittance, preview the allocation, and after approval record it in AR. Submission is not the end state; cash reconciliation is.
 
-Both applications refresh their visible state after writes and show recent tenant-scoped database audit events alongside the invoice queue, PO balances, and portal receipts. Acme's deterministic challenge simulator schedules every second committed supplier invoice for payment 10 seconds later. `get_invoice_status` remains a read-only discovery operation: it reads the same session-scoped backend status used by the human UI and never advances state as a side effect.
+Both applications refresh their visible state after writes and show recent tenant-scoped database audit events alongside the invoice queue, PO balances, and portal receipts. Acme also exposes a tenant-scoped exception queue: verified required evidence moves the supplier-owned card from **Action required** to **Approved**, while a buyer-owned blocker remains on hold and shows the durable open `CASE-*` reference. Acme's deterministic challenge simulator schedules every second committed supplier invoice for payment 10 seconds later. `get_invoice_status` remains a read-only discovery operation: it reads the same session-scoped backend status used by the human UI and never advances state as a side effect.
 
 The 19-tool inventory intentionally has **zero cross-writes**. The seven OpenFinance site tools can mutate only AR state, and the twelve Acme tools can mutate only AP state. Tool count increases capability without increasing implicit authority: the human remains the only actor who approves data crossing between the separately authenticated applications.
 

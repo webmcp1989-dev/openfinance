@@ -7,6 +7,7 @@ mock.module("server-only", () => ({}));
 const {
   describeExceptionAuthority,
   getInvoiceStatus,
+  listInvoiceWorkflows,
   replaceRejectedInvoice,
   respondToInvoiceException,
   submitInvoiceBatch,
@@ -88,6 +89,51 @@ describe("Acme invoice validation", () => {
     }));
   });
 
+  test("maps the tenant-scoped workflow read model without client-side authority guesses", async () => {
+    const client = {
+      rpc(name: string) {
+        expect(name).toBe("get_invoice_workflow_items");
+        return Promise.resolve({ data: [{
+          invoice_number: "INV-10463",
+          portal_reference: "ACME-20260820-A1046301",
+          amount_minor: 1_100_000,
+          currency: "USD",
+          invoice_status: "disputed",
+          exception_code: "missing_goods_receipt",
+          exception_category: "receiving",
+          exception_owner: "buyer_receiving",
+          exception_status: "open",
+          exception_message: "The purchase order has no posted goods receipt.",
+          resolution_guidance: "Open a tracked buyer case.",
+          allowed_actions: ["create_invoice_inquiry"],
+          required_document_kind: null,
+          exception_created_at: "2026-08-20T00:00:00.000Z",
+          exception_updated_at: "2026-08-21T00:00:00.000Z",
+          case_reference: "CASE-20260831-ABCDEF12",
+          case_status: "open",
+          case_subject: "Missing receipt follow-up",
+          case_created_at: "2026-08-31T00:00:00.000Z",
+        }], error: null });
+      },
+    };
+
+    await expect(listInvoiceWorkflows(client as never)).resolves.toEqual([expect.objectContaining({
+      invoiceNumber: "INV-10463",
+      invoiceStatus: "disputed",
+      exception: expect.objectContaining({
+        owner: "buyer_receiving",
+        supplierCanResolve: false,
+        status: "open",
+      }),
+      latestInquiry: {
+        caseReference: "CASE-20260831-ABCDEF12",
+        status: "open",
+        subject: "Missing receipt follow-up",
+        createdAt: "2026-08-31T00:00:00.000Z",
+      },
+    })]);
+  });
+
   test("returns an actionable conflict when AP rejects a buyer-owned response", async () => {
     const client = {
       rpc() {
@@ -111,6 +157,40 @@ describe("Acme invoice validation", () => {
       status: 409,
       code: "buyer_owned_exception",
     });
+  });
+
+  test("returns the authoritative resolved invoice state after verified evidence", async () => {
+    const { client, calls } = fakeSupabase({
+      rpcResult: {
+        invoiceNumber: "INV-10417",
+        exceptionCode: "missing_delivery_proof",
+        exceptionStatus: "resolved",
+        invoiceStatus: "accepted",
+        resolution: "required_evidence_verified",
+      },
+    });
+    const request = {
+      idempotencyKey: "supplier-evidence-test-20260831",
+      invoiceNumber: "INV-10417",
+      exceptionCode: "missing_delivery_proof",
+      message: "Verified proof of delivery attached.",
+      attachments: [{ documentKind: "proof_of_delivery" }],
+    };
+
+    await expect(respondToInvoiceException(client as never, request)).resolves.toEqual({
+      invoiceNumber: "INV-10417",
+      exceptionCode: "missing_delivery_proof",
+      exceptionStatus: "resolved",
+      invoiceStatus: "accepted",
+      resolution: "required_evidence_verified",
+    });
+    expect(calls).toEqual([expect.objectContaining({
+      name: "respond_to_invoice_exception",
+      args: expect.objectContaining({
+        p_idempotency_key: request.idempotencyKey,
+        p_payload: expect.objectContaining({ invoiceNumber: "INV-10417" }),
+      }),
+    })]);
   });
 
   test("does not expose database details when a replacement conflicts", async () => {

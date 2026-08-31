@@ -66,6 +66,21 @@ export type SubmissionRow = Readonly<{
   }>>;
 }>;
 
+export type InvoiceWorkflowItem = Readonly<{
+  invoiceNumber: string;
+  portalReference: string;
+  amountMinor: number;
+  currency: string;
+  invoiceStatus: SubmissionRow["status"];
+  exception: InvoiceException;
+  latestInquiry: Readonly<{
+    caseReference: string;
+    status: "open" | "in_progress" | "resolved" | "closed";
+    subject: string;
+    createdAt: string;
+  }> | null;
+}>;
+
 type SubmissionDatabaseRow = {
   invoice_number: string;
   portal_reference: string;
@@ -77,6 +92,28 @@ type SubmissionDatabaseRow = {
   settlement_expected_at: string | null;
   paid_at: string | null;
   payment_reference: string | null;
+};
+
+type InvoiceWorkflowDatabaseRow = {
+  invoice_number: string;
+  portal_reference: string;
+  amount_minor: number;
+  currency: string;
+  invoice_status: SubmissionRow["status"];
+  exception_code: string;
+  exception_category: InvoiceException["category"];
+  exception_owner: InvoiceException["owner"];
+  exception_status: InvoiceException["status"];
+  exception_message: string;
+  resolution_guidance: string;
+  allowed_actions: string[];
+  required_document_kind: string | null;
+  exception_created_at: string;
+  exception_updated_at: string;
+  case_reference: string | null;
+  case_status: "open" | "in_progress" | "resolved" | "closed" | null;
+  case_subject: string | null;
+  case_created_at: string | null;
 };
 
 function mapPurchaseOrder(row: PurchaseOrderRow): PurchaseOrder {
@@ -266,6 +303,40 @@ export async function listSubmissions(supabase: SupabaseClient): Promise<Submiss
   });
   if (error) throw new HttpError(500, "submission_query_failed", "Invoice submissions could not be loaded");
   return (data as unknown as SubmissionDatabaseRow[]).map(mapSubmission);
+}
+
+export async function listInvoiceWorkflows(supabase: SupabaseClient): Promise<InvoiceWorkflowItem[]> {
+  const { data, error } = await supabase.rpc("get_invoice_workflow_items");
+  if (error) throw new HttpError(500, "workflow_query_failed", "Invoice exception workflows could not be loaded");
+
+  return (data as unknown as InvoiceWorkflowDatabaseRow[]).map((row) => ({
+    invoiceNumber: row.invoice_number,
+    portalReference: row.portal_reference,
+    amountMinor: Number(row.amount_minor),
+    currency: row.currency,
+    invoiceStatus: row.invoice_status,
+    exception: {
+      exceptionCode: row.exception_code,
+      category: row.exception_category,
+      owner: row.exception_owner,
+      status: row.exception_status,
+      message: row.exception_message,
+      resolutionGuidance: row.resolution_guidance,
+      allowedActions: row.allowed_actions,
+      requiredDocumentKind: row.required_document_kind,
+      ...describeExceptionAuthority(row.exception_owner),
+      createdAt: row.exception_created_at,
+      updatedAt: row.exception_updated_at,
+    },
+    latestInquiry: row.case_reference && row.case_status && row.case_subject && row.case_created_at
+      ? {
+          caseReference: row.case_reference,
+          status: row.case_status,
+          subject: row.case_subject,
+          createdAt: row.case_created_at,
+        }
+      : null,
+  }));
 }
 
 export async function getInvoiceStatus(supabase: SupabaseClient, invoiceNumber: string): Promise<SubmissionRow | null> {

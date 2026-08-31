@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import type { SubmissionRequirements } from "@/lib/domain/submissions";
-import type { SubmissionRow } from "@/lib/services/submission-service";
-import { AP_AGENT_STARTER_PROMPT, fileDocument, filterSubmissionRows } from "./acme-workspace";
+import type { InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
+import { AP_AGENT_STARTER_PROMPT, fileDocument, filterSubmissionRows, workflowPresentation } from "./acme-workspace";
 
 function renderStructuralPdf() {
   const prefix = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n";
@@ -53,6 +53,76 @@ describe("human invoice portfolio filters", () => {
 
   test("returns the full supplier portfolio when filters are empty", () => {
     expect(filterSubmissionRows(submissions, "all", "")).toHaveLength(2);
+  });
+});
+
+function workflow(overrides: Partial<InvoiceWorkflowItem> = {}): InvoiceWorkflowItem {
+  return {
+    invoiceNumber: "INV-10417",
+    portalReference: "ACME-20260820-A1041701",
+    amountMinor: 640_000,
+    currency: "USD",
+    invoiceStatus: "disputed",
+    exception: {
+      exceptionCode: "missing_delivery_proof",
+      category: "document",
+      owner: "supplier_ar",
+      status: "open",
+      message: "Proof of delivery is required.",
+      resolutionGuidance: "Attach the verified proof of delivery.",
+      allowedActions: ["respond_to_exception"],
+      requiredDocumentKind: "proof_of_delivery",
+      supplierCanResolve: true,
+      authorityBoundary: "Supplier owns this blocker.",
+      createdAt: "2026-08-20T00:00:00.000Z",
+      updatedAt: "2026-08-20T00:00:00.000Z",
+    },
+    latestInquiry: null,
+    ...overrides,
+  };
+}
+
+describe("visible exception workflow states", () => {
+  test("shows an unresolved supplier blocker as action required", () => {
+    expect(workflowPresentation(workflow())).toEqual(expect.objectContaining({
+      label: "Action required",
+      owner: "Supplier",
+      tone: "action-required",
+    }));
+  });
+
+  test("shows a verified resolved exception as approved", () => {
+    expect(workflowPresentation(workflow({
+      invoiceStatus: "accepted",
+      exception: { ...workflow().exception, status: "resolved" },
+    }))).toEqual(expect.objectContaining({
+      label: "Approved",
+      title: "Required evidence verified",
+      tone: "approved",
+    }));
+  });
+
+  test("keeps a buyer-owned blocker on hold while showing its real case", () => {
+    expect(workflowPresentation(workflow({
+      invoiceNumber: "INV-10463",
+      exception: {
+        ...workflow().exception,
+        owner: "buyer_receiving",
+        exceptionCode: "missing_goods_receipt",
+        supplierCanResolve: false,
+      },
+      latestInquiry: {
+        caseReference: "CASE-20260831-ABCDEF12",
+        status: "open",
+        subject: "Missing receipt follow-up",
+        createdAt: "2026-08-31T00:00:00.000Z",
+      },
+    }))).toEqual(expect.objectContaining({
+      label: "Case open",
+      owner: "Acme receiving",
+      title: "CASE-20260831-ABCDEF12 · Awaiting buyer action",
+      tone: "case-open",
+    }));
   });
 });
 

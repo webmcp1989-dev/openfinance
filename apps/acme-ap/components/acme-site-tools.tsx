@@ -153,7 +153,7 @@ export function AcmeSiteTools() {
       {
         name: "respond_to_invoice_exception",
         title: "Respond to invoice exception",
-        description: "CONSEQUENTIAL WRITE: add a supplier response and up to three verified supporting PDFs to one actionable portal exception. Show the exact message and attachments and obtain human approval before calling. This does not replace or resubmit the invoice.",
+        description: "CONSEQUENTIAL WRITE: add a supplier response and up to three verified supporting PDFs to one actionable portal exception. Show the exact message and attachments and obtain human approval before calling. When the portal requested a specific evidence kind, exact validated evidence resolves that exception and approves the disputed invoice only if no other actionable blocker remains. The result returns both exceptionStatus and invoiceStatus. This does not replace or resubmit the invoice.",
         inputSchema: {
           type: "object", additionalProperties: false,
           required: ["idempotencyKey", "invoiceNumber", "exceptionCode", "message", "attachments"],
@@ -197,7 +197,7 @@ export function AcmeSiteTools() {
       {
         name: "create_invoice_inquiry",
         title: "Create invoice inquiry",
-        description: "CONSEQUENTIAL WRITE: open a tracked buyer AP case for a payment question, invoice question, expedite request, payment-terms issue, invoice-entry assistance, or buyer-owned blocker. When exception ownership is buyer_receiving, buyer_procurement, or buyer_ap, say 'This isn't mine to fix', name the buyer owner, then show the exact case type, subject, and message and obtain human approval first.",
+        description: "CONSEQUENTIAL WRITE: open a persistent tracked buyer AP case and return its CASE reference and open status for a payment question, invoice question, expedite request, payment-terms issue, invoice-entry assistance, or buyer-owned blocker. When exception ownership is buyer_receiving, buyer_procurement, or buyer_ap, say 'This isn't mine to fix', name the buyer owner, then show the exact case type, subject, and message and obtain human approval first. Opening a case never falsely resolves the buyer-owned exception or approves the invoice.",
         inputSchema: {
           type: "object", additionalProperties: false,
           required: ["idempotencyKey", "invoiceNumber", "inquiryType", "subject", "message"],
