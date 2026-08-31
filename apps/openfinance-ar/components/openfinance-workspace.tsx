@@ -71,6 +71,17 @@ function parseAmountMinor(value: string) {
   return amountMinor;
 }
 
+export function parseUtcDateTimeLocal(value: string) {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2}))?$/.exec(value.trim());
+  if (!match) throw new Error("Enter the exact UTC payment date and time.");
+
+  const date = new Date(`${match[1]}:${match[2] ?? "00"}Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 16) !== match[1]) {
+    throw new Error("Enter a valid UTC payment date and time.");
+  }
+  return date.toISOString();
+}
+
 export type OutcomeMode = "result" | "exception";
 
 export function isManualOutcomeStatusEligible(
@@ -339,7 +350,7 @@ export function OpenFinanceWorkspace({
           amountMinor: parseAmountMinor(String(formData.get("amount") ?? "")),
           currency: "USD",
           paymentMethod: String(formData.get("paymentMethod") ?? "ach"),
-          paidAt: new Date(String(formData.get("paidAt") ?? "")).toISOString(),
+          paidAt: parseUtcDateTimeLocal(String(formData.get("paidAt") ?? "")),
         }),
       });
       await refresh();
@@ -576,7 +587,7 @@ export function OpenFinanceWorkspace({
             <label><span>Payment reference</span><input name="paymentReference" required maxLength={120} placeholder="PAY-20260830-AB12CD34" /></label>
             <label><span>Paid amount</span><input name="amount" required inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="18420.00" /></label>
             <label><span>Payment method</span><select name="paymentMethod" defaultValue="ach"><option value="ach">ACH</option><option value="wire">Wire</option><option value="check">Check</option><option value="card">Card</option><option value="other">Other</option></select></label>
-            <label><span>Paid at</span><input name="paidAt" type="datetime-local" required /></label>
+            <label><span>Paid at <small>(UTC)</small></span><input name="paidAt" type="datetime-local" required /></label>
             <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I verified this exact reference, invoice allocation, amount, and payment date in the customer portal.</span></label>
             <button className="button primary full" type="submit" disabled={pendingAction !== null}>{pendingAction === "remittance" ? "Recording…" : "Record verified remittance"}</button>
           </form>
