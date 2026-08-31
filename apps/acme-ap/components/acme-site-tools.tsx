@@ -133,7 +133,7 @@ export function AcmeSiteTools() {
       {
         name: "get_invoice_status",
         title: "Get invoice status",
-        description: "Read one supplier invoice's current receipt, revision, complete timestamped AP timeline, structured exceptions, inquiries, and any completed synthetic payment reference. This is a read-only status check.",
+        description: "Read one supplier invoice's current receipt, revision, complete timestamped AP timeline across revisions, current structured exceptions, current inquiries, and any completed synthetic payment reference. This is a read-only status check.",
         inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
         execute: (input, options) => apiRequest("/api/agent/status", {

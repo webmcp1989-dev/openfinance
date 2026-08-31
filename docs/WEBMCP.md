@@ -32,7 +32,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 | `list_supplier_invoices` | read | Lists portal invoices with optional status or PO filters. |
 | `validate_invoice` | read, transfer-approved | Checks a human-approved package without reserving balance or writing data. |
 | `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts; identical retries return the original result. |
-| `get_invoice_status` | read | Returns the receipt, revision, complete timeline, exceptions, inquiries, and completed payment reference. |
+| `get_invoice_status` | read | Returns the current receipt and revision, complete timeline across revisions, current exceptions and inquiries, and completed payment reference. |
 | `get_invoice_exception` | read | Returns structured exception ownership, supplier authority, an explicit authority-boundary statement, guidance, evidence requirements, and permitted actions. |
 | `respond_to_invoice_exception` | consequential write, idempotent | Sends a reviewed supplier response and up to three verified supporting PDFs; the AP backend rejects buyer-owned blockers and enforces required evidence. |
 | `replace_rejected_invoice` | consequential write, idempotent | Transactionally supersedes an eligible rejected invoice with a corrected revision and adjusts PO balances. |

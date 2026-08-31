@@ -241,6 +241,7 @@ describe("Acme invoice validation", () => {
 
   test("loads one invoice status through the supplier-scoped read function", async () => {
     const calls: string[] = [];
+    const eventScopes: unknown[][] = [];
     const row = {
       invoice_number: "INV-10482",
       portal_reference: "ACME-20260829-ABCDEF12",
@@ -260,13 +261,24 @@ describe("Acme invoice validation", () => {
       },
       from(table: string) {
         const response = table === "invoice_submissions"
-          ? { data: { id: "submission-1", revision: 1 }, error: null }
-          : { data: [], error: null };
+          ? { data: [
+            { id: "submission-1", revision: 1, is_current: false },
+            { id: "submission-2", revision: 2, is_current: true },
+          ], error: null }
+          : table === "invoice_status_events"
+            ? { data: [{
+              status: "voided",
+              event_code: "invoice_replaced",
+              message: "Invoice was superseded by revision 2.",
+              actor_kind: "supplier",
+              created_at: "2026-08-29T07:00:05.000Z",
+            }], error: null }
+            : { data: [], error: null };
         const chain = {
           select() { return chain; },
           eq() { return chain; },
+          in(_column: string, values: unknown[]) { eventScopes.push(values); return chain; },
           order() { return chain; },
-          maybeSingle() { return Promise.resolve(response); },
           then(resolve: (value: typeof response) => unknown) { return Promise.resolve(response).then(resolve); },
         };
         return chain;
@@ -285,8 +297,14 @@ describe("Acme invoice validation", () => {
       settlementExpectedAt: "2026-08-29T07:00:10.000Z",
       paidAt: "2026-08-29T07:00:10.000Z",
       paymentReference: "PAY-20260829-1234ABCD",
-      revision: 1,
+      revision: 2,
       timeline: [{
+        status: "voided",
+        eventCode: "invoice_replaced",
+        message: "Invoice was superseded by revision 2.",
+        actorKind: "supplier",
+        createdAt: "2026-08-29T07:00:05.000Z",
+      }, {
         status: "paid",
         eventCode: "payment_completed",
         message: "Payment completed with reference PAY-20260829-1234ABCD.",
@@ -299,5 +317,6 @@ describe("Acme invoice validation", () => {
     expect(calls).toEqual([
       'rpc:get_invoice_submission_statuses:{"p_invoice_number":"INV-10482"}',
     ]);
+    expect(eventScopes).toEqual([["submission-1", "submission-2"]]);
   });
 });

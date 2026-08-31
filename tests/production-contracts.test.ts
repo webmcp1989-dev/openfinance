@@ -428,6 +428,7 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain('"/api/agent/validate"');
     expect(ap).toContain('"/api/agent/submissions"');
     expect(ap).toContain('"/api/agent/status"');
+    expect(ap).toContain("Revision {statusLookup.revision}");
     expect(ap).toContain("statusLookup.exceptions");
     expect(ap).toContain("exception.resolutionGuidance");
     expect(ap).toContain("statusLookup.inquiries");

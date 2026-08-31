@@ -276,14 +276,16 @@ export async function getInvoiceStatus(supabase: SupabaseClient, invoiceNumber: 
   const row = (data as unknown as SubmissionDatabaseRow[])[0];
   if (!row) return null;
   const submission = mapSubmission(row);
-  const { data: identity, error: identityError } = await supabase.from("invoice_submissions")
-    .select("id, revision").eq("invoice_number", invoiceNumber).eq("is_current", true).maybeSingle();
+  const { data: identities, error: identityError } = await supabase.from("invoice_submissions")
+    .select("id, revision, is_current").eq("invoice_number", invoiceNumber).order("revision", { ascending: true });
   if (identityError) throw new HttpError(500, "submission_query_failed", "Invoice status could not be loaded");
+  const identity = identities.find((candidate) => candidate.is_current);
   if (!identity) return null;
+  const revisionIds = identities.map((candidate) => candidate.id);
   const [timelineResult, exceptionResult, inquiryResult] = await Promise.all([
     supabase.from("invoice_status_events")
       .select("status, event_code, message, actor_kind, created_at")
-      .eq("invoice_submission_id", identity.id).order("created_at", { ascending: true }).order("id", { ascending: true }),
+      .in("invoice_submission_id", revisionIds).order("created_at", { ascending: true }).order("id", { ascending: true }),
     supabase.from("invoice_exceptions")
       .select("exception_code, category, owner, status, message, resolution_guidance, allowed_actions, required_document_kind, created_at, updated_at")
       .eq("invoice_submission_id", identity.id).order("created_at", { ascending: true }),

@@ -443,3 +443,24 @@ or establish correctness.
   `ready`/`rejected` query bound. Both type-checks and both lints pass.
 - Exact next action: run the full build/regression suite, deploy, verify the
   human and WebMCP paths live, then resume the confirmed stateful rehearsal.
+
+### F-013 — Corrected invoice status hid revision history
+
+- Severity: Medium.
+- Status: fixed locally; production deployment and independent live replay pending.
+- Evidence/root cause: the replacement transaction correctly recorded
+  `invoice_replaced` against revision 1 and created revision 2, but the status
+  service queried timeline events only for the current row. WebMCP therefore
+  returned revision 2 with a one-event timeline that omitted the supersession,
+  and the human status card did not render the returned revision number.
+- Remediation: the supplier-scoped service now loads all RLS-visible identities
+  for the invoice and reads timeline events across their IDs. Current exceptions
+  and inquiries remain scoped to the current identity. The human card renders
+  the authoritative revision, and tool/docs copy defines the cross-revision
+  timeline contract explicitly.
+- Tests: the focused service test now models two revisions, proves the event
+  query is limited to their exact IDs, and verifies the merged chronological
+  timeline. Focused suites pass (58 tests, 390 expectations), as do both
+  type-checks and both lints.
+- Exact next action: run full regression/build/audit, deploy, verify revision 2
+  and `invoice_replaced` live, then finish UI/audit checks and restore baseline.
