@@ -19,17 +19,33 @@ const timestamp = new Intl.DateTimeFormat("en-US", {
   timeZoneName: "short",
 });
 
+type InvoiceDisplayStatus = InvoiceQueueItem["status"] | "paid" | "partially_paid";
+
+function displayStatus(invoice: InvoiceQueueItem): InvoiceDisplayStatus {
+  if (invoice.paidAmountMinor >= invoice.amountMinor) return "paid";
+  if (invoice.paidAmountMinor > 0) return "partially_paid";
+  return invoice.status;
+}
+
 function statusLabel(invoice: InvoiceQueueItem) {
+  const status = displayStatus(invoice);
   const labels: Record<InvoiceQueueItem["status"], string> = {
     ready: "Ready", needs_attention: "Needs attention", submitted: "Submitted",
     accepted: "Accepted", rejected: "Rejected",
   };
-  return labels[invoice.status];
+  if (status === "paid") return "Paid";
+  if (status === "partially_paid") return "Partially paid";
+  return labels[status];
 }
 
 function auditSummary(event: AuditEvent) {
   if (event.action === "demo_state_reset") {
     return "Canonical synthetic AR data restored";
+  }
+  if (event.action === "payment_remittance_recorded") {
+    const invoiceNumber = typeof event.details.invoiceNumber === "string" ? event.details.invoiceNumber : "Invoice";
+    const paymentReference = typeof event.details.paymentReference === "string" ? event.details.paymentReference : "verified remittance";
+    return `${invoiceNumber} · ${paymentReference}`;
   }
   const eventType = typeof event.details.eventType === "string"
     ? event.details.eventType.replaceAll("_", " ")
@@ -67,7 +83,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const [customerFilter, setCustomerFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceQueueItem["status"]>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceDisplayStatus>("all");
   const [selected, setSelected] = useState<string[]>([]);
   const [packages, setPackages] = useState<SubmissionPackageItem[]>([]);
   const [outcomeMode, setOutcomeMode] = useState<OutcomeMode>("result");
@@ -104,7 +120,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
 
   const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
     const customerMatches = invoice.customerName.toLowerCase().includes(customerFilter.trim().toLowerCase());
-    return customerMatches && (statusFilter === "all" || invoice.status === statusFilter);
+    return customerMatches && (statusFilter === "all" || displayStatus(invoice) === statusFilter);
   }), [customerFilter, invoices, statusFilter]);
 
   const selectedReady = selected.filter((number) => invoices.some(
@@ -354,7 +370,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
           <div className="filters" aria-label="Invoice filters">
             <label><span>Customer</span><input value={customerFilter} onChange={(event) => setCustomerFilter(event.target.value)} placeholder="Filter customer" /></label>
             <label><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
-              <option value="all">All statuses</option><option value="ready">Ready</option><option value="needs_attention">Needs attention</option><option value="submitted">Submitted</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option>
+              <option value="all">All statuses</option><option value="ready">Ready</option><option value="needs_attention">Needs attention</option><option value="submitted">Submitted</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="partially_paid">Partially paid</option><option value="paid">Paid</option>
             </select></label>
           </div>
         </div>
@@ -388,7 +404,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
               <td>{invoice.customerName}</td>
               <td>{money.format(invoice.amountMinor / 100)}</td>
               <td>{invoice.purchaseOrderNumber ?? "Missing"}</td>
-              <td><span className={`badge ${invoice.status}`}>{statusLabel(invoice)}</span></td>
+              <td><span className={`badge ${displayStatus(invoice)}`}>{statusLabel(invoice)}</span></td>
               <td className="result-cell">{invoice.portalReference ?? invoice.exceptionMessage ?? "Awaiting portal review"}</td>
               <td><button className="text-button" type="button" onClick={() => void loadSupportingDocuments(invoice.invoiceNumber)} disabled={pendingAction !== null}>{pendingAction === `documents:${invoice.invoiceNumber}` ? "Loading…" : "View evidence"}</button></td>
             </tr>;
@@ -460,7 +476,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
           </div>
           <form className="outcome-form" action={(formData) => void recordRemittance(formData)}>
             <div><h3>Finish on cash</h3><p>Use only after get_payment_remittance returns the customer&apos;s completed allocation. Recording it here closes the AR balance; AP cannot write this state.</p></div>
-            <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select submitted invoice</option>{invoices.filter((invoice) => invoice.portalReference).map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber} · {money.format((invoice.amountMinor - invoice.paidAmountMinor) / 100)} due</option>)}</select></label>
+            <label><span>Invoice</span><select name="invoiceNumber" required defaultValue=""><option value="" disabled>Select submitted invoice</option>{invoices.filter((invoice) => invoice.portalReference && invoice.paidAmountMinor < invoice.amountMinor).map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber} · {money.format((invoice.amountMinor - invoice.paidAmountMinor) / 100)} due</option>)}</select></label>
             <label><span>Payment reference</span><input name="paymentReference" required maxLength={120} placeholder="PAY-20260830-AB12CD34" /></label>
             <label><span>Paid amount</span><input name="amount" required inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="18420.00" /></label>
             <label><span>Payment method</span><select name="paymentMethod" defaultValue="ach"><option value="ach">ACH</option><option value="wire">Wire</option><option value="check">Check</option><option value="card">Card</option><option value="other">Other</option></select></label>

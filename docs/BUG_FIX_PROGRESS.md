@@ -464,3 +464,25 @@ or establish correctness.
   type-checks and both lints.
 - Exact next action: run full regression/build/audit, deploy, verify revision 2
   and `invoice_replaced` live, then finish UI/audit checks and restore baseline.
+
+### F-014 — Cash and exception audit outcomes were misleading in human UI
+
+- Severity: Medium.
+- Status: fixed locally; final production verification pending.
+- Evidence/root cause: after three verified AP payments were recorded, AR's
+  backend correctly stored full payment totals and returned zero remaining due,
+  but the queue still displayed the local delivery state `Submitted`. Its audit
+  cards rendered each payment as `delivery update · 0 invoices`. AP likewise
+  rendered replacement, inquiry, and exception-response events as generic
+  zero-invoice batches even though their audit details contain exact invoice
+  context.
+- Remediation: AR now derives `Paid`/`Partially paid` presentation and filters
+  from authoritative amount totals, excludes fully paid invoices from the
+  remittance-entry selector, and renders invoice/payment references in audit.
+  AP renders invoice-specific exception/evidence, case, and revision summaries.
+  No persisted state, authorization, or database contract changed.
+- Tests: production parity coverage asserts the cash display/filter boundary,
+  no-invalid-remittance UX, and exact audit action handling. Focused contracts,
+  both type-checks, and both lints pass.
+- Exact next action: run the final full gate, deploy, verify the live labels and
+  audit summaries, then restore and independently confirm the judge baseline.

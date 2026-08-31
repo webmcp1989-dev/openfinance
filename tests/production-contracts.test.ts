@@ -423,6 +423,9 @@ describe("WebMCP safety contracts", () => {
     expect(ar).toContain("View evidence");
     expect(ar).toContain('"/api/agent/remittances"');
     expect(ar).toContain("Portal follow-ups and remittance");
+    expect(ar).toContain('return "paid"');
+    expect(ar).toContain('event.action === "payment_remittance_recorded"');
+    expect(ar).toContain("invoice.paidAmountMinor < invoice.amountMinor");
     expect(apPage).toContain("getRequirements(supabase)");
     expect(ap).toContain('"/api/agent/purchase-orders"');
     expect(ap).toContain('"/api/agent/validate"');
@@ -444,6 +447,8 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain("approve submission to Acme AP");
     expect(ap).toContain("activeStatusInvoiceNumber");
     expect(ap).toContain("if (refreshedStatus) setStatusLookup(refreshedStatus.submission)");
+    expect(ap).toContain('event.action === "rejected_invoice_replaced"');
+    expect(ap).toContain('event.action === "invoice_exception_responded"');
   });
 
   test("the demo runbook requires separate transfer and submission confirmations", async () => {

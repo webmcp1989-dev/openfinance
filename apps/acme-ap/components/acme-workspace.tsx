@@ -78,6 +78,19 @@ function auditSummary(event: AuditEvent) {
     const invoiceNumber = typeof event.details.invoiceNumber === "string" ? event.details.invoiceNumber : "Invoice";
     return `${invoiceNumber} · synthetic buyer settlement scheduled`;
   }
+  const invoiceNumber = typeof event.details.invoiceNumber === "string" ? event.details.invoiceNumber : null;
+  if (event.action === "invoice_exception_responded" && invoiceNumber) {
+    const exceptionCode = typeof event.details.exceptionCode === "string" ? event.details.exceptionCode.replaceAll("_", " ") : "exception";
+    const attachmentCount = typeof event.details.attachmentCount === "number" ? event.details.attachmentCount : 0;
+    return `${invoiceNumber} · ${exceptionCode} · ${attachmentCount} attachment${attachmentCount === 1 ? "" : "s"}`;
+  }
+  if (event.action === "invoice_inquiry_created" && invoiceNumber) {
+    return `${invoiceNumber} · ${event.entityId}`;
+  }
+  if (event.action === "rejected_invoice_replaced" && invoiceNumber) {
+    const revision = typeof event.details.revision === "number" ? `revision ${event.details.revision}` : "corrected revision";
+    return `${invoiceNumber} · ${revision}`;
+  }
   const itemCount = typeof event.details.itemCount === "number" ? event.details.itemCount : 0;
   return `${itemCount} invoice${itemCount === 1 ? "" : "s"} · batch ${event.entityId.slice(0, 8)}`;
 }

@@ -98,8 +98,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .select-column input { width: 17px; height: 17px; accent-color: var(--brand); }
 .badge { display: inline-flex; padding: 7px 10px; border-radius: 999px; font-size: .76rem; font-weight: 750; }
 .badge.ready, .badge.accepted { color: var(--brand); background: var(--brand-soft); }
+.badge.paid { color: var(--brand); background: var(--brand-soft); }
 .badge.needs_attention, .badge.rejected { color: var(--warning); background: var(--warning-soft); }
-.badge.submitted { color: var(--info); background: var(--info-soft); }
+.badge.submitted, .badge.partially_paid { color: var(--info); background: var(--info-soft); }
 .result-cell { max-width: 330px; overflow: hidden; color: var(--muted); text-overflow: ellipsis; }
 .empty-inline, .panel-message { margin: 0; padding: 28px; color: var(--muted); text-align: center; }
 .empty-inline p { margin: 5px 0 0; }
