@@ -71,7 +71,21 @@ function parseAmountMinor(value: string) {
   return amountMinor;
 }
 
-type OutcomeMode = "result" | "exception";
+export type OutcomeMode = "result" | "exception";
+
+export function isManualOutcomeStatusEligible(
+  status: InvoiceQueueItem["status"],
+  mode: OutcomeMode,
+) {
+  if (mode === "exception") {
+    return status === "ready" || status === "needs_attention";
+  }
+
+  return status === "ready"
+    || status === "submitted"
+    || status === "needs_attention"
+    || status === "rejected";
+}
 
 export function OpenFinanceWorkspace({
   initialInvoices,
@@ -481,9 +495,9 @@ export function OpenFinanceWorkspace({
               <button type="button" aria-pressed={outcomeMode === "exception"} onClick={() => setOutcomeMode("exception")}>Exception</button>
             </div>
             <label><span>Invoice</span><select key={`${outcomeMode}-${selectedReady[0] ?? ""}`} name="invoiceNumber" required defaultValue={selectedReady[0] ?? ""}>
-              <option value="" disabled>Select an invoice</option>{invoices.filter((invoice) => outcomeMode === "result"
-                ? invoice.status === "ready" || invoice.status === "submitted"
-                : invoice.status === "ready" || invoice.status === "needs_attention").map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber}</option>)}
+              <option value="" disabled>Select an invoice</option>{invoices
+                .filter((invoice) => isManualOutcomeStatusEligible(invoice.status, outcomeMode))
+                .map((invoice) => <option key={invoice.invoiceNumber} value={invoice.invoiceNumber}>{invoice.invoiceNumber}</option>)}
             </select></label>
             {outcomeMode === "result" ? <>
               <label><span>Portal reference</span><input name="portalReference" required minLength={1} maxLength={120} placeholder="ACME-2026-…" /></label>
