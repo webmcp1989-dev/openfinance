@@ -304,3 +304,18 @@ AP exception fixtures, with no browser errors. The entrant must still enter the 
 passwords in Devpost, publish the existing reviewed narrated demo video using
 [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and submit
 before September 3, 2026 at 1:00 p.m. PDT.
+
+The final August 31 senior-QA rehearsal invoked all 19 browser tools and every
+consequential branch against production. It submitted six valid invoices in
+two three-item batches ($49,585 total), retained `INV-10507` for its balance,
+receipt, and service-entry blockers, resolved supplier evidence, opened the
+buyer-owned case, replaced `INV-10479` as revision 2, discovered three ACH
+payments, and reconciled their exact allocations into AR. Retry, changed-
+payload, authority, checksum, unpaid-remittance, and overpayment negatives all
+failed or replayed as designed. Three findings discovered during this run were
+fixed and reverified live: the rejected correction-source path, cross-revision
+status history, and human paid/audit presentation. The final gate passed 125
+tests / 525 expectations, both type-checks, both lints, both builds, and a
+zero-finding dependency audit. Separate human resets then restored seven ready
+AR invoices and the three open AP exception fixtures; the rejected correction
+package remained checksum-valid after reset.

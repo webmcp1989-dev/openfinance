@@ -425,7 +425,7 @@ or establish correctness.
 ### F-012 — Rejected replacement source was unreachable from AR
 
 - Severity: Medium.
-- Status: fixed locally; production deployment and final stateful replay pending.
+- Status: fixed, deployed, and independently verified live.
 - Evidence/root cause: AP correctly exposed `replace_rejected_invoice` for the
   seeded `INV-10479` rejection, but AR's package service filtered exclusively
   to `ready`. The human queue also disabled selection for rejected invoices and
@@ -441,13 +441,14 @@ or establish correctness.
 - Tests: focused service and production-contract suites pass (59 tests, 381
   expectations), including a rejected-package test that asserts the exact
   `ready`/`rejected` query bound. Both type-checks and both lints pass.
-- Exact next action: run the full build/regression suite, deploy, verify the
-  human and WebMCP paths live, then resume the confirmed stateful rehearsal.
+- Live verification: `INV-10479` returned its checksum-protected rejected PDF
+  through WebMCP and the human follow-up exposed the authenticated correction
+  download. The same payload then produced AP revision 2 successfully.
 
 ### F-013 — Corrected invoice status hid revision history
 
 - Severity: Medium.
-- Status: fixed locally; production deployment and independent live replay pending.
+- Status: fixed, deployed, and independently verified live.
 - Evidence/root cause: the replacement transaction correctly recorded
   `invoice_replaced` against revision 1 and created revision 2, but the status
   service queried timeline events only for the current row. WebMCP therefore
@@ -462,13 +463,14 @@ or establish correctness.
   query is limited to their exact IDs, and verifies the merged chronological
   timeline. Focused suites pass (58 tests, 390 expectations), as do both
   type-checks and both lints.
-- Exact next action: run full regression/build/audit, deploy, verify revision 2
-  and `invoice_replaced` live, then finish UI/audit checks and restore baseline.
+- Live verification: WebMCP and the human status card both showed revision 2,
+  its new portal reference, and the prior `invoice_replaced` event across the
+  merged timeline. Reset restored the original revision-1 fixture afterward.
 
 ### F-014 — Cash and exception audit outcomes were misleading in human UI
 
 - Severity: Medium.
-- Status: fixed locally; final production verification pending.
+- Status: fixed, deployed, and independently verified live.
 - Evidence/root cause: after three verified AP payments were recorded, AR's
   backend correctly stored full payment totals and returned zero remaining due,
   but the queue still displayed the local delivery state `Submitted`. Its audit
@@ -484,5 +486,27 @@ or establish correctness.
 - Tests: production parity coverage asserts the cash display/filter boundary,
   no-invalid-remittance UX, and exact audit action handling. Focused contracts,
   both type-checks, and both lints pass.
-- Exact next action: run the final full gate, deploy, verify the live labels and
-  audit summaries, then restore and independently confirm the judge baseline.
+- Live verification: AR displayed all three reconciled invoices as `Paid`,
+  removed them from the remittance selector, and showed exact payment audit
+  references. AP showed exact invoice/evidence, case, and revision summaries.
+  Both human resets then restored the canonical judge baseline.
+
+### Final August 31 stateful rehearsal and independent verification
+
+- Coverage: all seven AR and twelve AP browser WebMCP tools; all seven ready
+  packages; six valid submissions in two bounded batches totaling $49,585;
+  the three-condition `INV-10507` exclusion; all three exception-owner branches;
+  replacement revision; payment discovery/writeback; human UI parity; audit;
+  idempotency, authority, checksum, unpaid-remittance, and overpayment negatives.
+- Confirmed behavior: identical submission, replacement, and remittance retries
+  returned their original records; changed-key reuse failed closed; buyer-owned
+  resolution was refused; three deterministic ACH payments reached zero AR due.
+- Findings fixed during the run: F-012, F-013, and F-014 above. No database
+  migration, environment variable, dependency, or infrastructure change.
+- Final release gate: 125 tests / 525 expectations, both type-checks, both
+  lints, both production builds, `bun audit` with no vulnerabilities, clean
+  tracked-environment scan, and clean `git diff --check`.
+- Restored baseline: fresh authenticated reads returned exactly seven ready AR
+  invoices and three AP fixtures—open supplier evidence, buyer inquiry, and
+  supplier replacement branches. The rejected correction package remains
+  readable and checksum-valid. Preserve this state until the judge demo.
