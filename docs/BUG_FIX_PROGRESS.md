@@ -390,16 +390,19 @@ or establish correctness.
   report zero warnings or errors. A contract test enforces the deterministic
   timezone configuration.
 
-### Operational finding — judge baseline is not currently canonical
+### Operational finding — judge baseline was not canonical
 
-- Status: pending final stateful verification and restore.
+- Status: resolved and independently verified live on August 31.
 - Evidence: the live read-only pass found four ready Acme invoices in AR and
   five AP submissions, including the prior `INV-10479` revision and two prior
   invoice submissions. The documented clean baseline is seven ready AR
   invoices and three AP exception fixtures.
-- Exact next action: after action-time confirmation for deleting synthetic demo
-  activity, restore both applications, run the approved stateful exception-to-
-  cash rehearsal, restore both again, and verify 7-ready/3-fixture counts.
+- Remediation and verification: after action-time confirmation, the separate
+  human controls restored AR and AP. Authenticated read-only WebMCP calls then
+  returned exactly seven ready AR invoices and three AP exception fixtures
+  (`INV-10479`, `INV-10463`, and `INV-10417`); both browser logs were empty.
+- Exact next action: preserve this state until the final demo. If any further
+  stateful rehearsal occurs, restore both applications again afterward.
 
 ### Current verification evidence
 

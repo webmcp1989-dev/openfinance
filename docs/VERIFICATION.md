@@ -296,10 +296,11 @@ an AI agent.
 
 ## Submission-only tasks
 
-All local, database, deployment, OAuth/MCP, cross-application rehearsal, and
-security gates are complete. The August 31 readiness check found that both
-applications still require one final independent restore to the canonical
-judge baseline described below. The entrant must also enter the two private judge
+All local, database, deployment, OAuth/MCP, cross-application rehearsal, reset,
+and security gates are complete. On August 31 the separate human controls
+restored both applications to the canonical judge baseline; authenticated
+read-only WebMCP calls then returned seven ready AR invoices and exactly three
+AP exception fixtures, with no browser errors. The entrant must still enter the two private judge
 passwords in Devpost, publish the existing reviewed narrated demo video using
 [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and submit
 before September 3, 2026 at 1:00 p.m. PDT.
