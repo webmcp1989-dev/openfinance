@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(20);
+select plan(25);
 select has_function('public', 'reset_demo_state', array[]::text[], 'public demo reset wrapper exists');
 select has_function('private', 'reset_demo_state', array[]::text[], 'private demo reset implementation exists');
 select ok(not (select prosecdef from pg_proc where oid = 'public.reset_demo_state()'::regprocedure), 'public reset wrapper is security invoker');
@@ -78,7 +78,12 @@ select is((select count(*)::text from public.invoice_exceptions where owner = 's
 select is((select count(*)::text from public.invoice_exceptions where owner = 'buyer_receiving' and allowed_actions = array['create_invoice_inquiry']::text[]), '1', 'one buyer-owned receipt blocker allows only a tracked inquiry');
 select is((select count(*)::text from public.invoice_exceptions where owner = 'supplier_ar' and allowed_actions = array['replace_invoice']::text[]), '1', 'one supplier-owned rejected invoice allows an approved replacement');
 select is((select count(*)::text from public.audit_events where action = 'demo_state_reset'), '1', 'reset remains visibly auditable');
-select is((select next_sequence::text from private.payment_simulator_state), '1', 'reset restores deterministic payment sequence');
+select is((select next_sequence::text from private.payment_simulator_state), '2', 'reset makes the first invoice in the approved pair the deterministic payment candidate');
+select has_function('public', 'get_open_buyer_cases', array[]::text[], 'tenant-scoped buyer case read model exists');
+select ok(not (select prosecdef from pg_proc where oid = 'public.get_open_buyer_cases()'::regprocedure), 'public buyer case wrapper is security invoker');
+select ok(not has_function_privilege('anon', 'public.get_open_buyer_cases()', 'execute'), 'anonymous callers cannot list buyer cases');
+select ok(has_function_privilege('authenticated', 'public.get_open_buyer_cases()', 'execute'), 'authenticated suppliers can list their own buyer cases');
+select is((select count(*)::text from public.get_open_buyer_cases()), '0', 'reset begins with no open buyer inquiry');
 
 update public.profiles set role = 'viewer'
 where user_id = (select id from auth.users where lower(email) = 'supplier@acme.demo');

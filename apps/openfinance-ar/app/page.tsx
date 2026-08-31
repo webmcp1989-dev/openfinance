@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import { OpenFinanceWorkspace } from "@/components/openfinance-workspace";
 import { loadAuditSnapshot } from "@/lib/services/audit-service";
-import { listInvoiceQueue, listPortalFollowups } from "@/lib/services/invoice-service";
+import {
+  listInvoicePaymentSummaries,
+  listInvoiceQueue,
+  listPortalFollowups,
+  listRecentPortalResolutions,
+  listRecordedBuyerCases,
+} from "@/lib/services/invoice-service";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -39,15 +45,21 @@ export default async function OpenFinanceHome() {
   const organization = organizationData as OrganizationRow | null;
   if (organizationError || !organization) redirect("/login?error=profile_missing");
 
-  const [invoices, followups, auditSnapshot] = await Promise.all([
+  const [invoices, followups, buyerCases, recentResolutions, paymentSummaries, auditSnapshot] = await Promise.all([
     listInvoiceQueue(supabase),
     listPortalFollowups(supabase),
+    listRecordedBuyerCases(supabase),
+    listRecentPortalResolutions(supabase),
+    listInvoicePaymentSummaries(supabase),
     loadAuditSnapshot(supabase),
   ]);
 
   return <OpenFinanceWorkspace
     initialInvoices={invoices}
     initialFollowups={followups}
+    initialBuyerCases={buyerCases}
+    initialRecentResolutions={recentResolutions}
+    initialPaymentSummaries={paymentSummaries}
     initialAuditEvents={auditSnapshot.auditEvents}
     initialAuditAvailable={auditSnapshot.auditAvailable}
     fullName={profile.full_name}

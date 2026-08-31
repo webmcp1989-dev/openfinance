@@ -24,19 +24,19 @@ OpenFinance AR also provides an optional OAuth-protected remote MCP server at `h
 
 Ask the agent:
 
-> Submit all Acme invoices that are ready for their AP portal.
+> Submit all Acme invoices that can be paid.
 
-The default seed is a realistic 24-invoice AR portfolio with seven locally ready invoices and three independently seeded AP exceptions. The intended result is deliberately non-trivial:
+The default seed is a realistic 24-invoice AR portfolio with exactly three narrated Acme candidates and three independently seeded AP exceptions. The intended result is deliberately non-trivial:
 
-1. OpenFinance exposes seven locally ready invoice packages among accepted, submitted, rejected, paid, and blocked history.
+1. OpenFinance exposes `INV-10482`, `INV-10491`, and `INV-10507` as the three locally ready candidates among accepted, submitted, rejected, paid, and blocked history.
 2. The agent previews the exact packages and Acme destination; the human approves their transfer for read-only validation.
 3. Acme validates each approved package against its independently stored PO data.
-4. Six invoices pass; `INV-10507` exceeds the remaining balance and lacks accepted service entry on `PO-8890`.
-5. The agent presents the six valid invoices, the $49,585 total, the exception, and two bounded AP batches, then obtains a separate submission approval.
-6. Acme atomically submits only the confirmed valid invoices in groups of at most three and returns portal references.
-7. OpenFinance records those references and the exception, updating the human-visible queue.
+4. Two invoices pass; `INV-10507` exceeds the remaining balance and lacks accepted service entry on `PO-8890`.
+5. The agent presents the two valid invoices, their $25,670 total, and the excluded invoice, then obtains a separate submission approval.
+6. Acme atomically submits only the confirmed two-invoice batch and returns portal references.
+7. OpenFinance records those references and the exact exception, updating the human-visible queue.
 8. For a seeded supplier-owned missing-delivery-proof exception, the agent can send verified AR evidence after approval. For a buyer-owned missing receipt, it says “This isn't mine to fix” and offers an approved tracked case. For rejected `INV-10479`, it can submit an approved corrected revision because AP explicitly permits `replace_invoice`.
-9. Ten seconds later, Acme's deterministic buyer simulation marks every second new committed invoice paid; UI and read-only status tools expose the same references.
+9. Ten seconds later, Acme's deterministic buyer simulation marks the first invoice in this canonical approved pair paid with `PAY-20260830-0DD9D23B`; UI and read-only status tools expose the exact reference.
 10. After exact human review, the agent reads AP remittance and writes those allocations back to AR. The story ends on reconciled cash, not document submission.
 
 ## Applications

@@ -252,6 +252,19 @@ describe("database mutation boundaries", () => {
     expect(testSuite).toContain("can read RLS-scoped remittance but cannot forge or modify settlements");
   });
 
+  test("the narrated baseline and visible outcome read models are database-authored", async () => {
+    const ar = await readFile(join(root, "services/openfinance/supabase/migrations/202609010001_align_narrated_demo_state.sql"), "utf8");
+    const ap = await readFile(join(root, "services/acme/supabase/migrations/202609010001_align_narrated_demo_state.sql"), "utf8");
+    expect(ar).toContain("jsonb_build_object('readyInvoiceCount', 3)");
+    expect(ar).toContain("v_invoice.exception_code is distinct from 'missing_delivery_proof'");
+    expect(ar).toContain("document.document_kind = 'proof_of_delivery'");
+    expect(ar).toContain("'portal_exception_resolved'");
+    expect(ap).toContain("set next_sequence = 2");
+    expect(ap).toContain("'PAY-20260830-0DD9D23B'");
+    expect(ap).toContain("create function public.get_open_buyer_cases()");
+    expect(ap).toContain("inquiry.supplier_id = (select private.current_supplier_id())");
+  });
+
   test("AR derives idempotency identity and compares canonical retry content in Postgres", async () => {
     const migration = await readFile(join(root, "services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql"), "utf8");
     expect(migration).toContain("v_existing_payload is distinct from p_payload");
@@ -429,6 +442,10 @@ describe("WebMCP safety contracts", () => {
     expect(ar).toContain("View evidence");
     expect(ar).toContain('"/api/agent/remittances"');
     expect(ar).toContain("Portal follow-ups and remittance");
+    expect(ar).toContain("Resolved exceptions and buyer cases");
+    expect(ar).toContain("payment.paymentReference");
+    expect(ar).toContain('id={`inv-${invoice.invoiceNumber}`}');
+    expect(ar).toContain('data-status={displayStatus(invoice)}');
     expect(ar).toContain('return "paid"');
     expect(ar).toContain('event.action === "payment_remittance_recorded"');
     expect(ar).toContain("invoice.paidAmountMinor < invoice.amountMinor");
@@ -458,6 +475,9 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain('event.action === "invoice_exception_resolved"');
     expect(ap).toContain("Invoice exception queue");
     expect(ap).toContain("workflowPresentation(item)");
+    expect(ap).toContain("Open buyer cases");
+    expect(ap).toContain('id={`case-${buyerCase.caseReference}`}');
+    expect(ap).toContain('id={`inv-${submission.invoiceNumber}`}');
   });
 
   test("the demo runbook requires separate transfer and submission confirmations", async () => {

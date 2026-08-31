@@ -12,7 +12,7 @@ OpenFinance AR <-> WebMCP <-> browser agent + human <-> WebMCP <-> Acme AP
 
 The two applications are independently authenticated, deployed, and persisted. The browser agent is the only runtime bridge. Never add a shared database, shared credentials, server-to-server integration, queue, webhook, or hidden orchestration path between them. Use only synthetic data.
 
-The challenge prompt is **"Submit all Acme invoices that are ready for their AP portal."** Preserve the complete flow and its explicit human approvals described in [docs/NORTH_STAR.md](docs/NORTH_STAR.md).
+The opening challenge prompt is **"Submit all Acme invoices that can be paid."** The separate follow-up instruction covers exception ownership and cash reconciliation. Preserve the complete flow and its explicit human approvals described in [docs/NORTH_STAR.md](docs/NORTH_STAR.md).
 
 ## Stack and repository map
 
@@ -61,7 +61,7 @@ Run the two dev servers in separate terminals. Configure each app with credentia
 - Preserve the Custom Access Token hook: hosted Supabase currently does not map RFC 8707 `resource` into `aud`, so the hook binds OAuth tokens to the exact MCP URL while leaving portal sessions unchanged.
 - Synthetic invoice files must remain genuinely renderable, credible invoices, not signature/EOF placeholders. Preserve the private database renderer, authoritative supplier/customer/invoice/date/PO/amount fields, deterministic Net-30 due date, explicit synthetic-data label, exact cross-reference offsets, parser/render tests, and authenticated download validation.
 - AP's challenge payment signal is deterministic backend simulation: every second committed supplier invoice settles after 10 seconds. Preserve its serialized, idempotent, read-only-discovery design; do not replace it with client timers that author state, random behavior, or hidden AR/AP integration.
-- The canonical portfolio contains 24 AR invoices, seven locally ready invoices, nine AP purchase orders, and three historical AP exception submissions. Exact requested delivery evidence resolves the supplier-owned exception and accepts its disputed invoice only when no other blocker remains; the buyer-receiving exception is case-only and must remain blocked after inquiry creation. Keep the primary story ending at AP remittance discovery and approved AR reconciliation, not at submission.
+- The canonical portfolio contains 24 AR invoices, exactly three narrated Acme candidates (`INV-10482`, `INV-10491`, and blocked `INV-10507`), nine AP purchase orders, and three historical AP exception submissions. Exact requested delivery evidence resolves the supplier-owned exception and accepts its disputed invoice only when no other blocker remains; the verified AP acceptance is then recorded in AR with the same portal reference. The buyer-receiving exception is case-only and must remain blocked after inquiry creation; the agent records the exact returned case in AR without claiming resolution. Keep the primary story ending at exact AP remittance discovery and approved AR reconciliation, not at submission.
 
 ## Authentication, isolation, and security
 

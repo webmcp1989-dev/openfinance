@@ -121,6 +121,12 @@ tbody tr:last-child td { border-bottom: 0; }
 .package-review dt { color: var(--muted); font-size: .67rem; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
 .package-review dd { margin: 4px 0 0; overflow: hidden; font-size: .79rem; text-overflow: ellipsis; white-space: nowrap; }
 .package-review .document-actions { align-items: center; padding-top: 12px; border-top: 1px solid #e1ece8; }
+.payment-cell { min-width: 210px; }
+.payment-cell dl { display: grid; gap: 4px; margin: 0; }
+.payment-cell dl div { display: grid; grid-template-columns: 54px 1fr; gap: 7px; }
+.payment-cell dt { color: var(--muted); font-size: .65rem; font-weight: 750; letter-spacing: .03em; text-transform: uppercase; }
+.payment-cell dd { margin: 0; color: var(--ink); font-size: .75rem; font-weight: 680; }
+.case-resolution-workbench .package-review:last-child { border-right: 0; }
 .document-actions p { margin: 0; color: var(--muted); font-size: .77rem; line-height: 1.45; }
 .document-actions .button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; text-decoration: none; }
 .empty-compact { padding: 22px; border: 1px dashed #bfd3cb; border-radius: 13px; color: var(--muted); text-align: center; background: rgb(255 255 255 / 60%); }

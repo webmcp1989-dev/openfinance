@@ -10,7 +10,7 @@ import type {
   ValidationIssue,
 } from "@/lib/domain/submissions";
 import type { AuditEvent } from "@/lib/services/audit-service";
-import type { InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
+import type { BuyerCase, InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
 import { hasStructuralPdf } from "@/lib/pdf-structure";
 import { AcmeSiteTools } from "./acme-site-tools";
 
@@ -190,12 +190,13 @@ export async function fileDocument(file: File, requirements: SubmissionRequireme
 }
 
 export function AcmeWorkspace({
-  initialRequirements, initialPurchaseOrders, initialSubmissions, initialWorkflows, initialAuditEvents, initialAuditAvailable, supplierName, supplierCode, signOutAction,
+  initialRequirements, initialPurchaseOrders, initialSubmissions, initialWorkflows, initialBuyerCases, initialAuditEvents, initialAuditAvailable, supplierName, supplierCode, signOutAction,
 }: {
   initialRequirements: SubmissionRequirements;
   initialPurchaseOrders: PurchaseOrder[];
   initialSubmissions: SubmissionRow[];
   initialWorkflows: InvoiceWorkflowItem[];
+  initialBuyerCases: BuyerCase[];
   initialAuditEvents: AuditEvent[];
   initialAuditAvailable: boolean;
   supplierName: string;
@@ -206,6 +207,7 @@ export function AcmeWorkspace({
   const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [workflows, setWorkflows] = useState(initialWorkflows);
+  const [buyerCases, setBuyerCases] = useState(initialBuyerCases);
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
   const [purchaseOrderLookup, setPurchaseOrderLookup] = useState<PurchaseOrder | null | undefined>(undefined);
@@ -231,6 +233,7 @@ export function AcmeWorkspace({
         purchaseOrders: PurchaseOrder[];
         submissions: SubmissionRow[];
         workflows: InvoiceWorkflowItem[];
+        buyerCases: BuyerCase[];
         auditEvents: AuditEvent[];
         auditAvailable: boolean;
       }>("/api/agent/workspace", { cache: "no-store" }),
@@ -244,6 +247,7 @@ export function AcmeWorkspace({
     setPurchaseOrders(body.purchaseOrders);
     setSubmissions(body.submissions);
     setWorkflows(body.workflows);
+    setBuyerCases(body.buyerCases);
     if (refreshedStatus) setStatusLookup(refreshedStatus.submission);
     setAuditEvents(body.auditEvents);
     setAuditAvailable(body.auditAvailable);
@@ -542,7 +546,7 @@ export function AcmeWorkspace({
           <span className="openfinance-logo portal-openfinance-logo" aria-hidden="true">OF</span>
           <span><strong>OpenFinance</strong><small>Supplier Portal · Acme</small></span>
         </div>
-        <nav aria-label="Primary navigation"><a href="#operations">Submit invoice</a><a href="#exceptions">Exceptions</a><a href="#orders">Purchase orders</a><a href="#submissions">Receipts</a></nav>
+        <nav aria-label="Primary navigation"><a href="#operations">Submit invoice</a><a href="#exceptions">Exceptions</a><a href="#buyer-cases">Buyer cases</a><a href="#orders">Purchase orders</a><a href="#submissions">Receipts</a></nav>
         <div className="supplier"><div><small>Signed in as</small><strong>{supplierName}</strong><span>{supplierCode}</span></div><form action={signOutAction}><button className="signout" type="submit">Sign out</button></form></div>
       </header>
 
@@ -579,7 +583,7 @@ export function AcmeWorkspace({
         {workflows.length === 0 ? <div className="empty-state"><strong>No invoice exceptions</strong><p>New buyer or supplier action items will appear here.</p></div> : (
           <div className="workflow-grid">{workflows.map((item) => {
             const presentation = workflowPresentation(item);
-            return <article className={`workflow-card ${presentation.tone}`} key={`${item.invoiceNumber}-${item.exception.exceptionCode}`}>
+            return <article className={`workflow-card ${presentation.tone}`} id={`exception-${item.invoiceNumber}`} data-invoice={item.invoiceNumber} data-status={item.invoiceStatus} key={`${item.invoiceNumber}-${item.exception.exceptionCode}`}>
               <header>
                 <div><strong>{item.invoiceNumber}</strong><span>{item.portalReference}</span></div>
                 <span className="workflow-state">{presentation.label}</span>
@@ -591,6 +595,25 @@ export function AcmeWorkspace({
               {item.latestInquiry && <div className="case-reference"><strong>{item.latestInquiry.caseReference}</strong><span>{item.latestInquiry.subject} · {item.latestInquiry.status.replaceAll("_", " ")}</span></div>}
             </article>;
           })}</div>
+        )}
+      </section>
+
+      <section className="workflow-board buyer-cases" id="buyer-cases" aria-labelledby="buyer-cases-title">
+        <div className="section-heading">
+          <div><p className="kicker">Buyer-owned work</p><h2 id="buyer-cases-title">Open buyer cases</h2></div>
+          <span>{buyerCases.length} open</span>
+        </div>
+        {buyerCases.length === 0 ? <div className="empty-state"><strong>No open buyer cases</strong><p>Approved supplier inquiries appear here immediately with their durable case reference.</p></div> : (
+          <div className="case-list">{buyerCases.map((buyerCase) => <article id={`case-${buyerCase.caseReference}`} data-invoice={buyerCase.invoiceNumber} data-status={buyerCase.status} key={buyerCase.caseReference}>
+            <div><strong>{buyerCase.caseReference}</strong><span>{buyerCase.status}</span></div>
+            <dl>
+              <div><dt>Invoice</dt><dd>{buyerCase.invoiceNumber}</dd></div>
+              <div><dt>Type</dt><dd>{buyerCase.inquiryType.replaceAll("_", " ")}</dd></div>
+              <div><dt>Owner</dt><dd>{buyerCase.owner}</dd></div>
+              <div><dt>Opened</dt><dd><time dateTime={buyerCase.openedAt}>{preciseTimestamp.format(new Date(buyerCase.openedAt))}</time></dd></div>
+            </dl>
+            <p>{buyerCase.subject}</p>
+          </article>)}</div>
         )}
       </section>
 
@@ -685,7 +708,7 @@ export function AcmeWorkspace({
       <section className="orders" id="orders" aria-labelledby="orders-title">
         <div className="section-heading"><div><p className="kicker">Authorized supplier data</p><h2 id="orders-title">Purchase orders</h2></div><span>{purchaseOrders.filter((order) => order.status === "open").length} open</span></div>
         <div className="cards">{purchaseOrders.map((order) => (
-          <article key={order.purchaseOrderNumber} className="order-card">
+          <article id={`po-${order.purchaseOrderNumber}`} data-po={order.purchaseOrderNumber} data-status={order.status} key={order.purchaseOrderNumber} className="order-card">
             <div><strong>{order.purchaseOrderNumber}</strong><span>{order.status}</span></div>
             <p>{order.description}</p><small>Remaining balance</small><h3>{money.format(order.remainingAmountMinor / 100)}</h3>
             <dl><div><dt>Payment terms</dt><dd>{order.paymentTerms}</dd></div><div><dt>Received</dt><dd>{money.format(order.receivedAmountMinor / 100)}</dd></div><div><dt>Service entry</dt><dd>{order.serviceEntryStatus.replaceAll("_", " ")}</dd></div><div><dt>Lines</dt><dd>{order.lines.length}</dd></div></dl>
@@ -748,7 +771,7 @@ export function AcmeWorkspace({
         </div>
         {submissions.length === 0 ? <div className="empty-state"><strong>No invoices submitted yet</strong><p>Validated invoices will appear here immediately after confirmed submission.</p></div> : (
           filteredSubmissions.length === 0 ? <div className="empty-state"><strong>No matching invoices</strong><p>Adjust the status or purchase-order filter.</p></div> : <div className="submission-list">{filteredSubmissions.map((submission) => (
-            <article key={submission.portalReference}>
+            <article id={`inv-${submission.invoiceNumber}`} data-invoice={submission.invoiceNumber} data-po={submission.purchaseOrderNumber} data-status={submission.status} key={submission.portalReference}>
               <div><strong>{submission.invoiceNumber}</strong><span className={submission.status}>{submission.status}</span></div>
               <p>{submission.portalReference} · {submission.purchaseOrderNumber}</p>
               {submission.status === "paid" && submission.paymentReference && submission.paidAt

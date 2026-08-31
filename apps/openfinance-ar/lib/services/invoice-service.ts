@@ -236,6 +236,108 @@ export type PortalFollowup = InvoiceQueueItem & Readonly<{
   remainingDueMinor: number;
 }>;
 
+export type RecordedBuyerCase = Readonly<{
+  caseReference: string;
+  invoiceNumber: string;
+  inquiryType: "payment_inquiry" | "invoice_inquiry" | "expedite_payment" |
+    "payment_terms" | "invoice_entry_assistance";
+  owner: "buyer_receiving" | "buyer_procurement" | "buyer_ap";
+  status: "open" | "in_progress";
+  openedAt: string;
+}>;
+
+export type RecentPortalResolution = Readonly<{
+  invoiceNumber: string;
+  portalReference: string;
+  exceptionCode: string;
+  documentName: string;
+  resolvedAt: string;
+}>;
+
+export type InvoicePaymentSummary = Readonly<{
+  invoiceNumber: string;
+  paymentReference: string;
+  amountMinor: number;
+  currency: string;
+  paymentMethod: "ach" | "wire" | "check" | "card" | "other";
+  paidAt: string;
+}>;
+
+const recordedBuyerCasePattern = /^Case (CASE-[0-9]{8}-[A-F0-9]{8}) opened · owner (buyer_receiving|buyer_procurement|buyer_ap) · type (payment_inquiry|invoice_inquiry|expedite_payment|payment_terms|invoice_entry_assistance) · status (open|in_progress)$/;
+
+export async function listRecordedBuyerCases(supabase: SupabaseClient): Promise<RecordedBuyerCase[]> {
+  const { data, error } = await supabase.from("delivery_events")
+    .select("created_at, payload")
+    .eq("event_type", "portal_exception")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) throw new HttpError(500, "buyer_case_query_failed", "Recorded buyer cases could not be loaded");
+
+  const cases: RecordedBuyerCase[] = [];
+  const seen = new Set<string>();
+  for (const event of data as Array<{ created_at: string; payload: unknown }>) {
+    if (!event.payload || typeof event.payload !== "object" || !("items" in event.payload)) continue;
+    const items = (event.payload as { items?: unknown }).items;
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const candidate = item as { invoiceNumber?: unknown; exceptionCode?: unknown; message?: unknown };
+      if (candidate.exceptionCode !== "buyer_case_open" || typeof candidate.invoiceNumber !== "string" || typeof candidate.message !== "string") continue;
+      const match = recordedBuyerCasePattern.exec(candidate.message);
+      const [, caseReference, owner, inquiryType, status] = match ?? [];
+      if (!caseReference || !owner || !inquiryType || !status || seen.has(caseReference)) continue;
+      seen.add(caseReference);
+      cases.push({
+        caseReference,
+        invoiceNumber: candidate.invoiceNumber,
+        owner: owner as RecordedBuyerCase["owner"],
+        inquiryType: inquiryType as RecordedBuyerCase["inquiryType"],
+        status: status as RecordedBuyerCase["status"],
+        openedAt: event.created_at,
+      });
+    }
+  }
+  return cases;
+}
+
+export async function listRecentPortalResolutions(supabase: SupabaseClient): Promise<RecentPortalResolution[]> {
+  const { data, error } = await supabase.from("audit_events")
+    .select("created_at, details")
+    .eq("action", "portal_exception_resolved")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (error) throw new HttpError(500, "resolution_query_failed", "Recent portal resolutions could not be loaded");
+  return (data as Array<{ created_at: string; details: Record<string, unknown> }>).flatMap((event) => {
+    const { invoiceNumber, portalReference, exceptionCode, documentName } = event.details;
+    return typeof invoiceNumber === "string" && typeof portalReference === "string"
+      && typeof exceptionCode === "string" && typeof documentName === "string"
+      ? [{ invoiceNumber, portalReference, exceptionCode, documentName, resolvedAt: event.created_at }]
+      : [];
+  });
+}
+
+export async function listInvoicePaymentSummaries(supabase: SupabaseClient): Promise<InvoicePaymentSummary[]> {
+  const { data, error } = await supabase.from("payment_remittance_events")
+    .select("payment_reference, amount_minor, currency, payment_method, paid_at, invoices!inner(invoice_number)")
+    .order("paid_at", { ascending: false });
+  if (error) throw new HttpError(500, "payment_summary_query_failed", "Invoice payment details could not be loaded");
+  return (data as unknown as Array<{
+    payment_reference: string;
+    amount_minor: number;
+    currency: string;
+    payment_method: InvoicePaymentSummary["paymentMethod"];
+    paid_at: string;
+    invoices: { invoice_number: string } | Array<{ invoice_number: string }>;
+  }>).map((row) => ({
+    invoiceNumber: Array.isArray(row.invoices) ? row.invoices[0]?.invoice_number ?? "" : row.invoices.invoice_number,
+    paymentReference: row.payment_reference,
+    amountMinor: Number(row.amount_minor),
+    currency: row.currency,
+    paymentMethod: row.payment_method,
+    paidAt: row.paid_at,
+  })).filter((item) => item.invoiceNumber !== "");
+}
+
 export async function listPortalFollowups(
   supabase: SupabaseClient,
   customerName?: string,

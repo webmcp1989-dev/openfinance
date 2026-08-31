@@ -6,6 +6,9 @@ const {
   getInvoiceDocument,
   getInvoiceSupportingDocuments,
   getSubmissionPackage,
+  listInvoicePaymentSummaries,
+  listRecentPortalResolutions,
+  listRecordedBuyerCases,
   recordDeliveryEvent,
   syncInvoicesFromErp,
 } = await import("./invoice-service");
@@ -223,6 +226,72 @@ describe("OpenFinance delivery service errors", () => {
       status: 409,
       code: "invoice_state_conflict",
       message: "Invoice state changed; reload the queue before recording the portal outcome",
+    });
+  });
+});
+
+describe("OpenFinance visible workflow outcomes", () => {
+  function readClient(rows: unknown[]) {
+    const chain = {
+      select() { return chain; },
+      eq() { return chain; },
+      order() { return chain; },
+      limit() { return Promise.resolve({ data: rows, error: null }); },
+      then(resolve: (value: unknown) => unknown) { return Promise.resolve({ data: rows, error: null }).then(resolve); },
+    };
+    return { from() { return chain; } };
+  }
+
+  test("parses only the exact agent-recorded buyer-case outcome grammar", async () => {
+    const result = await listRecordedBuyerCases(readClient([{
+      created_at: "2026-09-01T10:00:00.000Z",
+      payload: { items: [{
+        invoiceNumber: "INV-10463",
+        exceptionCode: "buyer_case_open",
+        message: "Case CASE-20260901-ABCDEF12 opened · owner buyer_receiving · type invoice_inquiry · status open",
+      }, {
+        invoiceNumber: "INV-FOREIGN",
+        exceptionCode: "buyer_case_open",
+        message: "untrusted free-form text",
+      }] },
+    }]) as never);
+    expect(result).toEqual([{
+      caseReference: "CASE-20260901-ABCDEF12",
+      invoiceNumber: "INV-10463",
+      inquiryType: "invoice_inquiry",
+      owner: "buyer_receiving",
+      status: "open",
+      openedAt: "2026-09-01T10:00:00.000Z",
+    }]);
+  });
+
+  test("maps durable resolution evidence and exact remittance details", async () => {
+    const resolution = await listRecentPortalResolutions(readClient([{
+      created_at: "2026-09-01T10:01:00.000Z",
+      details: {
+        invoiceNumber: "INV-10417",
+        portalReference: "ACME-20260820-A1041701",
+        exceptionCode: "missing_delivery_proof",
+        documentName: "INV-10417-proof-of-delivery.pdf",
+      },
+    }]) as never);
+    expect(resolution[0]).toMatchObject({ invoiceNumber: "INV-10417", documentName: "INV-10417-proof-of-delivery.pdf" });
+
+    const payment = await listInvoicePaymentSummaries(readClient([{
+      payment_reference: "PAY-20260830-0DD9D23B",
+      amount_minor: 1_842_000,
+      currency: "USD",
+      payment_method: "ach",
+      paid_at: "2026-09-01T10:02:00.000Z",
+      invoices: { invoice_number: "INV-10482" },
+    }]) as never);
+    expect(payment[0]).toEqual({
+      invoiceNumber: "INV-10482",
+      paymentReference: "PAY-20260830-0DD9D23B",
+      amountMinor: 1_842_000,
+      currency: "USD",
+      paymentMethod: "ach",
+      paidAt: "2026-09-01T10:02:00.000Z",
     });
   });
 });

@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(41);
+select plan(42);
 select has_table('public', 'purchase_order_lines', 'purchase-order line context exists');
 select has_table('public', 'invoice_status_events', 'invoice status timeline exists');
 select has_table('public', 'invoice_exceptions', 'structured invoice exceptions exist');
@@ -39,19 +39,6 @@ select is(
 select ok(position('extensions.digest' in pg_get_functiondef('public.respond_to_invoice_exception(text,text,jsonb)'::regprocedure)) > 0, 'exception-response wrapper derives its request fingerprint in PostgreSQL');
 select ok(position('extensions.digest' in pg_get_functiondef('public.create_invoice_inquiry(text,text,jsonb)'::regprocedure)) > 0, 'inquiry wrapper derives its request fingerprint in PostgreSQL');
 select ok(position('extensions.digest' in pg_get_functiondef('public.replace_rejected_invoice(text,text,jsonb)'::regprocedure)) > 0, 'replacement wrapper derives its request fingerprint in PostgreSQL');
-select ok(exists (
-  select 1
-  from public.invoice_exceptions as exception
-  join public.invoice_submissions as submission
-    on submission.id = exception.invoice_submission_id
-  where submission.invoice_number = 'INV-10479'
-    and submission.status = 'rejected'
-    and submission.is_current
-    and exception.owner = 'supplier_ar'
-    and exception.status = 'open'
-    and exception.allowed_actions = array['replace_invoice']::text[]
-), 'baseline includes one supplier-owned rejected invoice authorized for replacement');
-
 select set_config(
   'request.jwt.claim.sub',
   (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
@@ -64,6 +51,18 @@ select is(
   '3',
   'security and workflow tests start from the canonical three-exception baseline'
 );
+select ok(exists (
+  select 1
+  from public.invoice_exceptions as exception
+  join public.invoice_submissions as submission
+    on submission.id = exception.invoice_submission_id
+  where submission.invoice_number = 'INV-10479'
+    and submission.status = 'rejected'
+    and submission.is_current
+    and exception.owner = 'supplier_ar'
+    and exception.status = 'open'
+    and exception.allowed_actions = array['replace_invoice']::text[]
+), 'reset includes one supplier-owned rejected invoice authorized for replacement');
 
 create function pg_temp.structural_pdf()
 returns bytea
@@ -185,6 +184,13 @@ select is(
    where workflow.invoice_number = 'INV-10463'),
   'open',
   'the workflow read model exposes the tracked open buyer case'
+);
+select is(
+  (select invoice_number || '|' || owner || '|' || status
+   from public.get_open_buyer_cases()
+   where case_reference like 'CASE-%'),
+  'INV-10463|buyer_receiving|open',
+  'the UI buyer-case read model exposes the exact durable case and authority owner'
 );
 
 select lives_ok(

@@ -81,6 +81,17 @@ export type InvoiceWorkflowItem = Readonly<{
   }> | null;
 }>;
 
+export type BuyerCase = Readonly<{
+  caseReference: string;
+  invoiceNumber: string;
+  inquiryType: "payment_inquiry" | "invoice_inquiry" | "expedite_payment" |
+    "payment_terms" | "invoice_entry_assistance";
+  owner: "buyer_receiving" | "buyer_procurement" | "buyer_ap";
+  status: "open" | "in_progress";
+  subject: string;
+  openedAt: string;
+}>;
+
 type SubmissionDatabaseRow = {
   invoice_number: string;
   portal_reference: string;
@@ -114,6 +125,16 @@ type InvoiceWorkflowDatabaseRow = {
   case_status: "open" | "in_progress" | "resolved" | "closed" | null;
   case_subject: string | null;
   case_created_at: string | null;
+};
+
+type BuyerCaseDatabaseRow = {
+  case_reference: string;
+  invoice_number: string;
+  inquiry_type: BuyerCase["inquiryType"];
+  owner: BuyerCase["owner"];
+  status: BuyerCase["status"];
+  subject: string;
+  opened_at: string;
 };
 
 function mapPurchaseOrder(row: PurchaseOrderRow): PurchaseOrder {
@@ -336,6 +357,20 @@ export async function listInvoiceWorkflows(supabase: SupabaseClient): Promise<In
           createdAt: row.case_created_at,
         }
       : null,
+  }));
+}
+
+export async function listOpenBuyerCases(supabase: SupabaseClient): Promise<BuyerCase[]> {
+  const { data, error } = await supabase.rpc("get_open_buyer_cases");
+  if (error) throw new HttpError(500, "buyer_case_query_failed", "Open buyer cases could not be loaded");
+  return (data as unknown as BuyerCaseDatabaseRow[]).map((row) => ({
+    caseReference: row.case_reference,
+    invoiceNumber: row.invoice_number,
+    inquiryType: row.inquiry_type,
+    owner: row.owner,
+    status: row.status,
+    subject: row.subject,
+    openedAt: row.opened_at,
   }));
 }
 

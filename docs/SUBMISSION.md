@@ -9,7 +9,7 @@ This file contains judge-facing copy and the recording plan for the OpenFinance 
 - **Primary live URL:** https://openfinance-ar.vercel.app
 - **Independent AP portal:** https://openfinance-ap.vercel.app
 - **Public repository:** https://github.com/webmcp1989-dev/openfinance
-- **Demo prompt:** “Submit all Acme invoices that are ready for their AP portal.”
+- **Opening demo prompt:** “Submit all Acme invoices that can be paid.”
 
 ## Submission scope boundary
 
@@ -25,7 +25,7 @@ There is no shared database, credential, private connector, or server-to-server 
 
 ### How it creates a better user experience
 
-One natural-language request replaces repetitive navigation and re-keying while improving—not reducing—control. A realistic 24-invoice portfolio contains seven locally ready invoices. The agent first presents the Acme destination and exact candidate invoices, POs, and amounts; the human approves transferring only those packages for read-only validation. Acme independently finds six valid invoices totaling $49,585 and exposes the deliberate `PO-8890` balance/service-entry blocker. The agent presents the exact valid invoices, two bounded submission batches, and all exclusions. The human separately approves the consequential submission only after reviewing that concrete result.
+One natural-language request replaces repetitive navigation and re-keying while improving—not reducing—control. A realistic 24-invoice portfolio contains exactly three narrated Acme candidates. The agent first presents the Acme destination and exact candidate invoices, POs, and amounts; the human approves transferring only those packages for read-only validation. Acme independently accepts `INV-10482` and `INV-10491` for a $25,670 total and exposes the deliberate `INV-10507` `PO-8890` balance/receipt/service-entry blocker. The agent presents the exact two-invoice batch and the exclusion. The human separately approves the consequential submission only after reviewing that concrete result.
 
 Successful tool calls immediately update both visible applications. Acme shows committed portal references and reduced PO balances; OpenFinance shows delivery outcomes, the unresolved exception, and a tenant-scoped audit trail. Three seeded exception branches make authority visible: supplier AR can attach exact delivery proof; a missing receipt belongs to buyer receiving, so the agent says “This isn't mine to fix” and opens a tracked case; and a supplier-owned tax mismatch permits one approved corrected revision that explicitly supersedes the rejected invoice. The AP backend enforces those distinct permissions. Failures return actionable business explanations rather than generic automation errors.
 

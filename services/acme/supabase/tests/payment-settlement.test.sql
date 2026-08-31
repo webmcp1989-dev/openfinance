@@ -8,6 +8,10 @@ select set_config(
   true
 );
 
+set local role authenticated;
+select public.reset_demo_state();
+reset role;
+
 update private.payment_simulator_state
 set next_sequence = 1
 where supplier_id = '50000000-0000-4000-8000-000000000001';

@@ -5,7 +5,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
 import type { ErpSyncResult, InvoiceQueueItem, InvoiceSupportingDocument, SubmissionPackageItem } from "@/lib/domain/invoices";
 import type { AuditEvent } from "@/lib/services/audit-service";
-import type { PortalFollowup } from "@/lib/services/invoice-service";
+import type {
+  InvoicePaymentSummary,
+  PortalFollowup,
+  RecentPortalResolution,
+  RecordedBuyerCase,
+} from "@/lib/services/invoice-service";
 import { OpenFinanceSiteTools } from "./openfinance-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -68,9 +73,23 @@ function parseAmountMinor(value: string) {
 
 type OutcomeMode = "result" | "exception";
 
-export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initialAuditEvents, initialAuditAvailable, fullName, organizationName, signOutAction }: {
+export function OpenFinanceWorkspace({
+  initialInvoices,
+  initialFollowups,
+  initialBuyerCases,
+  initialRecentResolutions,
+  initialPaymentSummaries,
+  initialAuditEvents,
+  initialAuditAvailable,
+  fullName,
+  organizationName,
+  signOutAction,
+}: {
   initialInvoices: InvoiceQueueItem[];
   initialFollowups: PortalFollowup[];
+  initialBuyerCases: RecordedBuyerCase[];
+  initialRecentResolutions: RecentPortalResolution[];
+  initialPaymentSummaries: InvoicePaymentSummary[];
   initialAuditEvents: AuditEvent[];
   initialAuditAvailable: boolean;
   fullName: string;
@@ -79,6 +98,9 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
 }) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [followups, setFollowups] = useState(initialFollowups);
+  const [buyerCases, setBuyerCases] = useState(initialBuyerCases);
+  const [recentResolutions, setRecentResolutions] = useState(initialRecentResolutions);
+  const [paymentSummaries, setPaymentSummaries] = useState(initialPaymentSummaries);
   const [supportingDocuments, setSupportingDocuments] = useState<{ invoiceNumber: string; documents: InvoiceSupportingDocument[] } | null>(null);
   const [auditEvents, setAuditEvents] = useState(initialAuditEvents);
   const [auditAvailable, setAuditAvailable] = useState(initialAuditAvailable);
@@ -97,11 +119,17 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
     const body = await apiRequest<{
       invoices: InvoiceQueueItem[];
       followups: PortalFollowup[];
+      buyerCases: RecordedBuyerCase[];
+      recentResolutions: RecentPortalResolution[];
+      paymentSummaries: InvoicePaymentSummary[];
       auditEvents: AuditEvent[];
       auditAvailable: boolean;
     }>("/api/agent/workspace", { cache: "no-store" });
     setInvoices(body.invoices);
     setFollowups(body.followups);
+    setBuyerCases(body.buyerCases);
+    setRecentResolutions(body.recentResolutions);
+    setPaymentSummaries(body.paymentSummaries);
     setAuditEvents(body.auditEvents);
     setAuditAvailable(body.auditAvailable);
   }, []);
@@ -122,6 +150,10 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
     const customerMatches = invoice.customerName.toLowerCase().includes(customerFilter.trim().toLowerCase());
     return customerMatches && (statusFilter === "all" || displayStatus(invoice) === statusFilter);
   }), [customerFilter, invoices, statusFilter]);
+
+  const paymentByInvoice = useMemo(() => new Map(
+    paymentSummaries.map((payment) => [payment.invoiceNumber, payment]),
+  ), [paymentSummaries]);
 
   const selectedReady = selected.filter((number) => invoices.some(
     (invoice) => invoice.invoiceNumber === number && invoice.status === "ready",
@@ -354,7 +386,7 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
         {!resetOpen ? <button className="button quiet" type="button" onClick={() => setResetOpen(true)} disabled={pendingAction !== null}>
           Restore demo start
         </button> : <div className="reset-confirmation" role="group" aria-label="Confirm OpenFinance demo reset">
-          <p><strong>Restore the synthetic AR portfolio?</strong><span>Portal results, imported ERP invoices, remittance writebacks, and workflow events will be replaced by the canonical 24-invoice queue with seven ready packages.</span></p>
+          <p><strong>Restore the synthetic AR portfolio?</strong><span>Portal results, imported ERP invoices, remittance writebacks, and workflow events will be replaced by the canonical 24-invoice queue with three Acme candidates: two portal-ready and one deliberately blocked by buyer rules.</span></p>
           <div>
             <button className="button quiet" type="button" onClick={() => setResetOpen(false)} disabled={pendingAction !== null}>Cancel</button>
             <button className="button danger" type="button" onClick={() => void restoreDemo()} disabled={pendingAction !== null}>
@@ -394,11 +426,19 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
           </div>}
         </div>
         <div className="table-wrap"><table>
-          <thead><tr><th className="select-column"><span className="sr-only">Select</span></th><th>Invoice</th><th>Customer</th><th>Amount</th><th>Purchase order</th><th>Status</th><th>Portal result</th><th>Evidence</th></tr></thead>
+          <thead><tr><th className="select-column"><span className="sr-only">Select</span></th><th>Invoice</th><th>Customer</th><th>Amount</th><th>Purchase order</th><th>Status</th><th>Portal result</th><th>Payment</th><th>Evidence</th></tr></thead>
           <tbody>{filteredInvoices.map((invoice) => {
             const isSelected = selected.includes(invoice.invoiceNumber);
             const selectionDisabled = invoice.status !== "ready" || (!isSelected && selectedReady.length >= 3);
-            return <tr key={invoice.invoiceNumber} className={isSelected ? "selected-row" : undefined}>
+            const payment = paymentByInvoice.get(invoice.invoiceNumber);
+            return <tr
+              key={invoice.invoiceNumber}
+              id={`inv-${invoice.invoiceNumber}`}
+              data-invoice={invoice.invoiceNumber}
+              data-po={invoice.purchaseOrderNumber ?? undefined}
+              data-status={displayStatus(invoice)}
+              className={isSelected ? "selected-row" : undefined}
+            >
               <td className="select-column"><input type="checkbox" aria-label={`Select ${invoice.invoiceNumber}`} checked={isSelected} disabled={selectionDisabled} onChange={() => toggleSelected(invoice.invoiceNumber)} /></td>
               <td><strong>{invoice.invoiceNumber}</strong><small>{invoice.invoiceDate}</small></td>
               <td>{invoice.customerName}</td>
@@ -406,6 +446,11 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
               <td>{invoice.purchaseOrderNumber ?? "Missing"}</td>
               <td><span className={`badge ${displayStatus(invoice)}`}>{statusLabel(invoice)}</span></td>
               <td className="result-cell">{invoice.portalReference ?? invoice.exceptionMessage ?? "Awaiting portal review"}</td>
+              <td className="payment-cell">{payment ? <dl aria-label={`Payment details for ${invoice.invoiceNumber}`}>
+                <div><dt>Reference</dt><dd>{payment.paymentReference}</dd></div>
+                <div><dt>Paid</dt><dd>{money.format(payment.amountMinor / 100)} · {payment.paymentMethod.toUpperCase()}</dd></div>
+                <div><dt>Paid at</dt><dd>{timestamp.format(new Date(payment.paidAt))}</dd></div>
+              </dl> : <span>—</span>}</td>
               <td><button className="text-button" type="button" onClick={() => void loadSupportingDocuments(invoice.invoiceNumber)} disabled={pendingAction !== null}>{pendingAction === `documents:${invoice.invoiceNumber}` ? "Loading…" : "View evidence"}</button></td>
             </tr>;
           })}</tbody>
@@ -453,12 +498,49 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
         </div>
       </section>}
 
+      <section className="workbench case-resolution-workbench" aria-labelledby="case-resolution-title">
+        <div className="workbench-heading"><div><p className="eyebrow">Visible workflow outcomes</p><h2 id="case-resolution-title">Resolved exceptions and buyer cases</h2></div><span>{recentResolutions.length + buyerCases.length} recorded</span></div>
+        <div className="workbench-grid">
+          <div className="package-review" aria-labelledby="recently-resolved-title">
+            <h3 id="recently-resolved-title">Recently resolved</h3>
+            {recentResolutions.length === 0 ? <div className="empty-compact"><strong>No resolved exceptions yet</strong><p>Supplier-owned resolutions will remain visible here after the invoice is accepted.</p></div> : recentResolutions.map((resolution) => <article
+              key={`${resolution.invoiceNumber}-${resolution.resolvedAt}`}
+              id={`resolved-${resolution.invoiceNumber}`}
+              data-invoice={resolution.invoiceNumber}
+              data-status="resolved"
+            >
+              <div><strong>{resolution.invoiceNumber}</strong><span>Resolved</span></div>
+              <p>Resolved · proof of delivery attached · {timestamp.format(new Date(resolution.resolvedAt))}</p>
+              <dl><div><dt>Document</dt><dd>{resolution.documentName}</dd></div><div><dt>Portal reference</dt><dd>{resolution.portalReference}</dd></div></dl>
+            </article>)}
+          </div>
+          <div className="package-review" aria-labelledby="open-buyer-cases-title">
+            <h3 id="open-buyer-cases-title">Open buyer cases</h3>
+            {buyerCases.length === 0 ? <div className="empty-compact"><strong>No buyer cases yet</strong><p>Cases opened in the buyer portal will appear here after the agent records the exact portal outcome.</p></div> : buyerCases.map((buyerCase) => <article
+              key={buyerCase.caseReference}
+              id={`case-${buyerCase.caseReference}`}
+              data-invoice={buyerCase.invoiceNumber}
+              data-status={buyerCase.status}
+            >
+              <div><strong>{buyerCase.caseReference}</strong><span>{buyerCase.status.replaceAll("_", " ")}</span></div>
+              <p>{buyerCase.invoiceNumber} · {buyerCase.inquiryType.replaceAll("_", " ")}</p>
+              <dl><div><dt>Owner</dt><dd>{buyerCase.owner}</dd></div><div><dt>Opened at</dt><dd>{timestamp.format(new Date(buyerCase.openedAt))}</dd></div></dl>
+            </article>)}
+          </div>
+        </div>
+      </section>
+
       <section className="workbench" aria-labelledby="followup-title">
         <div className="workbench-heading"><div><p className="eyebrow">Exception to cash</p><h2 id="followup-title">Portal follow-ups and remittance</h2></div><span>{followups.length} actionable</span></div>
         <div className="workbench-grid">
           <div className="package-review">
             <h3>Invoices needing follow-up</h3>
-            {followups.length === 0 ? <div className="empty-compact"><strong>No follow-ups</strong><p>Submitted invoices are current and no balance needs attention.</p></div> : followups.map((followup) => <article key={followup.invoiceNumber}>
+            {followups.length === 0 ? <div className="empty-compact"><strong>No follow-ups</strong><p>Submitted invoices are current and no balance needs attention.</p></div> : followups.map((followup) => <article
+              key={followup.invoiceNumber}
+              id={`followup-${followup.invoiceNumber}`}
+              data-invoice={followup.invoiceNumber}
+              data-status={followup.status}
+            >
               <div><strong>{followup.invoiceNumber}</strong><span>{followup.followupReason.replaceAll("_", " ")}</span></div>
               <p>{followup.suggestedAction}</p>
               <dl><div><dt>Remaining due</dt><dd>{money.format(followup.remainingDueMinor / 100)}</dd></div><div><dt>Due date</dt><dd>{followup.dueDate}</dd></div></dl>

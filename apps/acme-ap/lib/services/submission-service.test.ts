@@ -7,6 +7,7 @@ mock.module("server-only", () => ({}));
 const {
   describeExceptionAuthority,
   getInvoiceStatus,
+  listOpenBuyerCases,
   listInvoiceWorkflows,
   replaceRejectedInvoice,
   respondToInvoiceException,
@@ -132,6 +133,32 @@ describe("Acme invoice validation", () => {
         createdAt: "2026-08-31T00:00:00.000Z",
       },
     })]);
+  });
+
+  test("maps open buyer cases from the tenant-scoped UI read model", async () => {
+    const client = {
+      rpc(name: string) {
+        expect(name).toBe("get_open_buyer_cases");
+        return Promise.resolve({ data: [{
+          case_reference: "CASE-20260901-ABCDEF12",
+          invoice_number: "INV-10463",
+          inquiry_type: "invoice_inquiry",
+          owner: "buyer_receiving",
+          status: "open",
+          subject: "Missing receipt follow-up",
+          opened_at: "2026-09-01T10:00:00.000Z",
+        }], error: null });
+      },
+    };
+    await expect(listOpenBuyerCases(client as never)).resolves.toEqual([{
+      caseReference: "CASE-20260901-ABCDEF12",
+      invoiceNumber: "INV-10463",
+      inquiryType: "invoice_inquiry",
+      owner: "buyer_receiving",
+      status: "open",
+      subject: "Missing receipt follow-up",
+      openedAt: "2026-09-01T10:00:00.000Z",
+    }]);
   });
 
   test("returns an actionable conflict when AP rejects a buyer-owned response", async () => {

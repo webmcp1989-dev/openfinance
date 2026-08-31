@@ -1100,23 +1100,60 @@ components:
           oneOf:
             - { $ref: "#/components/schemas/SubmissionReceipt" }
             - { type: "null" }
+    BuyerCase:
+      type: object
+      additionalProperties: false
+      required: [caseReference, invoiceNumber, inquiryType, owner, status, openedAt]
+      properties:
+        caseReference: { type: string, pattern: "^CASE-[0-9]{8}-[A-F0-9]{8}$" }
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        inquiryType: { type: string, enum: [payment_inquiry, invoice_inquiry, expedite_payment, payment_terms, invoice_entry_assistance] }
+        owner: { type: string, enum: [buyer_receiving, buyer_procurement, buyer_ap] }
+        status: { type: string, enum: [open, in_progress] }
+        subject: { type: string }
+        openedAt: { type: string, format: date-time }
+    RecentPortalResolution:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, portalReference, exceptionCode, documentName, resolvedAt]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        portalReference: { type: string }
+        exceptionCode: { type: string }
+        documentName: { type: string }
+        resolvedAt: { type: string, format: date-time }
+    InvoicePaymentSummary:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, paymentReference, amountMinor, currency, paymentMethod, paidAt]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        paymentReference: { type: string, pattern: "^PAY-[0-9]{8}-[A-F0-9]{8}$" }
+        amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        paymentMethod: { type: string, enum: [ach, wire, check, card, other] }
+        paidAt: { type: string, format: date-time }
     OpenFinanceWorkspaceState:
       type: object
       additionalProperties: false
-      required: [invoices, followups, auditEvents, auditAvailable]
+      required: [invoices, followups, buyerCases, recentResolutions, paymentSummaries, auditEvents, auditAvailable]
       properties:
         invoices: { type: array, items: { $ref: "#/components/schemas/InvoiceQueueItem" } }
         followups: { type: array, items: { $ref: "#/components/schemas/PortalFollowup" } }
+        buyerCases: { type: array, items: { $ref: "#/components/schemas/BuyerCase" } }
+        recentResolutions: { type: array, maxItems: 10, items: { $ref: "#/components/schemas/RecentPortalResolution" } }
+        paymentSummaries: { type: array, items: { $ref: "#/components/schemas/InvoicePaymentSummary" } }
         auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
         auditAvailable: { type: boolean, description: False when the optional recent-audit read failed; auditEvents is then empty. }
     AcmeWorkspaceState:
       type: object
       additionalProperties: false
-      required: [purchaseOrders, submissions, workflows, auditEvents, auditAvailable]
+      required: [purchaseOrders, submissions, workflows, buyerCases, auditEvents, auditAvailable]
       properties:
         purchaseOrders: { type: array, items: { $ref: "#/components/schemas/PurchaseOrder" } }
         submissions: { type: array, items: { $ref: "#/components/schemas/SubmissionReceipt" } }
         workflows: { type: array, items: { $ref: "#/components/schemas/InvoiceWorkflowItem" } }
+        buyerCases: { type: array, items: { $ref: "#/components/schemas/BuyerCase" } }
         auditEvents: { type: array, maxItems: 8, items: { $ref: "#/components/schemas/AuditEvent" } }
         auditAvailable: { type: boolean, description: False when the optional recent-audit read failed; auditEvents is then empty. }
     OpenFinanceDemoResetResult:
@@ -1125,7 +1162,7 @@ components:
       required: [restoredInvoiceCount, readyInvoiceCount, deletedDeliveryEventCount, deletedRemittanceEventCount, deletedErpEventCount, deletedErpInvoiceCount, resetAt]
       properties:
         restoredInvoiceCount: { type: integer, const: 24 }
-        readyInvoiceCount: { type: integer, const: 7 }
+        readyInvoiceCount: { type: integer, const: 3 }
         deletedDeliveryEventCount: { type: integer, minimum: 0 }
         deletedRemittanceEventCount: { type: integer, minimum: 0 }
         deletedErpEventCount: { type: integer, minimum: 0 }
@@ -1134,13 +1171,14 @@ components:
     AcmeDemoResetResult:
       type: object
       additionalProperties: false
-      required: [restoredPurchaseOrderCount, seededSubmissionCount, seededExceptionCount, deletedSubmissionCount, deletedBatchCount, resetAt]
+      required: [restoredPurchaseOrderCount, seededSubmissionCount, seededExceptionCount, deletedSubmissionCount, deletedBatchCount, nextPaymentSequence, resetAt]
       properties:
         restoredPurchaseOrderCount: { type: integer, const: 9 }
         seededSubmissionCount: { type: integer, const: 3 }
         seededExceptionCount: { type: integer, const: 3 }
         deletedSubmissionCount: { type: integer, minimum: 0 }
         deletedBatchCount: { type: integer, minimum: 0 }
+        nextPaymentSequence: { type: integer, const: 2 }
         resetAt: { type: string, format: date-time }
     ErrorResponse:
       type: object

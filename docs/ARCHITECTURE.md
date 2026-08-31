@@ -83,7 +83,7 @@ The canonical AP portfolio includes one supplier-owned missing-delivery-proof ex
 
 AR stores evidence independently and never reads AP records directly. Its follow-up service derives actionable status-stale, overdue, blocked, rejected, and partially paid work from AR state. Verified remittance writeback is an idempotent transaction that requires an existing portal receipt, enforces invoice currency and remaining balance, and supports partial allocations without accepting overpayment.
 
-The default reset restores 24 AR invoices with seven locally ready packages, nine AP purchase orders, and three AP historical exception submissions. Six ready packages have independently valid AP capacity; `INV-10507` retains the deliberate buyer-side PO/service-entry blocker. AP payment discovery followed by approved AR remittance writeback is the terminal business outcome.
+The default reset restores 24 AR invoices with exactly three narrated Acme candidates, nine AP purchase orders, and three AP historical exception submissions. `INV-10482` and `INV-10491` have independently valid AP capacity; `INV-10507` retains the deliberate buyer-side PO/service-entry blocker. The first invoice in the canonical approved pair receives the deterministic payment signal. AP payment discovery followed by approved AR remittance writeback is the terminal business outcome.
 
 ## Data transfer
 

@@ -9,6 +9,10 @@ select set_config(
 );
 select plan(14);
 
+set local role authenticated;
+select public.reset_demo_state();
+reset role;
+
 select ok(
   exists (
     select 1 from pg_constraint

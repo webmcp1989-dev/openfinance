@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(16);
+select plan(20);
 select has_table('public', 'invoice_supporting_documents', 'supporting documents exist');
 select has_table('public', 'payment_remittance_events', 'remittance events exist');
 select is((select relrowsecurity from pg_class where oid = 'public.invoice_supporting_documents'::regclass), true, 'supporting documents enforce RLS');
@@ -44,6 +44,32 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select is((public.reset_demo_state()->>'readyInvoiceCount'), '3', 'test setup restores the narrated AR baseline');
+select lives_ok(
+  $$
+    select public.record_delivery_event(
+      'portal_result',
+      'evidence-resolution-test-20260901',
+      repeat('b', 64),
+      '{"items":[{"invoiceNumber":"INV-10417","portalReference":"ACME-20260820-A1041701","portalStatus":"accepted"}]}'::jsonb
+    )
+  $$,
+  'verified AP evidence resolution can be recorded without inventing a replacement reference'
+);
+select is(
+  (select status::text || ':' || portal_status || ':' || coalesce(exception_code, 'none')
+   from public.invoices where invoice_number = 'INV-10417'),
+  'accepted:accepted:none',
+  'evidence resolution visibly advances the AR invoice and clears its exception'
+);
+select is(
+  (select details->>'documentName' from public.audit_events
+   where action = 'portal_exception_resolved' and details->>'invoiceNumber' = 'INV-10417'
+   order by created_at desc limit 1),
+  'INV-10417-proof-of-delivery.pdf',
+  'the resolution audit retains the exact approved evidence name'
+);
 
 select lives_ok(
   $$

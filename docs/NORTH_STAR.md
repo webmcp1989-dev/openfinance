@@ -74,7 +74,7 @@ OpenFinance AR and the customer's AP portal are independent, separately authenti
 
 **0:35-0:58 — Discovery and transfer approval**
 
-The user gives one intent. The agent reads the ready invoices from OpenFinance, excludes the missing-PO invoice, and shows the exact candidate invoices and AP destination. The human approves only those packages for read-only validation.
+The user asks to submit all Acme invoices that can be paid. The agent reads the exact three narrated candidates from OpenFinance and shows their invoices, POs, amounts, and AP destination. The human approves only those packages for read-only validation.
 
 **0:58-1:25 — Discovery and reasoning**
 
@@ -82,15 +82,15 @@ The agent discovers the AP portal's requirements, looks up POs, and validates on
 
 **1:25-1:45 — Submission control**
 
-The agent shows the exact valid invoices, amounts, POs, total, destination, and exceptions. The human separately approves only the valid batch for submission.
+The agent shows the exact two valid invoices, amounts, POs, $25,670 total, destination, and the excluded `INV-10507`. The human separately approves only that two-invoice batch for submission.
 
 **1:45-2:20 — Execution**
 
-The agent submits the invoices through the AP portal's tools, receives reference numbers, and records the outcome back in OpenFinance.
+The agent submits the invoices through the AP portal's tools, receives reference numbers, and records the outcome back in OpenFinance. A second instruction then drives supplier-owned evidence, a buyer-owned case, and exact remittance reconciliation.
 
 **2:20-2:40 — Visible proof**
 
-Both sites show the updated records and audit trail. The agent summarizes what succeeded, what was blocked, and the next action.
+Both sites show the updated records and audit trail: accepted evidence remains visible, the buyer case remains open with its exact reference, and the paid AR invoice shows the reconciled AP remittance.
 
 **2:40-2:58 — Implication**
 

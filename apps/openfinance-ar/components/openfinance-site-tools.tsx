@@ -98,7 +98,7 @@ export function OpenFinanceSiteTools() {
       {
         name: "record_portal_result",
         title: "Record portal results",
-        description: "Record portal references and receipt statuses returned by Acme AP for invoices that were actually submitted. For a corrected AP revision, include the exact prior reference in supersedesPortalReference; AR permits the change only when it matches current state. This changes the OpenFinance queue; use only after verifying the AP result.",
+        description: "Record exact portal references and statuses returned by Acme AP. After AP accepts proof for a supplier-owned missing_delivery_proof exception, record portalStatus accepted with the same current portalReference so AR visibly moves the invoice from needs attention to accepted. For a corrected AP revision, include the exact prior reference in supersedesPortalReference. This changes the OpenFinance queue; use only after verifying the AP result.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "items"],
           properties: {
@@ -120,7 +120,7 @@ export function OpenFinanceSiteTools() {
       {
         name: "record_portal_exception",
         title: "Record portal exception",
-        description: "Record a precise AP validation exception on invoices without submitting them. This changes their OpenFinance status to needs attention and creates an audit event.",
+        description: "Record a precise AP exception or buyer-case outcome in AR after verifying it in the customer portal. For a case returned by create_invoice_inquiry, use exceptionCode buyer_case_open and the exact message: 'Case CASE-YYYYMMDD-XXXXXXXX opened · owner buyer_receiving · type invoice_inquiry · status open'. This preserves the authority boundary while making the buyer-owned case visible in AR. The write affects only OpenFinance and creates an audit event.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "items"],
           properties: {
