@@ -421,3 +421,25 @@ or establish correctness.
 - No migration or environment-variable change was required. SQL suites were
   reviewed but not re-executed in this fresh pass because the repository has no
   local Supabase runtime or administrative database credential.
+
+### F-012 — Rejected replacement source was unreachable from AR
+
+- Severity: Medium.
+- Status: fixed locally; production deployment and final stateful replay pending.
+- Evidence/root cause: AP correctly exposed `replace_rejected_invoice` for the
+  seeded `INV-10479` rejection, but AR's package service filtered exclusively
+  to `ready`. The human queue also disabled selection for rejected invoices and
+  offered only supporting documents, of which that invoice has none. Neither
+  an agent nor a human could obtain the authoritative rejected PDF needed for
+  the replacement preview.
+- Remediation: the existing tenant-scoped package service now permits only
+  `ready` and `rejected` invoice states. Tool descriptions explicitly require
+  AP replacement authority before transferring a rejected package, and the AR
+  follow-up card exposes the same authenticated, checksum-validating PDF route
+  as **Download correction source**. Ready-only queue selection is unchanged;
+  AP's transaction remains the authoritative replacement guard.
+- Tests: focused service and production-contract suites pass (59 tests, 381
+  expectations), including a rejected-package test that asserts the exact
+  `ready`/`rejected` query bound. Both type-checks and both lints pass.
+- Exact next action: run the full build/regression suite, deploy, verify the
+  human and WebMCP paths live, then resume the confirmed stateful rehearsal.

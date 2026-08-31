@@ -59,6 +59,8 @@ The trust model should be said out loud: **19 browser tools across two apps and 
 
 For the all-human fallback, select any ready invoice in the OpenFinance queue and use the download button that appears beside the selection count. A human can download immediately or inspect the protected package first, then use Acme's invoice form to upload, validate, review, confirm, and submit it. Multiple selections expose one explicit download per invoice so the browser never relies on ambiguous bulk-download behavior. This path uses the same tenant-scoped backend rules as the agent flow.
 
+Rejected follow-ups also expose **Download correction source**. The same rejected PDF is available through `get_submission_package`, but it may be transferred as a replacement only after Acme reports `replace_invoice` as an allowed supplier action and the human approves the exact revision preview.
+
 ## Judge-facing emphasis
 
 - Usefulness: removes repetitive re-keying from a common AR-to-AP workflow.

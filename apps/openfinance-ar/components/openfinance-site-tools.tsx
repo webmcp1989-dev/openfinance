@@ -56,7 +56,7 @@ export function OpenFinanceSiteTools() {
       {
         name: "get_submission_package",
         title: "Get submission package",
-        description: "Read up to three complete, checksum-protected invoice packages for specific locally ready invoices. Returns only invoices authorized for the signed-in supplier and includes each PDF payload needed for AP validation.",
+        description: "Read up to three complete, checksum-protected invoice packages for specific locally ready invoices or rejected invoices that need supplier correction. Returns only invoices authorized for the signed-in supplier and includes each PDF payload needed for AP validation or an AP-authorized replacement.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["invoiceNumbers"],
           properties: { invoiceNumbers: invoiceNumberArray },

@@ -220,7 +220,7 @@ export function createOpenFinanceMcpServer(
 
   server.registerTool("get_submission_package", {
     title: "Get invoice submission package",
-    description: `Read up to ${MAX_TRANSFER_INVOICE_COUNT} exact, locally ready invoice packages with checksum-protected PDF payloads. Reading is local to AR; obtain separate informed human approval before transferring any returned invoice data to a customer portal.`,
+    description: `Read up to ${MAX_TRANSFER_INVOICE_COUNT} exact invoice packages with checksum-protected PDF payloads for locally ready invoices or rejected invoices that need supplier correction. Reading is local to AR; use a rejected package only when the customer portal authorizes supplier replacement, and obtain separate informed human approval before transferring any returned invoice data.`,
     inputSchema: packageRequestSchema,
     outputSchema: z.object({
       items: z.array(invoiceSchema.extend({ document: documentSchema })).min(1).max(MAX_TRANSFER_INVOICE_COUNT),

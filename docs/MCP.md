@@ -40,7 +40,7 @@ The consent screen explains the actual capabilities and acting role. Users can i
 | `get_ar_workspace` | read | Confirm the authenticated organization and role. |
 | `list_customers` | read | List tenant customers and configured portal origins. |
 | `list_invoices` | read | Filter live tenant invoice state. |
-| `get_submission_package` | sensitive read | Return exact ready invoice data and verified PDF payloads. Separate approval is required before cross-site transfer. |
+| `get_submission_package` | sensitive read | Return exact ready or rejected invoice data and verified PDF payloads. Rejected packages are correction sources and must be used only after the customer portal authorizes supplier replacement. Separate approval is required before cross-site transfer. |
 | `list_portal_followups` | read | Find blocked, rejected, overdue, status-stale, and partially paid invoices. |
 | `get_invoice_supporting_documents` | sensitive read | Return verified evidence PDFs for one invoice. Separate approval is required before cross-site transfer. |
 | `list_audit_events` | read | Read tenant audit activity, including OAuth client attribution. |

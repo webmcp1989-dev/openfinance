@@ -174,7 +174,7 @@ export async function getSubmissionPackage(
     .from("invoices")
     .select(`${queueColumns}, document_name, document_media_type, document_content_base64, document_sha256`)
     .in("invoice_number", invoiceNumbers)
-    .eq("status", "ready")
+    .in("status", ["ready", "rejected"])
     .order("invoice_number", { ascending: true });
 
   if (error) throw new HttpError(500, "package_query_failed", "Submission package could not be prepared");
@@ -182,7 +182,11 @@ export async function getSubmissionPackage(
   const found = new Set(rows.map((row) => row.invoice_number));
   const missing = invoiceNumbers.filter((number) => !found.has(number));
   if (missing.length > 0) {
-    throw new HttpError(409, "invoice_not_ready", `Not ready or not found: ${missing.join(", ")}`);
+    throw new HttpError(
+      409,
+      "invoice_not_transferable",
+      `Not transferable or not found: ${missing.join(", ")}`,
+    );
   }
 
   return rows.map((row) => {

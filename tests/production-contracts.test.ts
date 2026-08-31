@@ -415,6 +415,7 @@ describe("WebMCP safety contracts", () => {
     expect(ar).toContain('"/api/agent/packages"');
     expect(ar).toContain("Selected invoice downloads");
     expect(ar).toContain("Download selected invoice");
+    expect(ar).toContain("Download correction source");
     expect(ar).toContain("/api/agent/invoices/${encodeURIComponent(invoiceNumber)}/document");
     expect(ar.match(/"\/api\/agent\/delivery-events"/g)).toHaveLength(1);
     expect(ar).toContain("Record portal outcome");

@@ -446,6 +446,12 @@ export function OpenFinanceWorkspace({ initialInvoices, initialFollowups, initia
               <div><strong>{followup.invoiceNumber}</strong><span>{followup.followupReason.replaceAll("_", " ")}</span></div>
               <p>{followup.suggestedAction}</p>
               <dl><div><dt>Remaining due</dt><dd>{money.format(followup.remainingDueMinor / 100)}</dd></div><div><dt>Due date</dt><dd>{followup.dueDate}</dd></div></dl>
+              {followup.status === "rejected" && <a
+                className="button secondary"
+                href={`/api/agent/invoices/${encodeURIComponent(followup.invoiceNumber)}/document`}
+                download={`${followup.invoiceNumber}.pdf`}
+                aria-label={`Download rejected invoice ${followup.invoiceNumber} correction source PDF`}
+              >Download correction source</a>}
               <button className="button secondary" type="button" onClick={() => void loadSupportingDocuments(followup.invoiceNumber)} disabled={pendingAction !== null}>Supporting documents</button>
             </article>)}
             {supportingDocuments && <div className="empty-compact"><strong>{supportingDocuments.invoiceNumber} evidence</strong>

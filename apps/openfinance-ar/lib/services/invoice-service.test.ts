@@ -34,14 +34,19 @@ const validDocumentBytes = renderTestPdf("OpenFinance invoice");
 const validDocumentBase64 = validDocumentBytes.toString("base64");
 const validDocumentSha256 = createHash("sha256").update(validDocumentBytes).digest("hex");
 
-function packageClient(contentBase64: string, sha256 = validDocumentSha256) {
+function packageClient(
+  contentBase64: string,
+  sha256 = validDocumentSha256,
+  status: "ready" | "rejected" = "ready",
+  calls: Array<{ column: string; values: unknown[] }> = [],
+) {
   const row = {
     invoice_number: "INV-10482",
     amount_minor: 1_842_000,
     currency: "USD",
     invoice_date: "2026-08-12",
     purchase_order_number: "PO-8821",
-    status: "ready",
+    status,
     portal_reference: null,
     portal_status: null,
     exception_code: null,
@@ -55,7 +60,7 @@ function packageClient(contentBase64: string, sha256 = validDocumentSha256) {
   };
   const chain = {
     select() { return chain; },
-    in() { return chain; },
+    in(column: string, values: unknown[]) { calls.push({ column, values }); return chain; },
     eq() { return chain; },
     order() { return Promise.resolve({ data: [row], error: null }); },
   };
@@ -83,6 +88,20 @@ describe("OpenFinance submission packages", () => {
     const wrapped = `${validDocumentBase64.slice(0, 12)}\n${validDocumentBase64.slice(12)}`;
     const result = await getSubmissionPackage(packageClient(wrapped) as never, ["INV-10482"]);
     expect(result[0]?.document.contentBase64).toBe(validDocumentBase64);
+  });
+
+  test("returns rejected invoices as correction sources without broadening other statuses", async () => {
+    const calls: Array<{ column: string; values: unknown[] }> = [];
+    const result = await getSubmissionPackage(
+      packageClient(validDocumentBase64, validDocumentSha256, "rejected", calls) as never,
+      ["INV-10482"],
+    );
+
+    expect(result[0]?.status).toBe("rejected");
+    expect(calls).toEqual([
+      { column: "invoice_number", values: ["INV-10482"] },
+      { column: "status", values: ["ready", "rejected"] },
+    ]);
   });
 
   test("fails closed when stored document content is not base64", async () => {

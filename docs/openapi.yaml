@@ -123,7 +123,7 @@ paths:
       - url: https://openfinance-ar.vercel.app
     post:
       operationId: getSubmissionPackage
-      summary: Read complete packages for locally ready invoices
+      summary: Read complete packages for locally ready or rejected invoices
       requestBody:
         required: true
         content:

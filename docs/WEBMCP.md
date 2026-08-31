@@ -15,7 +15,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 | Tool | Kind | Purpose |
 | --- | --- | --- |
 | `list_ready_invoices` | read | Lists locally ready invoices for an explicitly named customer. |
-| `get_submission_package` | read | Returns exact invoice fields and checksum-protected PDF payloads for selected ready invoices. |
+| `get_submission_package` | read | Returns exact invoice fields and checksum-protected PDF payloads for selected ready invoices or rejected invoices needing a supplier correction. A rejected package is transferable only after AP reports that replacement is an allowed supplier action. |
 | `list_portal_followups` | read | Finds blocked, rejected, overdue, status-stale, or partially paid invoices and suggests the next AR action. |
 | `get_invoice_supporting_documents` | sensitive read | Returns verified evidence PDFs for one invoice after informed transfer approval. |
 | `record_portal_result` | write, idempotent | Records portal references only after Acme actually returns them. A corrected AP revision must include the exact current AR reference as `supersedesPortalReference`; stale or implicit overwrites fail closed. |
