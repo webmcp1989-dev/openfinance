@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { SubmissionRequirements } from "@/lib/domain/submissions";
 import type { SubmissionRow } from "@/lib/services/submission-service";
-import { fileDocument, filterSubmissionRows } from "./acme-workspace";
+import { AP_AGENT_STARTER_PROMPT, fileDocument, filterSubmissionRows } from "./acme-workspace";
 
 function renderStructuralPdf() {
   const prefix = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n";
@@ -54,4 +54,8 @@ describe("human invoice portfolio filters", () => {
   test("returns the full supplier portfolio when filters are empty", () => {
     expect(filterSubmissionRows(submissions, "all", "")).toHaveLength(2);
   });
+});
+
+test("presents the canonical short instruction for starting the agent workflow", () => {
+  expect(AP_AGENT_STARTER_PROMPT).toBe("Submit all Acme invoices that can be paid.");
 });

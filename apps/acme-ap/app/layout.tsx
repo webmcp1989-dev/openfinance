@@ -4,8 +4,8 @@ import "./styles.css";
 import "./audit.css";
 
 export const metadata: Metadata = {
-  title: "Acme Supplier Portal",
-  description: "Purchase orders and invoice submissions for Acme suppliers.",
+  title: "OpenFinance Supplier Portal · Acme AP",
+  description: "WebMCP-enabled purchase orders and invoice submissions for Acme suppliers.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

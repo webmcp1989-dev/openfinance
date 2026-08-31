@@ -21,6 +21,11 @@ button:disabled { cursor: not-allowed; opacity: .58; }
 .portal-header { min-height: 84px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 30px; border-bottom: 1px solid var(--line); }
 .wordmark { display: flex; align-items: center; gap: 10px; color: var(--navy); font-weight: 800; }
 .mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; color: #fff; background: var(--blue); }
+.openfinance-lockup { display: flex; align-items: center; gap: 12px; color: var(--navy); }
+.openfinance-logo { width: 43px; height: 43px; display: grid; place-items: center; border-radius: 13px; color: #fff; background: linear-gradient(145deg, #176d52, #0c4937); box-shadow: 0 9px 22px rgb(12 73 55 / 20%); font-size: .74rem; font-weight: 850; letter-spacing: -.03em; }
+.openfinance-lockup > span:last-child { display: grid; gap: 1px; }
+.openfinance-lockup strong { color: #123b2f; font-size: 1rem; letter-spacing: -.02em; }
+.openfinance-lockup small { color: var(--muted); font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 nav { display: flex; gap: 26px; }
 nav a { color: var(--muted); font-size: .86rem; font-weight: 650; text-decoration: none; }
 nav a:hover { color: var(--blue); }
@@ -37,6 +42,15 @@ nav a:hover { color: var(--blue); }
 .agent-guide { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; padding: 17px 20px; border: 1px solid #cbdaf0; border-radius: 16px; background: #f7faff; }
 .agent-guide p { margin: 4px 0 0; color: var(--muted); font-size: .88rem; }
 .pulse { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 6px #dfeafb; }
+.webmcp-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr); gap: 28px; margin-top: 30px; padding: 30px; overflow: hidden; border: 1px solid #b9decf; border-radius: 24px; background: linear-gradient(120deg, #ecfbf5 0%, #f7fbff 58%, #eaf1fb 100%); box-shadow: 0 16px 42px rgb(24 72 57 / 8%); }
+.webmcp-hero-copy { align-self: center; }
+.webmcp-hero h1 { margin: 7px 0 10px; color: #0b4f3a; font-size: clamp(2.2rem, 5vw, 4.7rem); line-height: .98; letter-spacing: -.055em; }
+.webmcp-hero-copy > p:last-child { max-width: 670px; margin: 0; color: #4e6b62; line-height: 1.55; }
+.agent-starter { display: grid; align-content: center; gap: 11px; padding: 22px; border: 1px solid rgb(20 92 70 / 18%); border-radius: 18px; background: rgb(255 255 255 / 78%); box-shadow: 0 10px 28px rgb(19 70 55 / 7%); }
+.agent-starter > span { color: var(--green); font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.agent-starter blockquote { margin: 0; color: var(--navy); font-size: 1.12rem; font-weight: 760; line-height: 1.45; }
+.agent-starter button { justify-self: start; padding: 9px 13px; border: 1px solid #a8ccbe; border-radius: 9px; color: #0d6248; background: #f3fcf8; font-size: .75rem; font-weight: 760; }
+.agent-starter button:hover { background: #e6f7f0; }
 .demo-controls { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; padding: 18px 20px; border: 1px dashed #cbd4df; border-radius: 16px; background: rgb(255 255 255 / 68%); }
 .demo-controls h2 { margin: 3px 0 4px; color: var(--navy); font-size: 1rem; letter-spacing: -.02em; }
 .demo-controls > div:first-child > p:last-child { margin: 0; color: var(--muted); font-size: .79rem; }
@@ -139,6 +153,7 @@ nav a:hover { color: var(--blue); }
 .auth-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 80% 0%, #dbe7f8, transparent 42%), var(--canvas); }
 .auth-card { width: min(440px, 100%); display: grid; gap: 18px; padding: 34px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); box-shadow: 0 24px 70px rgb(25 45 75 / 12%); }
 .auth-form { display: grid; gap: 18px; }
+.auth-portal-context { margin-top: -4px; color: var(--blue); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .auth-card h1 { margin: 4px 0 0; color: var(--navy); letter-spacing: -.03em; }
 .auth-form > p:not(.form-error) { margin: -8px 0 2px; color: var(--muted); line-height: 1.55; }
 .auth-card label { display: grid; gap: 7px; color: #45546b; font-size: .82rem; font-weight: 700; }
@@ -158,6 +173,7 @@ nav a:hover { color: var(--blue); }
   .submission-workbench { grid-template-columns: 1fr; }
   .candidate-form { border-right: 0; border-bottom: 1px solid var(--line); }
   .demo-controls, .reset-confirmation { align-items: flex-start; flex-direction: column; }
+  .webmcp-hero { grid-template-columns: 1fr; }
   .reset-confirmation { width: 100%; padding: 14px 0 0; border-top: 1px solid var(--line); border-left: 0; }
 }
 @media (max-width: 620px) {
@@ -165,6 +181,8 @@ nav a:hover { color: var(--blue); }
   .portal-header { grid-template-columns: 1fr; padding: 16px 0; }
   .supplier { justify-content: space-between; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
   .intro { align-items: flex-start; flex-direction: column; padding-top: 34px; }
+  .webmcp-hero { margin-top: 20px; padding: 22px; }
+  .webmcp-hero h1 { font-size: clamp(2.4rem, 15vw, 3.7rem); }
   .lookup-grid, .field-grid { grid-template-columns: 1fr; }
   .lookup-card.remittance-lookup { grid-column: auto; }
   .detailed-result dl { grid-template-columns: 1fr; }

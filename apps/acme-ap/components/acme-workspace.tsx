@@ -58,6 +58,8 @@ type PaymentRemittance = Readonly<{
 
 type SubmissionStatusFilter = "all" | SubmissionRow["status"];
 
+export const AP_AGENT_STARTER_PROMPT = "Submit all Acme invoices that can be paid.";
+
 export function filterSubmissionRows(
   submissions: readonly SubmissionRow[],
   status: SubmissionStatusFilter,
@@ -166,6 +168,7 @@ export function AcmeWorkspace({
   const [confirmation, setConfirmation] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [resetOpen, setResetOpen] = useState(false);
+  const [starterPromptCopied, setStarterPromptCopied] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -226,6 +229,15 @@ export function AcmeWorkspace({
   function clearFeedback() {
     setNotice(null);
     setError(null);
+  }
+
+  async function copyStarterPrompt() {
+    try {
+      await navigator.clipboard.writeText(AP_AGENT_STARTER_PROMPT);
+      setStarterPromptCopied(true);
+    } catch {
+      setError("Copy was unavailable. Select the starter instruction and copy it manually.");
+    }
   }
 
   async function findPurchaseOrder(formData: FormData) {
@@ -475,6 +487,21 @@ export function AcmeWorkspace({
         <nav aria-label="Primary navigation"><a href="#operations">Submit invoice</a><a href="#orders">Purchase orders</a><a href="#submissions">Receipts</a></nav>
         <div className="supplier"><div><small>Signed in as</small><strong>{supplierName}</strong><span>{supplierCode}</span></div><form action={signOutAction}><button className="signout" type="submit">Sign out</button></form></div>
       </header>
+
+      <section className="webmcp-hero" aria-labelledby="webmcp-support-title">
+        <div className="webmcp-hero-copy">
+          <p className="kicker">Agent-ready supplier workspace</p>
+          <h1 id="webmcp-support-title">WebMCP fully supported</h1>
+          <p>Open this portal and your OpenFinance AR workspace in a WebMCP-capable agent, then start with one clear instruction.</p>
+        </div>
+        <div className="agent-starter">
+          <span>Say to your agent</span>
+          <blockquote>“{AP_AGENT_STARTER_PROMPT}”</blockquote>
+          <button type="button" onClick={() => void copyStarterPrompt()} aria-live="polite">
+            {starterPromptCopied ? "Prompt copied" : "Copy starter prompt"}
+          </button>
+        </div>
+      </section>
 
       <section className="intro">
         <div><p className="kicker">Accounts payable</p><h1>Supplier workspace</h1><p>Find purchase orders, validate invoices, submit approved batches, and track receipts.</p></div>

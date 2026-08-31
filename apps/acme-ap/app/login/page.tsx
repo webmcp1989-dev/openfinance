@@ -11,8 +11,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="login-title">
         <form action={signIn} className="auth-form">
-          <div className="wordmark"><span className="mark">A</span><span>Acme Supplier Portal</span></div>
-          <h1 id="login-title">Supplier sign in</h1>
+          <div className="openfinance-lockup" aria-label="OpenFinance Supplier Portal">
+            <span className="openfinance-logo" aria-hidden="true">OF</span>
+            <span><strong>OpenFinance</strong><small>Supplier Portal</small></span>
+          </div>
+          <span className="auth-portal-context">Acme Manufacturing · Accounts payable</span>
+          <h1 id="login-title">Sign in to Supplier Portal</h1>
           <p>Use your Acme supplier credentials. Site tools are scoped to this independent portal session.</p>
           <label>Email<input name="email" type="email" autoComplete="username" required /></label>
           <label>Password<input name="password" type="password" autoComplete="current-password" minLength={8} required /></label>
