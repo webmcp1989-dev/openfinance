@@ -15,8 +15,22 @@ import { hasStructuralPdf } from "@/lib/pdf-structure";
 import { AcmeSiteTools } from "./acme-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const timestamp = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
-const preciseTimestamp = new Intl.DateTimeFormat("en-US", { timeStyle: "medium" });
+const timestamp = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
+const preciseTimestamp = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  second: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
 
 type ValidationResult = Readonly<{
   valid: boolean;

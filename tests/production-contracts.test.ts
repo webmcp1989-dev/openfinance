@@ -37,6 +37,20 @@ describe("responsive authentication controls", () => {
   });
 });
 
+describe("deterministic server rendering", () => {
+  test("both hydrated workspaces render timestamps in an explicit timezone", async () => {
+    const [ar, ap] = await Promise.all([
+      readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8"),
+      readFile(join(root, "apps/acme-ap/components/acme-workspace.tsx"), "utf8"),
+    ]);
+
+    expect(ar).toContain('timeZone: "UTC"');
+    expect(ap.match(/timeZone: "UTC"/g)).toHaveLength(2);
+    expect(ar).toContain('timeZoneName: "short"');
+    expect(ap.match(/timeZoneName: "short"/g)).toHaveLength(2);
+  });
+});
+
 describe("authentication recovery messages", () => {
   for (const loginPage of [
     "apps/openfinance-ar/app/login/page.tsx",

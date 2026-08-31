@@ -9,7 +9,15 @@ import type { PortalFollowup } from "@/lib/services/invoice-service";
 import { OpenFinanceSiteTools } from "./openfinance-site-tools";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const timestamp = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" });
+const timestamp = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
 
 function statusLabel(invoice: InvoiceQueueItem) {
   const labels: Record<InvoiceQueueItem["status"], string> = {
