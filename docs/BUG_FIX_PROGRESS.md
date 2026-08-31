@@ -321,3 +321,100 @@ and revocation; and independently authorized demo resets.
   through RLS, with INSERT/UPDATE/DELETE denied.
 - Verification: live AP reset 14/14, exception-to-cash 16/16, payment 15/15,
   RLS 15/15, and submission-wrapper 14/14 passed in rollback transactions.
+
+## August 31 contest-readiness re-verification
+
+This was a fresh review of the current implementation. The August 30 map and
+findings above were historical context only and were not used to narrow scope
+or establish correctness.
+
+| Review area | Current coverage | Result |
+| --- | --- | --- |
+| Repository and deployment | workspaces, CI, dependency graph, ignored environments, license, fresh clone, Vercel builds | complete |
+| Authentication boundaries | login, profile recovery, session refresh, protected routes, unauthenticated behavior | complete |
+| OpenFinance AR | queue, packages, PDF/evidence, outcome/exception/remittance, sync, audit, human UI | complete — F-010/F-011 |
+| AR remote MCP | metadata, OAuth resource/audience, RLS-bound services, consent/revocation, contest separation | complete |
+| Acme AP | PO policy, validation, submission, status, exception, replacement, inquiry, payment, human UI | complete — F-008/F-009/F-011 |
+| Database state machines | migrations, RLS/grants, tenant derivation, locks, idempotency, reset, payment sequence | complete by source and contract review |
+| Cross-application workflow | 7 + 12 tools, package normalization, AP preflight, authority branches, remittance, zero cross-writes | complete for read paths; final stateful replay pending |
+| Human UX and documents | PDF download/render/upload, detail views, responsive containment, feedback, console | complete |
+| Contracts and submission | OpenAPI, MCP docs, setup, public repo/license, challenge requirements and judging criteria | complete |
+| Independent final verification | fresh GitHub clone, full tests/type-check/lint/build/audit, public headers, fresh live tabs | complete except final stateful replay/reset |
+
+### F-008 — AP refresh discarded complete invoice detail
+
+- Severity: Medium.
+- Status: fixed, deployed, and regression-tested.
+- Evidence/root cause: `AcmeWorkspace.refresh()` replaced the active status
+  detail with a row from the summary portfolio endpoint. Summary rows do not
+  contain timeline, exception, inquiry, or revision data, so any successful
+  tool mutation or scheduled settlement refresh silently removed those fields.
+- Remediation: when a detail card is active, refresh now loads the supplier-
+  scoped status endpoint concurrently with the workspace summary and replaces
+  the detail only with that authoritative complete response.
+- Tests: production parity contract plus full 124-test fresh-clone suite;
+  production status UI displays complete timeline and exception metadata.
+
+### F-009 — Replacement conflict could expose PostgreSQL error text
+
+- Severity: Low.
+- Status: fixed, deployed, and regression-tested.
+- Evidence/root cause: the service returned arbitrary `error.message` for every
+  PostgreSQL `23514` replacement failure. A constraint error could disclose
+  internal table or constraint names through the public API.
+- Remediation: all replacement-state conflicts now return one stable public
+  message. A focused service test supplies an internal-looking database error
+  and proves that it is not exposed.
+
+### F-010 — Primary AR workspace advertised out-of-scope remote MCP tools
+
+- Severity: Low (contest execution).
+- Status: fixed and deployed.
+- Evidence/root cause: although submission documentation correctly excludes the
+  optional own-system remote MCP, the primary challenge workspace prominently
+  linked to it and displayed `7 site + 11 remote tools`, competing with the
+  browser challenge's deliberate `19 tools, zero cross-writes` story.
+- Remediation: retained the optional routes and documentation but removed their
+  marketing block and dead styles from the primary judge workspace. A contract
+  test prevents the out-of-scope count from returning there.
+
+### F-011 — Locale-dependent timestamps caused production hydration errors
+
+- Severity: Medium.
+- Status: fixed, deployed, and independently verified live.
+- Evidence/root cause: both workspaces formatted timestamps without an explicit
+  timezone. Vercel rendered in UTC while the browser rendered in its local
+  timezone, producing React hydration error 418 in both production consoles.
+- Remediation: both server/client formatters now use explicit UTC fields and a
+  visible UTC timezone label. Fresh production tabs render the same text and
+  report zero warnings or errors. A contract test enforces the deterministic
+  timezone configuration.
+
+### Operational finding — judge baseline is not currently canonical
+
+- Status: pending final stateful verification and restore.
+- Evidence: the live read-only pass found four ready Acme invoices in AR and
+  five AP submissions, including the prior `INV-10479` revision and two prior
+  invoice submissions. The documented clean baseline is seven ready AR
+  invoices and three AP exception fixtures.
+- Exact next action: after action-time confirmation for deleting synthetic demo
+  activity, restore both applications, run the approved stateful exception-to-
+  cash rehearsal, restore both again, and verify 7-ready/3-fixture counts.
+
+### Current verification evidence
+
+- Fresh production tool inventories: seven AR and twelve AP browser tools.
+- Live normalized `INV-10522` package passed AP validation against PO-8912.
+- Live human path downloaded a 3,994-byte one-page PDF, rendered and visually
+  verified all invoice fields, uploaded the same file to AP, and passed human
+  preflight. PO detail, status timeline/authority, and exact ACH remittance were
+  visible through human controls.
+- Unauthenticated roots redirect to login; protected workspace APIs and MCP
+  return `401`. Login responses are private/no-store and include CSP, frame,
+  MIME, referrer, and permissions protections.
+- A fresh clone of commit `5eda779` installed with the frozen lockfile and
+  passed 124 tests / 515 expectations, both type-checks, both lints, and both
+  production builds. `bun audit` reported no vulnerabilities.
+- No migration or environment-variable change was required. SQL suites were
+  reviewed but not re-executed in this fresh pass because the repository has no
+  local Supabase runtime or administrative database credential.
