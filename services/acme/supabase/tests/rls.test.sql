@@ -41,6 +41,25 @@ begin
 end;
 $$;
 
+create function pg_temp.submit_invoice_batch(p_key text, p_fingerprint text, p_invoices jsonb)
+returns jsonb
+language plpgsql
+as $$
+declare v_preview jsonb; v_approval jsonb;
+begin
+  select jsonb_build_object('action', 'submit_invoice_batch', 'invoices', jsonb_agg(jsonb_build_object(
+    'invoiceNumber', item.value->'invoiceNumber', 'invoiceDate', item.value->'invoiceDate',
+    'amountMinor', item.value->'amountMinor', 'currency', item.value->'currency',
+    'purchaseOrderNumber', item.value->'purchaseOrderNumber',
+    'document', jsonb_build_object('fileName', item.value->'document'->'fileName', 'mediaType', item.value->'document'->'mediaType', 'sha256', item.value->'document'->'sha256')
+  ) order by item.ordinality)) into v_preview
+  from jsonb_array_elements(p_invoices) with ordinality as item(value, ordinality);
+  v_approval := public.request_document_submission_approval('submit_invoice_batch', p_key, repeat('0', 64), v_preview, 'human');
+  perform public.decide_document_submission_approval((v_approval->>'approvalId')::uuid, 'approved');
+  return public.submit_invoice_batch(p_key, p_fingerprint, p_invoices, (v_approval->>'approvalId')::uuid);
+end;
+$$;
+
 select plan(18);
 select has_table('public', 'suppliers', 'suppliers exists');
 select has_table('public', 'purchase_orders', 'purchase orders exist');
@@ -68,7 +87,7 @@ select is(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'foreign-rls-test-20260829',
       repeat('f', 64),
       jsonb_build_array(jsonb_build_object(

@@ -66,6 +66,38 @@ begin
 end;
 $$;
 
+create function pg_temp.submit_invoice_batch(p_key text, p_fingerprint text, p_invoices jsonb)
+returns jsonb
+language plpgsql
+as $$
+declare
+  v_preview jsonb;
+  v_approval jsonb;
+begin
+  select jsonb_build_object(
+    'action', 'submit_invoice_batch',
+    'invoices', coalesce(jsonb_agg(jsonb_build_object(
+      'invoiceNumber', item.value->'invoiceNumber',
+      'invoiceDate', item.value->'invoiceDate',
+      'amountMinor', item.value->'amountMinor',
+      'currency', item.value->'currency',
+      'purchaseOrderNumber', item.value->'purchaseOrderNumber',
+      'document', jsonb_build_object(
+        'fileName', item.value->'document'->'fileName',
+        'mediaType', item.value->'document'->'mediaType',
+        'sha256', item.value->'document'->'sha256'
+      )
+    ) order by item.ordinality), '[]'::jsonb)
+  ) into v_preview
+  from jsonb_array_elements(p_invoices) with ordinality as item(value, ordinality);
+  v_approval := public.request_document_submission_approval(
+    'submit_invoice_batch', p_key, repeat('0', 64), v_preview, 'human'
+  );
+  perform public.decide_document_submission_approval((v_approval->>'approvalId')::uuid, 'approved');
+  return public.submit_invoice_batch(p_key, p_fingerprint, p_invoices, (v_approval->>'approvalId')::uuid);
+end;
+$$;
+
 select is(
   (select prosecdef from pg_proc where oid = 'public.submit_invoice_batch(text,text,jsonb)'::regprocedure),
   false,
@@ -80,7 +112,7 @@ select ok(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'duplicate-batch-test-20260829',
       repeat('a', 64),
       '[{"invoiceNumber":"INV-DUP-01"},{"invoiceNumber":"INV-DUP-01"}]'::jsonb
@@ -93,7 +125,7 @@ select throws_ok(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'extra-field-test-20260829',
       repeat('e', 64),
       jsonb_build_array(jsonb_build_object(
@@ -119,7 +151,7 @@ select throws_ok(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'noncanonical-test-20260829',
       repeat('d', 64),
       jsonb_build_array(jsonb_build_object(
@@ -144,7 +176,7 @@ select throws_ok(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'missing-eof-test-20260829',
       repeat('c', 64),
       jsonb_build_array(jsonb_build_object(
@@ -169,7 +201,7 @@ select throws_ok(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'pseudo-pdf-test-20260830',
       repeat('f', 64),
       jsonb_build_array(jsonb_build_object(
@@ -197,7 +229,7 @@ create temporary table retry_probe (
 ) on commit drop;
 
 insert into retry_probe (response)
-select public.submit_invoice_batch(
+select pg_temp.submit_invoice_batch(
   'matching-retry-test-20260829',
   repeat('b', 64),
   jsonb_build_array(jsonb_build_object(
@@ -216,7 +248,7 @@ select public.submit_invoice_batch(
 );
 
 select is(
-  public.submit_invoice_batch(
+  pg_temp.submit_invoice_batch(
     'matching-retry-test-20260829',
     repeat('b', 64),
     jsonb_build_array(jsonb_build_object(
@@ -245,7 +277,7 @@ select is(
 
 select throws_ok(
   $$
-    select public.submit_invoice_batch(
+    select pg_temp.submit_invoice_batch(
       'matching-retry-test-20260829',
       repeat('b', 64),
       jsonb_build_array(jsonb_build_object(

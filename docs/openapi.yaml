@@ -389,8 +389,12 @@ paths:
       operationId: submitInvoiceBatch
       summary: Atomically submit a human-confirmed valid invoice batch
       description: >-
-        Consequential operation. The WebMCP caller must show the exact valid batch and
-        exceptions to the user and obtain explicit confirmation before invoking it.
+        Consequential document operation. The portal prepares a short-lived, single-use
+        approval, shows its exact batch manifest to the signed-in human, and supplies the
+        returned approval identifier only after explicit confirmation. PostgreSQL binds and
+        consumes that approval in the same transaction as the batch mutation.
+      parameters:
+        - { $ref: "#/components/parameters/DocumentApproval" }
       requestBody:
         required: true
         content:
@@ -419,6 +423,58 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+  /api/agent/document-approvals:
+    servers:
+      - url: https://openfinance-ap.vercel.app
+    post:
+      operationId: requestDocumentSubmissionApproval
+      summary: Prepare a short-lived approval for exact document metadata
+      description: >-
+        Creates only a pending consent record. The request contains filenames and SHA-256
+        values but never PDF base64. It does not submit, attach, or replace a document.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentSubmissionApprovalRequest" }
+      responses:
+        "200":
+          description: Pending approval challenge
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentSubmissionApproval" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+    patch:
+      operationId: decideDocumentSubmissionApproval
+      summary: Approve or deny one exact pending document action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [approvalId, decision]
+              properties:
+                approvalId: { type: string, format: uuid }
+                decision: { type: string, enum: [approved, denied] }
+      responses:
+        "200":
+          description: Recorded human decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentSubmissionApproval" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
   /api/agent/invoices/{invoiceNumber}/document:
     servers:
       - url: https://openfinance-ar.vercel.app
@@ -504,6 +560,8 @@ paths:
     post:
       operationId: respondToInvoiceException
       summary: Idempotently send a human-approved exception response and evidence
+      parameters:
+        - { $ref: "#/components/parameters/DocumentApproval" }
       requestBody:
         required: true
         content:
@@ -526,12 +584,15 @@ paths:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
   /api/agent/replacements:
     servers:
       - url: https://openfinance-ap.vercel.app
     post:
       operationId: replaceRejectedInvoice
       summary: Transactionally supersede a rejected invoice with a corrected revision
+      parameters:
+        - { $ref: "#/components/parameters/DocumentApproval" }
       requestBody:
         required: true
         content:
@@ -552,6 +613,7 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
   /api/agent/inquiries:
     servers:
       - url: https://openfinance-ap.vercel.app
@@ -631,6 +693,16 @@ paths:
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "422": { $ref: "#/components/responses/Unprocessable" }
 components:
+  parameters:
+    DocumentApproval:
+      in: header
+      name: X-OpenFinance-Document-Approval
+      required: true
+      description: >-
+        Opaque, short-lived approval identifier created for the same signed-in user,
+        tenant, action, idempotency key, and exact document metadata. It is never a
+        WebMCP input and is consumed transactionally by the AP mutation.
+      schema: { type: string, format: uuid }
   securitySchemes:
     cookieSession:
       type: apiKey
@@ -682,6 +754,11 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
+    PreconditionRequired:
+      description: Fresh human approval is required for this exact document action
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
   schemas:
     InvoiceNumber:
       type: string
@@ -693,6 +770,86 @@ components:
       type: string
       minLength: 16
       maxLength: 128
+    DocumentMetadata:
+      type: object
+      additionalProperties: false
+      required: [fileName, mediaType, sha256]
+      properties:
+        fileName: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" }
+        mediaType: { type: string, const: application/pdf }
+        sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+    DocumentSubmissionApprovalRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, initiatedBy, manifest]
+      properties:
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        initiatedBy: { type: string, enum: [agent, human] }
+        manifest:
+          description: PDF base64 is forbidden; documents are represented only by filename, media type, and SHA-256.
+          oneOf:
+            - { $ref: "#/components/schemas/BatchSubmissionApprovalManifest" }
+            - { $ref: "#/components/schemas/ExceptionResponseApprovalManifest" }
+            - { $ref: "#/components/schemas/ReplacementApprovalManifest" }
+    ApprovalInvoiceMetadata:
+      type: object
+      additionalProperties: false
+      required: [invoiceNumber, invoiceDate, amountMinor, currency, purchaseOrderNumber, document]
+      properties:
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        invoiceDate: { type: string, format: date }
+        amountMinor: { type: integer, minimum: 1, maximum: 9007199254740991 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        purchaseOrderNumber: { $ref: "#/components/schemas/PurchaseOrderNumber" }
+        document: { $ref: "#/components/schemas/DocumentMetadata" }
+    ApprovalSupportingDocumentMetadata:
+      type: object
+      additionalProperties: false
+      required: [fileName, mediaType, sha256, documentKind]
+      properties:
+        fileName: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$" }
+        mediaType: { type: string, const: application/pdf }
+        sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+        documentKind: { type: string, enum: [proof_of_delivery, service_acceptance, timesheet, tax_document, contract, other] }
+    BatchSubmissionApprovalManifest:
+      type: object
+      additionalProperties: false
+      required: [action, invoices]
+      properties:
+        action: { type: string, const: submit_invoice_batch }
+        invoices:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items: { $ref: "#/components/schemas/ApprovalInvoiceMetadata" }
+    ExceptionResponseApprovalManifest:
+      type: object
+      additionalProperties: false
+      required: [action, invoiceNumber, exceptionCode, message, attachments]
+      properties:
+        action: { type: string, const: respond_to_invoice_exception }
+        invoiceNumber: { $ref: "#/components/schemas/InvoiceNumber" }
+        exceptionCode: { type: string, pattern: "^[a-z][a-z0-9_]{1,63}$" }
+        message: { type: string, minLength: 1, maxLength: 1000 }
+        attachments:
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/ApprovalSupportingDocumentMetadata" }
+    ReplacementApprovalManifest:
+      type: object
+      additionalProperties: false
+      required: [action, invoice]
+      properties:
+        action: { type: string, const: replace_rejected_invoice }
+        invoice: { $ref: "#/components/schemas/ApprovalInvoiceMetadata" }
+    DocumentSubmissionApproval:
+      type: object
+      additionalProperties: false
+      required: [approvalId, status, expiresAt]
+      properties:
+        approvalId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, approved, denied, consumed] }
+        expiresAt: { type: string, format: date-time }
     ErpSyncRequest:
       type: object
       additionalProperties: false

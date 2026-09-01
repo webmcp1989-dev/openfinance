@@ -31,11 +31,11 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 | `get_purchase_order_details` | read | Returns the complete live context for one supplier-authorized PO. |
 | `list_supplier_invoices` | read | Lists portal invoices with optional status or PO filters. |
 | `validate_invoice` | read, transfer-approved | Checks a human-approved package without reserving balance or writing data. |
-| `submit_invoice_batch` | consequential write, idempotent | Atomically submits only a human-confirmed valid batch and returns receipts; identical retries return the original result. |
+| `submit_invoice_batch` | consent-gated document write, idempotent | Opens the portal's exact document-approval panel, then atomically submits only an approved valid batch and returns receipts; identical retries return the original result. |
 | `get_invoice_status` | read | Returns the current receipt and revision, complete timeline across revisions, current exceptions and inquiries, and completed payment reference. |
 | `get_invoice_exception` | read | Returns structured exception ownership, supplier authority, an explicit authority-boundary statement, guidance, evidence requirements, and permitted actions. |
-| `respond_to_invoice_exception` | consequential write, idempotent | Sends a reviewed supplier response and up to three verified supporting PDFs. Exact requested evidence resolves that exception and approves a disputed invoice only when no other actionable blocker remains; the result reports both authoritative states. Buyer-owned blockers are rejected. |
-| `replace_rejected_invoice` | consequential write, idempotent | Transactionally supersedes an eligible rejected invoice with a corrected revision and adjusts PO balances. |
+| `respond_to_invoice_exception` | consent-gated document write, idempotent | Opens the portal's exact approval panel, then sends the approved response and up to three verified supporting PDFs. Exact requested evidence resolves that exception and approves a disputed invoice only when no other actionable blocker remains; the result reports both authoritative states. Buyer-owned blockers are rejected. |
+| `replace_rejected_invoice` | consent-gated document write, idempotent | Opens the portal's exact corrected-document approval panel, then transactionally supersedes an eligible rejected invoice and adjusts PO balances. |
 | `create_invoice_inquiry` | consequential write, idempotent | Opens a persistent tracked payment, invoice, expedite, terms, entry-assistance, or buyer-owned-blocker case and returns its `CASE-*` reference. It never resolves the buyer-owned exception or approves the invoice. |
 | `get_payment_remittance` | read | Returns scheduled or completed payment details and exact invoice allocations so the approved workflow can finish with AR reconciliation. |
 
@@ -50,6 +50,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 - Read outputs include live versions, balances, rules, checksums, and validation issues needed to verify decisions.
 - Acme's stored requirements are database-constrained to the same PDF, size, open-PO, and balance contract advertised by its tools and enforced during submission.
 - Write outputs include durable references and committed remaining balances.
+- AP's three document-writing tools (`submit_invoice_batch`, `respond_to_invoice_exception`, and `replace_rejected_invoice`) cannot reach their mutation RPC until the signed-in human approves a five-minute, one-time manifest. The manifest contains exact business fields, filenames, and SHA-256 values but never PDF base64. PostgreSQL derives the final manifest from the actual payload, locks the approval, compares tenant/user/action/idempotency/payload, commits the business mutation, and consumes consent in one transaction. The approval identifier is internal page state, not a WebMCP input or tool.
 - Frontend schemas aid tool selection; Zod, RLS, exact public-RPC validation, constraints, and transaction code remain authoritative. Both mutation RPCs derive request identity in PostgreSQL, so a caller-supplied digest cannot disguise changed idempotent content. AR also compares the stored event type and payload directly before replaying an existing delivery result.
 
 ## Required orchestration
@@ -59,7 +60,7 @@ Cross-site package reads and AP submission writes accept at most three invoices 
 3. Read AP rules and preflight only the transfer-approved invoices.
 4. Separate valid invoices from exceptions.
 5. Present the exact valid invoice numbers, POs, amounts, total, and exclusions.
-6. Obtain a separate explicit human confirmation immediately before submission.
+6. Invoke the AP submission tool; its mandatory portal panel shows the exact destination, invoices, POs, amounts, total, filenames, and hashes. The human must approve there immediately before submission.
 7. Submit the valid batch exactly once with a unique idempotency key.
 8. Verify returned references and visible AP state.
 9. Record verified results and exceptions in OpenFinance.

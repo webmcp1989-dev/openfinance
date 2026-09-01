@@ -9,7 +9,9 @@ const {
   getInvoiceStatus,
   listOpenBuyerCases,
   listInvoiceWorkflows,
+  decideDocumentSubmissionApproval,
   replaceRejectedInvoice,
+  requestDocumentSubmissionApproval,
   respondToInvoiceException,
   submitInvoiceBatch,
   validateInvoice,
@@ -27,6 +29,7 @@ function renderStructuralPdf() {
 }
 
 const documentBytes = renderStructuralPdf();
+const approvalId = "90000000-0000-4000-8000-000000000001";
 
 function invoice(overrides: Partial<InvoiceCandidate> = {}): InvoiceCandidate {
   return {
@@ -83,6 +86,70 @@ function fakeSupabase(options: {
   };
   return { client, calls, filters };
 }
+
+describe("document submission approval service", () => {
+  test("prepares a bounded tenant-scoped approval through one RPC", async () => {
+    const prepared = { approvalId, status: "pending", expiresAt: "2026-09-01T10:05:00.000Z" } as const;
+    const { client, calls } = fakeSupabase({ rpcResult: prepared });
+    const request = {
+      idempotencyKey: "approval-batch-20260901",
+      initiatedBy: "agent" as const,
+      manifest: {
+        action: "submit_invoice_batch" as const,
+        invoices: [{
+          invoiceNumber: "INV-10482",
+          invoiceDate: "2026-08-12",
+          amountMinor: 1_842_000,
+          currency: "USD",
+          purchaseOrderNumber: "PO-8821",
+          document: { fileName: "INV-10482.pdf", mediaType: "application/pdf" as const, sha256: "a".repeat(64) },
+        }],
+      },
+    };
+
+    await expect(requestDocumentSubmissionApproval(client as never, request)).resolves.toEqual(prepared);
+    expect(calls).toEqual([expect.objectContaining({
+      name: "request_document_submission_approval",
+      args: expect.objectContaining({
+        p_action: "submit_invoice_batch",
+        p_initiated_by: "agent",
+        p_preview: request.manifest,
+      }),
+    })]);
+  });
+
+  test("records only an explicit approved or denied decision", async () => {
+    const decided = { approvalId, status: "approved", expiresAt: "2026-09-01T10:05:00.000Z" } as const;
+    const { client, calls } = fakeSupabase({ rpcResult: decided });
+
+    await expect(decideDocumentSubmissionApproval(client as never, approvalId, "approved")).resolves.toEqual(decided);
+    expect(calls[0]).toEqual({
+      name: "decide_document_submission_approval",
+      args: { p_approval_id: approvalId, p_decision: "approved" },
+    });
+  });
+
+  test("maps a missing or mismatched approval to a safe precondition error", async () => {
+    const client = {
+      rpc() {
+        return Promise.resolve({
+          data: null,
+          error: { code: "P0001", message: "Document approval does not match this request" },
+        });
+      },
+    };
+
+    await expect(submitInvoiceBatch(
+      client as never,
+      "approval-required-20260901",
+      [invoice()],
+      approvalId,
+    )).rejects.toMatchObject({
+      status: 428,
+      code: "document_approval_required",
+    });
+  });
+});
 
 describe("Acme invoice validation", () => {
   test("states the supplier authority boundary for buyer-owned receiving work", () => {
@@ -185,7 +252,7 @@ describe("Acme invoice validation", () => {
       exceptionCode: "missing_goods_receipt",
       message: "Resolved.",
       attachments: [],
-    })).rejects.toMatchObject({
+    }, approvalId)).rejects.toMatchObject({
       status: 409,
       code: "buyer_owned_exception",
     });
@@ -209,7 +276,7 @@ describe("Acme invoice validation", () => {
       attachments: [{ documentKind: "proof_of_delivery" }],
     };
 
-    await expect(respondToInvoiceException(client as never, request)).resolves.toEqual({
+    await expect(respondToInvoiceException(client as never, request, approvalId)).resolves.toEqual({
       invoiceNumber: "INV-10417",
       exceptionCode: "missing_delivery_proof",
       exceptionStatus: "resolved",
@@ -220,6 +287,7 @@ describe("Acme invoice validation", () => {
       name: "respond_to_invoice_exception",
       args: expect.objectContaining({
         p_idempotency_key: request.idempotencyKey,
+        p_approval_id: approvalId,
         p_payload: expect.objectContaining({ invoiceNumber: "INV-10417" }),
       }),
     })]);
@@ -242,6 +310,7 @@ describe("Acme invoice validation", () => {
       client as never,
       "replacement-error-test-20260831",
       invoice(),
+      approvalId,
     )).rejects.toMatchObject({
       status: 409,
       code: "replacement_conflict",
@@ -327,10 +396,13 @@ describe("Acme invoice validation", () => {
 
   test("submits a fully valid batch through one transactional RPC", async () => {
     const { client, calls } = fakeSupabase();
-    const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()]);
+    const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()], approvalId);
     expect(result).toEqual({ batchId: "batch-1", items: [] });
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toEqual(expect.objectContaining({ name: "submit_invoice_batch" }));
+    expect(calls[0]).toEqual(expect.objectContaining({
+      name: "submit_invoice_batch",
+      args: expect.objectContaining({ p_approval_id: approvalId }),
+    }));
   });
 
   test("lets an identical retry reach the idempotent transaction without duplicate preflight", async () => {
@@ -349,7 +421,7 @@ describe("Acme invoice validation", () => {
       },
     };
 
-    const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()]);
+    const result = await submitInvoiceBatch(client as never, "demo-batch-20260829", [invoice()], approvalId);
 
     expect(result).toEqual(existing);
     expect(calls).toHaveLength(1);

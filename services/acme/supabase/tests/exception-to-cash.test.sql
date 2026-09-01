@@ -76,6 +76,36 @@ begin
 end;
 $$;
 
+create function pg_temp.approve_action(p_action text, p_key text, p_payload jsonb)
+returns uuid
+language plpgsql
+as $$
+declare v_preview jsonb; v_approval jsonb;
+begin
+  if p_action = 'respond_to_invoice_exception' then
+    select jsonb_build_object(
+      'action', p_action, 'invoiceNumber', p_payload->'invoiceNumber',
+      'exceptionCode', p_payload->'exceptionCode', 'message', p_payload->'message',
+      'attachments', coalesce(jsonb_agg(jsonb_build_object(
+        'documentKind', item.value->'documentKind', 'fileName', item.value->'fileName',
+        'mediaType', item.value->'mediaType', 'sha256', item.value->'sha256'
+      ) order by item.ordinality) filter (where item.value is not null), '[]'::jsonb)
+    ) into v_preview
+    from jsonb_array_elements(coalesce(p_payload->'attachments', '[]'::jsonb)) with ordinality as item(value, ordinality);
+  else
+    v_preview := jsonb_build_object('action', p_action, 'invoice', jsonb_build_object(
+      'invoiceNumber', p_payload->'invoiceNumber', 'invoiceDate', p_payload->'invoiceDate',
+      'amountMinor', p_payload->'amountMinor', 'currency', p_payload->'currency',
+      'purchaseOrderNumber', p_payload->'purchaseOrderNumber',
+      'document', jsonb_build_object('fileName', p_payload->'document'->'fileName', 'mediaType', p_payload->'document'->'mediaType', 'sha256', p_payload->'document'->'sha256')
+    ));
+  end if;
+  v_approval := public.request_document_submission_approval(p_action, p_key, repeat('0', 64), v_preview, 'human');
+  perform public.decide_document_submission_approval((v_approval->>'approvalId')::uuid, 'approved');
+  return (v_approval->>'approvalId')::uuid;
+end;
+$$;
+
 select lives_ok(
   $$
     select public.create_invoice_inquiry(
@@ -113,7 +143,16 @@ select is(
         'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
         'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       ))
-    )
+    ),
+    pg_temp.approve_action('respond_to_invoice_exception', 'verified-evidence-test-0001', jsonb_build_object(
+      'invoiceNumber', 'INV-10417', 'exceptionCode', 'missing_delivery_proof',
+      'message', 'Attached is the verified proof of delivery requested by Acme.',
+      'attachments', jsonb_build_array(jsonb_build_object(
+        'documentKind', 'proof_of_delivery', 'fileName', 'INV-10417-proof.pdf',
+        'mediaType', 'application/pdf', 'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+      ))
+    ))
   )->>'exceptionStatus'),
   'resolved',
   'verified required supplier evidence resolves the exception'
@@ -132,7 +171,16 @@ select is(
         'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
         'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       ))
-    )
+    ),
+    pg_temp.approve_action('respond_to_invoice_exception', 'verified-evidence-test-0001', jsonb_build_object(
+      'invoiceNumber', 'INV-10417', 'exceptionCode', 'missing_delivery_proof',
+      'message', 'Attached is the verified proof of delivery requested by Acme.',
+      'attachments', jsonb_build_array(jsonb_build_object(
+        'documentKind', 'proof_of_delivery', 'fileName', 'INV-10417-proof.pdf',
+        'mediaType', 'application/pdf', 'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+      ))
+    ))
   )->>'invoiceStatus'),
   'accepted',
   'an identical retry returns the original accepted invoice outcome'
@@ -210,7 +258,16 @@ select lives_ok(
           'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
           'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
         )
-      )
+      ),
+      pg_temp.approve_action('replace_rejected_invoice', 'replacement-fixture-test-0001', jsonb_build_object(
+        'invoiceNumber', 'INV-10479', 'invoiceDate', '2026-08-30', 'amountMinor', 410000,
+        'currency', 'USD', 'purchaseOrderNumber', 'PO-8955',
+        'document', jsonb_build_object(
+          'fileName', 'INV-10479-corrected.pdf', 'mediaType', 'application/pdf',
+          'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+          'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+        )
+      ))
     )
   $$,
   'authorized supplier can replace the seeded rejected invoice'

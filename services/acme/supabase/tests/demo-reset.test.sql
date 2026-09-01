@@ -29,6 +29,39 @@ begin
 end;
 $$;
 
+create function pg_temp.approve_action(p_action text, p_key text, p_payload jsonb)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_preview jsonb;
+  v_approval jsonb;
+begin
+  if p_action = 'submit_invoice_batch' then
+    select jsonb_build_object('action', p_action, 'invoices', jsonb_agg(jsonb_build_object(
+      'invoiceNumber', item.value->'invoiceNumber', 'invoiceDate', item.value->'invoiceDate',
+      'amountMinor', item.value->'amountMinor', 'currency', item.value->'currency',
+      'purchaseOrderNumber', item.value->'purchaseOrderNumber',
+      'document', jsonb_build_object('fileName', item.value->'document'->'fileName', 'mediaType', item.value->'document'->'mediaType', 'sha256', item.value->'document'->'sha256')
+    ) order by item.ordinality)) into v_preview
+    from jsonb_array_elements(p_payload) with ordinality as item(value, ordinality);
+  else
+    select jsonb_build_object(
+      'action', p_action, 'invoiceNumber', p_payload->'invoiceNumber',
+      'exceptionCode', p_payload->'exceptionCode', 'message', p_payload->'message',
+      'attachments', coalesce(jsonb_agg(jsonb_build_object(
+        'documentKind', item.value->'documentKind', 'fileName', item.value->'fileName',
+        'mediaType', item.value->'mediaType', 'sha256', item.value->'sha256'
+      ) order by item.ordinality) filter (where item.value is not null), '[]'::jsonb)
+    ) into v_preview
+    from jsonb_array_elements(coalesce(p_payload->'attachments', '[]'::jsonb)) with ordinality as item(value, ordinality);
+  end if;
+  v_approval := public.request_document_submission_approval(p_action, p_key, repeat('0', 64), v_preview, 'human');
+  perform public.decide_document_submission_approval((v_approval->>'approvalId')::uuid, 'approved');
+  return (v_approval->>'approvalId')::uuid;
+end;
+$$;
+
 select is(
   jsonb_array_length(public.submit_invoice_batch(
     'reset-test-submit-20260829',
@@ -45,7 +78,16 @@ select is(
         'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
         'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
       )
-    ))
+    )),
+    pg_temp.approve_action('submit_invoice_batch', 'reset-test-submit-20260829', jsonb_build_array(jsonb_build_object(
+      'invoiceNumber', 'INV-RESET-TEST', 'invoiceDate', '2026-08-29', 'amountMinor', 1000,
+      'currency', 'USD', 'purchaseOrderNumber', 'PO-8821',
+      'document', jsonb_build_object(
+        'fileName', 'INV-RESET-TEST.pdf', 'mediaType', 'application/pdf',
+        'contentBase64', replace(encode(pg_temp.structural_pdf(), 'base64'), chr(10), ''),
+        'sha256', encode(extensions.digest(pg_temp.structural_pdf(), 'sha256'), 'hex')
+      )
+    )))
   )->'items'),
   1,
   'test setup commits one synthetic invoice'
@@ -54,7 +96,8 @@ select is((public.reset_demo_state()->>'restoredPurchaseOrderCount'), '9', 'auth
 select throws_ok(
   $$ select public.respond_to_invoice_exception(
     'buyer-owner-guard-20260830', repeat('6', 64),
-    '{"invoiceNumber":"INV-10463","exceptionCode":"missing_goods_receipt","message":"Supplier resolved it.","attachments":[]}'::jsonb
+    '{"invoiceNumber":"INV-10463","exceptionCode":"missing_goods_receipt","message":"Supplier resolved it.","attachments":[]}'::jsonb,
+    pg_temp.approve_action('respond_to_invoice_exception', 'buyer-owner-guard-20260830', '{"invoiceNumber":"INV-10463","exceptionCode":"missing_goods_receipt","message":"Supplier resolved it.","attachments":[]}'::jsonb)
   ) $$,
   'P0001',
   'This isn''t mine to fix. The buyer owns this blocker; open a tracked AP inquiry instead.',
@@ -63,7 +106,8 @@ select throws_ok(
 select throws_ok(
   $$ select public.respond_to_invoice_exception(
     'required-proof-guard-20260830', repeat('7', 64),
-    '{"invoiceNumber":"INV-10417","exceptionCode":"missing_delivery_proof","message":"Please approve.","attachments":[]}'::jsonb
+    '{"invoiceNumber":"INV-10417","exceptionCode":"missing_delivery_proof","message":"Please approve.","attachments":[]}'::jsonb,
+    pg_temp.approve_action('respond_to_invoice_exception', 'required-proof-guard-20260830', '{"invoiceNumber":"INV-10417","exceptionCode":"missing_delivery_proof","message":"Please approve.","attachments":[]}'::jsonb)
   ) $$,
   '23514',
   'The required supporting document is missing from this exception response.',

@@ -11,6 +11,9 @@ import type {
   SubmissionRequirements,
   ValidationIssue,
 } from "@/lib/domain/submissions";
+import type {
+  DocumentSubmissionApprovalRequest,
+} from "@/lib/domain/document-approvals";
 import { fingerprint, HttpError } from "@/lib/http-core";
 import { hasStructuralPdf } from "@/lib/pdf-structure";
 
@@ -308,12 +311,66 @@ export async function validateInvoice(supabase: SupabaseClient, invoice: Invoice
   return { valid: issues.length === 0, invoiceNumber: invoice.invoiceNumber, purchaseOrder, issues };
 }
 
-export async function submitInvoiceBatch(supabase: SupabaseClient, idempotencyKey: string, invoices: InvoiceCandidate[]) {
+export type DocumentSubmissionApproval = Readonly<{
+  approvalId: string;
+  status: "pending" | "approved" | "denied" | "consumed";
+  expiresAt: string;
+}>;
+
+export async function requestDocumentSubmissionApproval(
+  supabase: SupabaseClient,
+  request: DocumentSubmissionApprovalRequest,
+): Promise<DocumentSubmissionApproval> {
+  const { data, error } = await supabase.rpc("request_document_submission_approval", {
+    p_action: request.manifest.action,
+    p_idempotency_key: request.idempotencyKey,
+    p_request_fingerprint: fingerprint(request.manifest),
+    p_preview: request.manifest,
+    p_initiated_by: request.initiatedBy,
+  });
+  if (error?.code === "42501") throw new HttpError(403, "submitter_access_required", "Submitter access is required");
+  if (error) throw new HttpError(422, "approval_request_rejected", "Document approval could not be prepared");
+  return data as DocumentSubmissionApproval;
+}
+
+export async function decideDocumentSubmissionApproval(
+  supabase: SupabaseClient,
+  approvalId: string,
+  decision: "approved" | "denied",
+): Promise<DocumentSubmissionApproval> {
+  const { data, error } = await supabase.rpc("decide_document_submission_approval", {
+    p_approval_id: approvalId,
+    p_decision: decision,
+  });
+  if (error?.code === "42501") throw new HttpError(403, "approval_access_denied", "This approval is not available to the signed-in user");
+  if (error?.code === "P0002") throw new HttpError(404, "approval_not_found", "Document approval was not found");
+  if (error?.code === "P0001") throw new HttpError(409, "approval_not_pending", "Document approval is no longer pending");
+  if (error) throw new HttpError(422, "approval_decision_rejected", "Document approval could not be updated");
+  return data as DocumentSubmissionApproval;
+}
+
+function mapDocumentApprovalError(error: { code?: string; message?: string } | null) {
+  if (!error) return null;
+  if (error.code === "P0001" && error.message?.startsWith("Document approval")) {
+    return new HttpError(428, "document_approval_required", "Fresh human approval is required for this exact document submission");
+  }
+  return null;
+}
+
+export async function submitInvoiceBatch(
+  supabase: SupabaseClient,
+  idempotencyKey: string,
+  invoices: InvoiceCandidate[],
+  approvalId: string,
+) {
   const { data, error } = await supabase.rpc("submit_invoice_batch", {
     p_idempotency_key: idempotencyKey,
     p_request_fingerprint: fingerprint(invoices),
     p_invoices: invoices,
+    p_approval_id: approvalId,
   });
+  const approvalError = mapDocumentApprovalError(error);
+  if (approvalError) throw approvalError;
   if (error) {
     if (error.code === "23505") throw new HttpError(409, "duplicate_or_idempotency_conflict", "Invoice or idempotency key conflicts with an earlier submission");
     if (error.code === "23514") throw new HttpError(409, "purchase_order_changed", "A purchase order changed; validate the batch again");
@@ -470,13 +527,17 @@ export async function getInvoiceExceptions(supabase: SupabaseClient, invoiceNumb
 export async function respondToInvoiceException(
   supabase: SupabaseClient,
   request: { idempotencyKey: string; invoiceNumber: string; exceptionCode: string; message: string; attachments: unknown[] },
+  approvalId: string,
 ) {
   const { idempotencyKey, ...payload } = request;
   const { data, error } = await supabase.rpc("respond_to_invoice_exception", {
     p_idempotency_key: idempotencyKey,
     p_request_fingerprint: fingerprint(payload),
     p_payload: payload,
+    p_approval_id: approvalId,
   });
+  const approvalError = mapDocumentApprovalError(error);
+  if (approvalError) throw approvalError;
   if (error?.code === "42501") throw new HttpError(403, "submitter_access_required", "Submitter access is required");
   if (error?.code === "P0001" && error.message?.startsWith("This isn't mine to fix.")) {
     throw new HttpError(409, "buyer_owned_exception", error.message);
@@ -495,12 +556,16 @@ export async function replaceRejectedInvoice(
   supabase: SupabaseClient,
   idempotencyKey: string,
   invoice: InvoiceCandidate,
+  approvalId: string,
 ) {
   const { data, error } = await supabase.rpc("replace_rejected_invoice", {
     p_idempotency_key: idempotencyKey,
     p_request_fingerprint: fingerprint(invoice),
     p_invoice: invoice,
+    p_approval_id: approvalId,
   });
+  const approvalError = mapDocumentApprovalError(error);
+  if (approvalError) throw approvalError;
   if (error?.code === "42501") throw new HttpError(403, "submitter_access_required", "Submitter access is required");
   if (error?.code === "23505") throw new HttpError(409, "idempotency_conflict", "Idempotency key conflicts with an earlier replacement");
   if (error?.code === "23514") {

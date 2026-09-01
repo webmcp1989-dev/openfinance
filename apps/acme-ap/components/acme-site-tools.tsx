@@ -3,7 +3,19 @@
 import { useEffect } from "react";
 
 import { apiRequest } from "@/lib/browser-api";
+import {
+  DOCUMENT_APPROVAL_HEADER,
+  exceptionResponseApprovalRequest,
+  replacementApprovalRequest,
+  submissionApprovalRequest,
+} from "@/lib/domain/document-approvals";
+import {
+  exceptionResponseRequestSchema,
+  replacementInvoiceRequestSchema,
+  submitBatchRequestSchema,
+} from "@/lib/domain/submissions";
 import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
+import { obtainDocumentSubmissionApproval } from "./document-submission-approval";
 import {
   buildAcmeSubmissionResult,
   dispatchAcmeAgentRead,
@@ -141,7 +153,7 @@ export function AcmeSiteTools() {
       {
         name: "submit_invoice_batch",
         title: "Submit confirmed invoice batch",
-        description: "CONSEQUENTIAL WRITE: atomically submit up to three previously validated invoices, reserve each PO balance, and create portal references. Call only after showing the exact valid invoice numbers, amounts, and exceptions to the user and receiving explicit confirmation. Never include invalid invoices.",
+        description: "CONSEQUENTIAL DOCUMENT WRITE: atomically submit up to three previously validated invoices, reserve each PO balance, and create portal references. The portal opens a mandatory approval panel showing the exact invoices, amounts, POs, documents, and total; submission cannot continue unless the signed-in human explicitly approves it. Never include invalid invoices.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "invoices"],
           properties: {
@@ -151,11 +163,16 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const request = input as {
-            invoices: Array<{ invoiceNumber: string; amountMinor: number; currency: string }>;
-          };
+          const request = submitBatchRequestSchema.parse(input);
+          const approvalId = await obtainDocumentSubmissionApproval(
+            submissionApprovalRequest(request, "agent"),
+            options?.signal,
+          );
           const result = await apiRequest<{ items: Array<{ invoiceNumber: string; portalReference: string }> }>("/api/agent/submissions", {
-            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+            method: "POST",
+            body: JSON.stringify(request),
+            headers: { [DOCUMENT_APPROVAL_HEADER]: approvalId },
+            signal: options?.signal,
           });
           dispatchAcmeDataChanged({
             actor: "agent",
@@ -195,7 +212,7 @@ export function AcmeSiteTools() {
       {
         name: "respond_to_invoice_exception",
         title: "Respond to invoice exception",
-        description: "CONSEQUENTIAL WRITE: add a supplier response and up to three verified supporting PDFs to one actionable portal exception. Show the exact message and attachments and obtain human approval before calling. When the portal requested a specific evidence kind, exact validated evidence resolves that exception and approves the disputed invoice only if no other actionable blocker remains. The result returns both exceptionStatus and invoiceStatus. This does not replace or resubmit the invoice.",
+        description: "CONSEQUENTIAL DOCUMENT WRITE: add a supplier response and up to three verified supporting PDFs to one actionable portal exception. The portal opens a mandatory approval panel showing the exact invoice, exception, message, and attachments; the response cannot be sent unless the signed-in human explicitly approves it. When the portal requested a specific evidence kind, exact validated evidence resolves that exception and approves the disputed invoice only if no other actionable blocker remains. The result returns both exceptionStatus and invoiceStatus. This does not replace or resubmit the invoice.",
         inputSchema: {
           type: "object", additionalProperties: false,
           required: ["idempotencyKey", "invoiceNumber", "exceptionCode", "message", "attachments"],
@@ -209,9 +226,16 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const request = input as { invoiceNumber: string; attachments: unknown[] };
+          const request = exceptionResponseRequestSchema.parse(input);
+          const approvalId = await obtainDocumentSubmissionApproval(
+            exceptionResponseApprovalRequest(request, "agent"),
+            options?.signal,
+          );
           const result = await apiRequest<{ exceptionStatus: string; invoiceStatus: string }>("/api/agent/exception-responses", {
-            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+            method: "POST",
+            body: JSON.stringify(request),
+            headers: { [DOCUMENT_APPROVAL_HEADER]: approvalId },
+            signal: options?.signal,
           });
           const message = result.exceptionStatus === "resolved" && result.invoiceStatus === "accepted"
             ? `${request.invoiceNumber} evidence was verified, the exception cleared, and the invoice was approved.`
@@ -227,7 +251,7 @@ export function AcmeSiteTools() {
       {
         name: "replace_rejected_invoice",
         title: "Replace rejected invoice",
-        description: "CONSEQUENTIAL WRITE: atomically supersede the current rejected or disputed invoice with a corrected revision, revalidate its PDF and PO, and adjust PO balances. Call only when the portal exception explicitly permits replacement and after the human approves the exact corrected invoice.",
+        description: "CONSEQUENTIAL DOCUMENT WRITE: atomically supersede the current rejected or disputed invoice with a corrected revision, revalidate its PDF and PO, and adjust PO balances. The portal opens a mandatory approval panel showing the exact corrected invoice, amount, PO, and PDF; replacement cannot continue unless the signed-in human explicitly approves it. Call only when the portal exception permits replacement.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "invoice"],
           properties: {
@@ -237,9 +261,16 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const request = input as { invoice: { invoiceNumber: string } };
+          const request = replacementInvoiceRequestSchema.parse(input);
+          const approvalId = await obtainDocumentSubmissionApproval(
+            replacementApprovalRequest(request, "agent"),
+            options?.signal,
+          );
           const result = await apiRequest("/api/agent/replacements", {
-            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+            method: "POST",
+            body: JSON.stringify(request),
+            headers: { [DOCUMENT_APPROVAL_HEADER]: approvalId },
+            signal: options?.signal,
           });
           dispatchAcmeDataChanged({
             actor: "agent",

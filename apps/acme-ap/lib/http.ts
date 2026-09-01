@@ -3,6 +3,7 @@ import "server-only";
 import type { NextRequest } from "next/server";
 
 import { HttpError } from "@/lib/http-core";
+import { DOCUMENT_APPROVAL_HEADER } from "@/lib/domain/document-approvals";
 import { createClient } from "@/lib/supabase/server";
 
 export { fingerprint, HttpError } from "@/lib/http-core";
@@ -22,6 +23,14 @@ export function requireSameOriginJson(request: NextRequest) {
   if (!origin || origin !== request.nextUrl.origin) {
     throw new HttpError(403, "cross_site_request_blocked", "A same-origin request is required");
   }
+}
+
+export function requireDocumentApprovalId(request: NextRequest) {
+  const approvalId = request.headers.get(DOCUMENT_APPROVAL_HEADER);
+  if (!approvalId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(approvalId)) {
+    throw new HttpError(428, "document_approval_required", "Human approval is required for this document submission");
+  }
+  return approvalId;
 }
 
 export function apiError(error: unknown) {

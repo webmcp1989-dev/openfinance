@@ -3,16 +3,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { apiRequest } from "@/lib/browser-api";
+import {
+  DOCUMENT_APPROVAL_HEADER,
+  exceptionResponseApprovalRequest,
+  replacementApprovalRequest,
+  submissionApprovalRequest,
+} from "@/lib/domain/document-approvals";
 import type {
   InvoiceCandidate,
   PurchaseOrder,
   SubmissionRequirements,
   ValidationIssue,
 } from "@/lib/domain/submissions";
+import {
+  exceptionResponseRequestSchema,
+  replacementInvoiceRequestSchema,
+} from "@/lib/domain/submissions";
 import type { AuditEvent } from "@/lib/services/audit-service";
 import type { BuyerCase, InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
 import { hasStructuralPdf } from "@/lib/pdf-structure";
 import { AcmeSiteTools } from "./acme-site-tools";
+import { DocumentApprovalDialog } from "./document-approval-dialog";
+import { obtainDocumentSubmissionApproval } from "./document-submission-approval";
 import {
   ACME_AGENT_READ_EVENT,
   ACME_DATA_CHANGED_EVENT,
@@ -228,7 +240,6 @@ export function AcmeWorkspace({
   const [candidatePurchaseOrder, setCandidatePurchaseOrder] = useState("");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [validatedBatch, setValidatedBatch] = useState<InvoiceCandidate[]>([]);
-  const [confirmation, setConfirmation] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [resetOpen, setResetOpen] = useState(false);
   const [starterPromptCopied, setStarterPromptCopied] = useState(false);
@@ -409,7 +420,6 @@ export function AcmeWorkspace({
           const withoutSameInvoice = current.filter((item) => item.invoiceNumber !== candidate.invoiceNumber);
           return withoutSameInvoice.length >= 3 ? withoutSameInvoice : [...withoutSameInvoice, candidate];
         });
-        setConfirmation(false);
         setNotice(`${candidate.invoiceNumber} passed preflight and was added to the review batch.`);
         setFileInputKey((key) => key + 1);
       }
@@ -422,24 +432,26 @@ export function AcmeWorkspace({
 
   async function submitBatch() {
     clearFeedback();
-    if (validatedBatch.length === 0 || !confirmation) {
-      setError("Review the exact batch and confirm it before submission.");
+    if (validatedBatch.length === 0) {
+      setError("Validate at least one invoice before submission.");
       return;
     }
     setPendingAction("submit");
     try {
+      const request = {
+        idempotencyKey: idempotencyKey("ui-ap-submit"),
+        invoices: validatedBatch,
+      };
+      const approvalId = await obtainDocumentSubmissionApproval(submissionApprovalRequest(request, "human"));
       const result = await apiRequest<{ items: Array<{ invoiceNumber: string; portalReference: string }> }>("/api/agent/submissions", {
         method: "POST",
-        body: JSON.stringify({
-          idempotencyKey: idempotencyKey("ui-ap-submit"),
-          invoices: validatedBatch,
-        }),
+        body: JSON.stringify(request),
+        headers: { [DOCUMENT_APPROVAL_HEADER]: approvalId },
       });
       await refresh();
       setSubmissionResult(buildAcmeSubmissionResult("human", validatedBatch, result.items));
       setValidatedBatch([]);
       setValidation(null);
-      setConfirmation(false);
       setNotice(submissionConfirmationMessage(result.items.length));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The invoice batch could not be submitted");
@@ -450,10 +462,6 @@ export function AcmeWorkspace({
 
   async function respondToException(formData: FormData) {
     clearFeedback();
-    if (formData.get("confirmation") !== "approved") {
-      setError("Review and approve the exact response and evidence before sending it.");
-      return;
-    }
     setPendingAction("exception-response");
     try {
       const file = formData.get("attachment");
@@ -462,15 +470,18 @@ export function AcmeWorkspace({
         documentKind: String(formData.get("documentKind") ?? "other"),
       }] : [];
       const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
+      const request = exceptionResponseRequestSchema.parse({
+        idempotencyKey: idempotencyKey("ui-exception-response"),
+        invoiceNumber,
+        exceptionCode: String(formData.get("exceptionCode") ?? ""),
+        message: String(formData.get("message") ?? ""),
+        attachments,
+      });
+      const approvalId = await obtainDocumentSubmissionApproval(exceptionResponseApprovalRequest(request, "human"));
       const result = await apiRequest<{ exceptionStatus: string; invoiceStatus: string }>("/api/agent/exception-responses", {
         method: "POST",
-        body: JSON.stringify({
-          idempotencyKey: idempotencyKey("ui-exception-response"),
-          invoiceNumber,
-          exceptionCode: String(formData.get("exceptionCode") ?? ""),
-          message: String(formData.get("message") ?? ""),
-          attachments,
-        }),
+        body: JSON.stringify(request),
+        headers: { [DOCUMENT_APPROVAL_HEADER]: approvalId },
       });
       await refresh();
       setNotice(result.exceptionStatus === "resolved" && result.invoiceStatus === "accepted"
@@ -485,28 +496,27 @@ export function AcmeWorkspace({
 
   async function replaceRejectedInvoice(formData: FormData) {
     clearFeedback();
-    if (formData.get("confirmation") !== "approved") {
-      setError("Review and approve the exact corrected invoice before replacement.");
-      return;
-    }
     setPendingAction("replacement");
     try {
       const file = formData.get("document");
       if (!(file instanceof File) || file.size === 0) throw new Error("Choose the corrected invoice PDF.");
       const invoiceNumber = String(formData.get("invoiceNumber") ?? "").toUpperCase();
+      const request = replacementInvoiceRequestSchema.parse({
+        idempotencyKey: idempotencyKey("ui-invoice-replacement"),
+        invoice: {
+          invoiceNumber,
+          invoiceDate: String(formData.get("invoiceDate") ?? ""),
+          amountMinor: parseAmountMinor(String(formData.get("amount") ?? "")),
+          currency: String(formData.get("currency") ?? "USD").toUpperCase(),
+          purchaseOrderNumber: String(formData.get("purchaseOrderNumber") ?? "").toUpperCase(),
+          document: await fileDocument(file, requirements),
+        },
+      });
+      const approvalId = await obtainDocumentSubmissionApproval(replacementApprovalRequest(request, "human"));
       await apiRequest("/api/agent/replacements", {
         method: "POST",
-        body: JSON.stringify({
-          idempotencyKey: idempotencyKey("ui-invoice-replacement"),
-          invoice: {
-            invoiceNumber,
-            invoiceDate: String(formData.get("invoiceDate") ?? ""),
-            amountMinor: parseAmountMinor(String(formData.get("amount") ?? "")),
-            currency: String(formData.get("currency") ?? "USD").toUpperCase(),
-            purchaseOrderNumber: String(formData.get("purchaseOrderNumber") ?? "").toUpperCase(),
-            document: await fileDocument(file, requirements),
-          },
-        }),
+        body: JSON.stringify(request),
+        headers: { [DOCUMENT_APPROVAL_HEADER]: approvalId },
       });
       await refresh();
       setNotice(`${invoiceNumber} was replaced by a corrected, newly validated revision.`);
@@ -558,7 +568,6 @@ export function AcmeWorkspace({
       setCandidatePurchaseOrder("");
       setValidation(null);
       setValidatedBatch([]);
-      setConfirmation(false);
       setFileInputKey((key) => key + 1);
       setResetOpen(false);
       setSubmissionResult(null);
@@ -575,6 +584,7 @@ export function AcmeWorkspace({
   return (
     <main className="portal-shell">
       <AcmeSiteTools />
+      <DocumentApprovalDialog />
       <header className="portal-header">
         <div className="openfinance-lockup portal-openfinance-lockup" aria-label="OpenFinance Supplier Portal">
           <span className="openfinance-logo portal-openfinance-logo" aria-hidden="true">OF</span>
@@ -729,14 +739,13 @@ export function AcmeWorkspace({
           </form>
 
           <div className="batch-review">
-            <div className="form-heading"><span className="step-number">3</span><div><h3>Review and submit</h3><p>Only validated invoices can enter this batch.</p></div></div>
+            <div className="form-heading"><span className="step-number">3</span><div><h3>Review and submit</h3><p>Only validated invoices can enter this batch. Review the exact documents, then approve submission to Acme AP in the consent dialog.</p></div></div>
             {validatedBatch.length === 0 ? <div className="batch-empty"><strong>No validated invoices yet</strong><p>Validate up to three invoices to build an atomic submission batch.</p></div> : <>
               <ol className="batch-list">{validatedBatch.map((candidate) => <li key={candidate.invoiceNumber}>
-                <div><strong>{candidate.invoiceNumber}</strong><span>{candidate.purchaseOrderNumber}</span></div><b>{money.format(candidate.amountMinor / 100)}</b><button type="button" aria-label={`Remove ${candidate.invoiceNumber}`} onClick={() => { setValidatedBatch((current) => current.filter((item) => item.invoiceNumber !== candidate.invoiceNumber)); setConfirmation(false); }}>Remove</button>
+                <div><strong>{candidate.invoiceNumber}</strong><span>{candidate.purchaseOrderNumber}</span></div><b>{money.format(candidate.amountMinor / 100)}</b><button type="button" aria-label={`Remove ${candidate.invoiceNumber}`} onClick={() => setValidatedBatch((current) => current.filter((item) => item.invoiceNumber !== candidate.invoiceNumber))}>Remove</button>
               </li>)}</ol>
               <div className="batch-total"><span>{validatedBatch.length} invoice{validatedBatch.length === 1 ? "" : "s"}</span><strong>{money.format(batchTotal / 100)}</strong></div>
-              <label className="confirmation"><input type="checkbox" checked={confirmation} onChange={(event) => setConfirmation(event.target.checked)} /><span>I reviewed these exact invoices, POs, documents, and total and approve submission to Acme AP.</span></label>
-              <button className="portal-button primary" type="button" onClick={() => void submitBatch()} disabled={!confirmation || pendingAction !== null}>{pendingAction === "submit" ? "Submitting batch…" : `Submit ${validatedBatch.length} approved invoice${validatedBatch.length === 1 ? "" : "s"}`}</button>
+              <button className="portal-button primary" type="button" onClick={() => void submitBatch()} disabled={pendingAction !== null}>{pendingAction === "submit" ? "Waiting for approval…" : `Review and submit ${validatedBatch.length} invoice${validatedBatch.length === 1 ? "" : "s"}`}</button>
             </>}
           </div>
         </div>
@@ -767,8 +776,7 @@ export function AcmeWorkspace({
               <label className="file-field"><span>Supporting PDF (optional)</span><input name="attachment" type="file" accept="application/pdf,.pdf" /></label>
             </div>
             <label><span>Response</span><textarea name="message" required minLength={1} maxLength={1000} placeholder="Explain the correction or attached evidence." /></label>
-            <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I reviewed this exact response and evidence and approve sending it to Acme AP.</span></label>
-            <button className="portal-button secondary" type="submit" disabled={pendingAction !== null}>{pendingAction === "exception-response" ? "Sending…" : "Send approved response"}</button>
+            <button className="portal-button secondary" type="submit" disabled={pendingAction !== null}>{pendingAction === "exception-response" ? "Waiting for approval…" : "Review response and evidence"}</button>
           </form>
 
           <form className="candidate-form" action={(formData) => void replaceRejectedInvoice(formData)}>
@@ -781,8 +789,7 @@ export function AcmeWorkspace({
               <label><span>Purchase order</span><select name="purchaseOrderNumber" required defaultValue=""><option value="" disabled>Select PO</option>{purchaseOrders.filter((order) => order.status === "open").map((order) => <option key={order.purchaseOrderNumber} value={order.purchaseOrderNumber}>{order.purchaseOrderNumber}</option>)}</select></label>
               <label className="file-field"><span>Corrected invoice PDF</span><input name="document" type="file" accept="application/pdf,.pdf" required /></label>
             </div>
-            <label className="confirmation"><input name="confirmation" type="checkbox" value="approved" /><span>I reviewed the exact corrected invoice, PO, amount, and document and approve replacement.</span></label>
-            <button className="portal-button secondary" type="submit" disabled={pendingAction !== null}>{pendingAction === "replacement" ? "Replacing…" : "Replace rejected invoice"}</button>
+            <button className="portal-button secondary" type="submit" disabled={pendingAction !== null}>{pendingAction === "replacement" ? "Waiting for approval…" : "Review corrected replacement"}</button>
           </form>
         </div>
 

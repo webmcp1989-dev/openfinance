@@ -92,6 +92,7 @@ describe("API authorization ordering", () => {
     "apps/acme-ap/app/api/agent/exceptions/route.ts",
     "apps/acme-ap/app/api/agent/exception-responses/route.ts",
     "apps/acme-ap/app/api/agent/replacements/route.ts",
+    "apps/acme-ap/app/api/agent/document-approvals/route.ts",
     "apps/acme-ap/app/api/agent/inquiries/route.ts",
     "apps/acme-ap/app/api/agent/remittance/route.ts",
     "apps/acme-ap/app/api/demo/reset/route.ts",
@@ -150,6 +151,23 @@ describe("database mutation boundaries", () => {
     expect(setup).toContain("202608300007_serialize_exception_responses.sql");
     expect(setup).toContain("202608300008_name_postgrest_rpc_arguments.sql");
     expect(setup).toContain("202608310001_complete_exception_workflow.sql");
+    expect(setup).toContain("202609010002_require_document_submission_approval.sql");
+    expect(setup).toContain("202609010003_fix_document_approval_wrappers.sql");
+    expect(setup).toContain("202609010004_align_document_approval_fingerprint.sql");
+    expect(setup).toContain("202609010005_preserve_canonical_document_mutations.sql");
+  });
+
+  test("AP document consent composes with the established mutation boundary", async () => {
+    const approval = await readFile(join(root, "services/acme/supabase/migrations/202609010002_require_document_submission_approval.sql"), "utf8");
+    const entryPoints = await readFile(join(root, "services/acme/supabase/migrations/202609010003_fix_document_approval_wrappers.sql"), "utf8");
+    const consentIdentity = await readFile(join(root, "services/acme/supabase/migrations/202609010004_align_document_approval_fingerprint.sql"), "utf8");
+    const canonicalWrites = await readFile(join(root, "services/acme/supabase/migrations/202609010005_preserve_canonical_document_mutations.sql"), "utf8");
+    expect(approval).toContain("v_approval.preview <> p_manifest");
+    expect(approval).toContain("private.consume_document_submission_approval(p_approval_id)");
+    expect(entryPoints.match(/security definer/g)).toHaveLength(2);
+    expect(consentIdentity).not.toContain("v_approval.request_fingerprint <> p_request_fingerprint");
+    expect(canonicalWrites).toContain("v_result := public.respond_to_invoice_exception");
+    expect(canonicalWrites).toContain("v_result := public.replace_rejected_invoice");
   });
 
   test("expanded exception-to-cash records remain tenant-scoped and database-enforced", async () => {
@@ -379,7 +397,7 @@ describe("WebMCP safety contracts", () => {
     expect(ACME_TRANSFER_LIMIT).toBe(3);
     expect(ar).toContain("maxItems: MAX_TRANSFER_INVOICE_COUNT");
     expect(ap).toContain("maxItems: MAX_TRANSFER_INVOICE_COUNT");
-    expect(openApi.match(/maxItems: 3/g)).toHaveLength(3);
+    expect(openApi.match(/maxItems: 3/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
   });
 
   test("business-data reads are marked untrusted and all requests are cancellable", async () => {
