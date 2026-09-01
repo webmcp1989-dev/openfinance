@@ -50,6 +50,25 @@ This file records only non-obvious continuation context. Repository-wide rules a
 
 ## Migration and environment status
 
+- Commits `55d7b34`, `4ea272e`, `597703e`, and `df56a71` are the current
+  narrated-demo alignment release. The first adds the paired `202609010001`
+  migrations and visible buyer-case/resolution/payment read models; the follow-up
+  fixes scope duplicate preflight to current AP revisions, exposes governed human
+  AR result writebacks for needs-attention/rejected invoices, and makes AP
+  remittance entry explicitly UTC. Both production projects have these commits.
+- The final production workflow was replayed independently after those fixes. It
+  submitted `INV-10482` and `INV-10491` for exactly $25,670, retained `INV-10507`
+  for its balance/receipt/service-entry blockers, resolved `INV-10417` with the
+  exact stored proof PDF, opened buyer-owned case `CASE-20260901-4CE0F6E6` for
+  `INV-10463`, and reconciled `PAY-20260830-0DD9D23B` for $18,420 by ACH at the
+  same displayed UTC time. Each state and exact reference was visible in both
+  applicable live UIs.
+- Both human-only reset confirmations were then run twice. The rendered invoice
+  rows matched exactly between resets. The clean live baseline is 24 AR invoices
+  with exactly three ready candidates (`INV-10482`, `INV-10491`, `INV-10507`), no
+  cases/resolved cards/payments from rehearsal, and AP with nine POs, three
+  historical exception submissions, and no open case or new submitted invoice.
+
 - AR migration `202608290006_simulate_erp_invoice_sync.sql` was applied to the live AR project and its 17-assertion rollback-only suite passed. Any new environment must apply it before deploying code that calls `/api/agent/erp-sync`.
 - AR migrations through `202608290010_space_invoice_amount_due.sql` are applied to the live AR project. The expanded 16-assertion rollback-only suite passed; an exact human-UI download passed strict `pypdf`, `pdfplumber`, SHA-256 verification, Poppler rendering, text-field checks, and full-page visual review with no clipping or overlap.
 - AP migration `202608290007_simulate_payment_settlement.sql` is applied to the live AP project and its 15-assertion rollback-only pgTAP suite passed. Any new environment must apply it before deploying the payment-aware AP code.

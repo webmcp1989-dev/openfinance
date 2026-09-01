@@ -296,11 +296,51 @@ an AI agent.
 
 ## Submission-only tasks
 
+### September 1 narrated-flow verification
+
+The final narrated workflow was exercised twice against the deployed applications,
+including a fresh independent replay after the fixes. The live run used the exact
+synthetic PDFs for `INV-10482`, `INV-10491`, and blocked `INV-10507`; all four
+downloaded documents (the three invoices and `proof_of_delivery.pdf`) passed PDF
+metadata/text extraction and full-page Poppler rendering, and the primary invoice
+was visually reviewed as a credible one-page invoice with the authoritative
+supplier, customer, dates, PO, amount, and synthetic-data label.
+
+Both eligible invoices passed AP preflight and committed atomically for $25,670.
+`INV-10507` stayed out with all three narrated buyer-side blockers: its $12,900
+amount exceeded the $10,000 PO balance, only $6,000 was received, and the service
+entry remained pending. AP returned distinct references for the two committed
+invoices and AR recorded the exact values. A safe read-only retry of a transient
+uniqueness lookup succeeded without changing state.
+
+The independent replay then attached the exact proof-of-delivery PDF to
+`INV-10417`; AP visibly moved it from Action required/disputed to Approved/accepted,
+and AR retained a resolved card with the exact document, timestamp, and unchanged
+AP reference. `INV-10463` correctly remained outside supplier authority and opened
+`CASE-20260901-4CE0F6E6`, owner `buyer_receiving`, status `open`; the exact case was
+visible in both portals. AP exposed payment `PAY-20260830-0DD9D23B` for $18,420 by
+ACH, and AR displayed the same reference, amount, method, zero remaining due, and
+the AP time as `Sep 1, 2026, 4:14 AM UTC`.
+
+Three implementation defects discovered through live evidence were fixed and
+reverified: current-only duplicate preflight (`4ea272e`), unreachable human AR
+writebacks for needs-attention/rejected rows (`597703e`), and browser-local
+interpretation of AP timestamps (`df56a71`). The second replay proved the UTC fix
+by entering the AP time in the explicitly labelled `Paid at (UTC)` control and
+reading the identical UTC value back from the deployed AR row. No WebMCP tool name,
+schema, or response payload changed.
+
+Finally, both human-only two-step resets were confirmed twice. The complete
+rendered invoice rows were identical between resets: AR contained 24 rows with
+exactly `INV-10482`, `INV-10491`, and `INV-10507` ready, no buyer cases or resolved
+cards; AP contained nine POs, three historical exception submissions, and no open
+buyer cases or new `INV-10482` submission.
+
 All local, database, deployment, OAuth/MCP, cross-application rehearsal, reset,
-and security gates are complete. On August 31 the separate human controls
-restored both applications to the canonical judge baseline; authenticated
-read-only WebMCP calls then returned seven ready AR invoices and exactly three
-AP exception fixtures, with no browser errors. The entrant must still enter the two private judge
+and security gates are complete. On September 1 the separate human controls
+restored both applications to the canonical judge baseline; authenticated live
+views returned exactly three ready AR candidates and three AP exception fixtures,
+with no open buyer cases. The entrant must still enter the two private judge
 passwords in Devpost, publish the existing reviewed narrated demo video using
 [YOUTUBE.md](YOUTUBE.md), accept Devpost's entrant declarations, and submit
 before September 3, 2026 at 1:00 p.m. PDT.
