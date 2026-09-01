@@ -1,79 +1,61 @@
 # Setup and deployment
 
-The two applications must remain independently configured. Never reuse a Supabase project, publishable key, database password, or authenticated browser session between them.
+OpenFinance AR and Acme AP must use separate Supabase projects, Vercel projects, environment values, and authenticated sessions.
 
 ## Prerequisites
 
 - Bun 1.3.14 or newer
 - Two Supabase projects
 - Two Vercel projects connected to this repository
-- A current ChatGPT desktop app with site tools enabled and GPT-5.6 Sol or Terra selected
+- A WebMCP-capable browser
 
-## Database setup
+## Database
 
-Run each migration only in its named project:
+Apply every `.sql` migration in filename order to its owning project:
 
-| Application | Supabase project ref | Migrations, in order |
+| Application | Migration directory | Database tests |
 | --- | --- | --- |
-| OpenFinance AR | `bhjtwmpwlmdqjxlvgrhj` | `services/openfinance/supabase/migrations/202608290001_initial.sql`<br>`services/openfinance/supabase/migrations/202608290002_reject_duplicate_delivery_items.sql`<br>`services/openfinance/supabase/migrations/202608290003_enforce_delivery_event_contract.sql`<br>`services/openfinance/supabase/migrations/202608290004_bound_json_money.sql`<br>`services/openfinance/supabase/migrations/202608290005_canonicalize_delivery_requests.sql`<br>`services/openfinance/supabase/migrations/202608290006_simulate_erp_invoice_sync.sql`<br>`services/openfinance/supabase/migrations/202608290007_repair_renderable_invoice_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608290008_render_detailed_invoice_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608290009_align_invoice_amount_due.sql`<br>`services/openfinance/supabase/migrations/202608290010_space_invoice_amount_due.sql`<br>`services/openfinance/supabase/migrations/202608290011_add_authorized_demo_reset.sql`<br>`services/openfinance/supabase/migrations/202608290012_secure_mcp_oauth_activity.sql`<br>`services/openfinance/supabase/migrations/202608300001_bind_oauth_tokens_to_mcp.sql`<br>`services/openfinance/supabase/migrations/202608300002_expand_exception_to_cash.sql`<br>`services/openfinance/supabase/migrations/202608300003_align_exception_to_cash_reset.sql`<br>`services/openfinance/supabase/migrations/202608300004_track_portal_checks.sql`<br>`services/openfinance/supabase/migrations/202608300005_validate_supporting_document_pdfs.sql`<br>`services/openfinance/supabase/migrations/202608300006_serialize_remittance_idempotency.sql`<br>`services/openfinance/supabase/migrations/202608300007_render_proof_of_delivery_fixture.sql`<br>`services/openfinance/supabase/migrations/202608300008_seed_realistic_invoice_portfolio.sql`<br>`services/openfinance/supabase/migrations/202608300009_default_invoice_due_date.sql`<br>`services/openfinance/supabase/migrations/202608300010_record_portal_replacement_results.sql`<br>`services/openfinance/supabase/migrations/202608300011_restrict_rls_event_trigger_helper.sql`<br>`services/openfinance/supabase/migrations/202608300012_derive_remittance_request_fingerprint.sql`<br>`services/openfinance/supabase/migrations/202608300015_accept_rejected_replacement_results.sql` |
-| Acme AP | `lakrgujjrhydjsoyaiin` | `services/acme/supabase/migrations/202608290001_initial.sql`<br>`services/acme/supabase/migrations/202608290002_harden_submission_wrapper.sql`<br>`services/acme/supabase/migrations/202608290003_bound_json_money.sql`<br>`services/acme/supabase/migrations/202608290004_align_submission_policy.sql`<br>`services/acme/supabase/migrations/202608290005_canonicalize_submission_requests.sql`<br>`services/acme/supabase/migrations/202608290006_validate_pdf_structure.sql`<br>`services/acme/supabase/migrations/202608290007_simulate_payment_settlement.sql`<br>`services/acme/supabase/migrations/202608290008_add_authorized_demo_reset.sql`<br>`services/acme/supabase/migrations/202608300001_expand_exception_to_cash.sql`<br>`services/acme/supabase/migrations/202608300002_replace_rejected_invoice.sql`<br>`services/acme/supabase/migrations/202608300003_align_simulator_and_reset.sql`<br>`services/acme/supabase/migrations/202608300004_current_invoice_statuses.sql`<br>`services/acme/supabase/migrations/202608300005_validate_attachment_pdfs.sql`<br>`services/acme/supabase/migrations/202608300006_serialize_invoice_inquiries.sql`<br>`services/acme/supabase/migrations/202608300007_serialize_exception_responses.sql`<br>`services/acme/supabase/migrations/202608300008_name_postgrest_rpc_arguments.sql`<br>`services/acme/supabase/migrations/202608300009_enforce_structural_pdf_contract.sql`<br>`services/acme/supabase/migrations/202608300010_repair_binary_pdf_inspection.sql`<br>`services/acme/supabase/migrations/202608300011_seed_exception_portfolio.sql`<br>`services/acme/supabase/migrations/202608300012_restrict_rls_event_trigger_helper.sql`<br>`services/acme/supabase/migrations/202608300013_derive_financial_request_fingerprints.sql`<br>`services/acme/supabase/migrations/202608300014_seed_replacement_exception.sql`<br>`services/acme/supabase/migrations/202608310001_complete_exception_workflow.sql`<br>`services/acme/supabase/migrations/202609010001_align_narrated_demo_state.sql`<br>`services/acme/supabase/migrations/202609010002_require_document_submission_approval.sql` |
+| OpenFinance AR | `services/openfinance/supabase/migrations` | `services/openfinance/supabase/tests` |
+| Acme AP | `services/acme/supabase/migrations` | `services/acme/supabase/tests` |
 
-After the final OpenFinance AR entry shown above, apply `services/openfinance/supabase/migrations/202609010001_align_narrated_demo_state.sql`. It is the next timestamped migration and must be applied before deploying the matching workspace UI.
+Never apply one application's SQL to the other project. Migrations are forward-only and include schema, RLS, grants, private transaction functions, deterministic synthetic data, and reset support. The service README in each directory explains its database boundary.
 
-After the final Acme AP table entry, apply `services/acme/supabase/migrations/202609010003_fix_document_approval_wrappers.sql`. It preserves private implementation isolation while making the two validated public approval entry points executable.
-
-Then apply `services/acme/supabase/migrations/202609010004_align_document_approval_fingerprint.sql`. It keeps document consent bound to the exact metadata and SHA-256 manifest while the existing financial wrapper independently derives the full-payload idempotency fingerprint.
-
-Finally apply `services/acme/supabase/migrations/202609010005_preserve_canonical_document_mutations.sql`. The approval-aware evidence and replacement wrappers reuse the existing canonicalizing business wrappers so safe retries retain their original results.
-
-Apply every listed migration in filename order through the Supabase SQL editor or a reviewed migration pipeline. The migrations are transactional, enable RLS on every exposed table, revoke anonymous access, grant only required reads, and expose authenticated write wrappers around private transaction functions.
-
-Create one password user per project after the migration so its trigger can attach the correct tenant profile:
+Create one password user per project after applying migrations so the profile trigger can attach the correct synthetic tenant:
 
 - OpenFinance AR: `demo@openfinance.dev`
 - Acme AP: `supplier@acme.demo`
 
-Use a strong unique password for each project. Do not commit or document either password. If a user was created before the migration, delete and recreate it or insert the corresponding profile through a reviewed administrative script.
+Use strong unique passwords and provide them only through the contest's private credential field. Disable public signup after creating the users; keep email/password login enabled.
 
-After both fixed demo users exist, disable **Authentication -> Sign In / Providers -> Allow new users to sign up** in each Supabase project. These challenge deployments intentionally provision users administratively; they do not expose public registration. Keep email/password sign-in enabled for the existing user in each project.
+## Environment and hosting
 
-## Application environment
-
-Each Vercel project receives only its own values:
+Create a separate `.env.local` for each app from `.env.example`. Each Vercel project receives only its own values:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-# OpenFinance AR only:
-OPENFINANCE_MCP_URL=https://openfinance-ar.vercel.app/mcp
 ```
 
-The values are public connection identifiers; authorization comes from the authenticated user JWT, Postgres grants, and RLS. Never add a service-role key or database password to either Next.js runtime.
+OpenFinance AR production also uses `OPENFINANCE_MCP_URL=https://openfinance-ar.vercel.app/mcp`. Its optional own-system connector requires the Supabase OAuth server, `/oauth/consent` authorization path, dynamic client registration, the AR production redirect allowlist, and `public.custom_access_token_hook`. This connector never has access to Acme AP.
 
-For OpenFinance AR, enable the Supabase OAuth 2.1 server, set its authorization path to `/oauth/consent`, enable dynamic client registration, keep the AR production origin in the Auth site URL/redirect allowlist, and enable the Postgres `public.custom_access_token_hook` as the **Customize Access Token** hook. AP does not receive `OPENFINANCE_MCP_URL` and does not share the AR authorization server. See [MCP.md](MCP.md) for the discovery and security contract.
-
-Vercel project mapping:
+Never add a service-role key or database password to either Next.js runtime.
 
 | Vercel project | Root directory | Supabase project |
 | --- | --- | --- |
+| `openfinance-ap` | `apps/acme-ap` | Acme AP |
 | `openfinance-ar` | `apps/openfinance-ar` | OpenFinance AR |
-| `openfinance-ap` | `apps/acme-ap` | OpenFinance AP / Acme demo |
 
-## Local run
-
-Create `apps/openfinance-ar/.env.local` and `apps/acme-ap/.env.local` with their separate values, then:
+## Local development
 
 ```bash
 bun install --frozen-lockfile
-bun run dev:openfinance
-bun run dev:acme
+bun run dev:openfinance  # http://localhost:3000
+bun run dev:acme         # http://localhost:3001
 ```
 
-The apps run on ports 3000 and 3001. Cross-origin site calls are intentionally not supported; each site's tools call only its own same-origin backend.
+Run the apps in separate terminals. Site tools call only their application's same-origin backend.
 
-## Verification gate
-
-Before deployment:
+## Validation
 
 ```bash
 bun run typecheck
@@ -83,29 +65,16 @@ bun run build
 bun audit
 ```
 
-Run every SQL file under each service's `supabase/tests` directory in its corresponding project after applying all migrations. Then sign into both live applications in separate tabs, inspect Available site tools, and run the [judge workflow](JUDGE_GUIDE.md#workflow).
-
-For Acme AP, include `services/acme/supabase/tests/document-submission-approval.test.sql`. It verifies that old mutation signatures cannot bypass consent; denied, expired, cross-action, idempotency-mismatched, and payload-mismatched approvals fail; exact approval commits and is consumed; a completed decision cannot be changed; idempotent replay remains safe; no PDF base64 is retained; and reset clears approval artifacts.
+After migrations, run every SQL file in each application's `supabase/tests` directory against its owning project. Then sign into both deployments, inspect the registered site tools, and run the [judge workflow](JUDGE_GUIDE.md#workflow).
 
 ## Restore the synthetic demo state
 
-Each authenticated demo workspace has a two-step **Restore demo start** control. Restore AR and AP separately: each application calls only its own same-origin backend and database. The reset is deliberately human-only, is not registered with WebMCP, requires an explicit confirmation payload, permits only the fixed synthetic demo operator or submitter, and replaces prior workflow audit entries with one visible `demo_state_reset` event.
+Each authenticated workspace has a two-step **Restore demo start** control. Restore AP and AR separately; reset is human-only, tenant-scoped, audited, and absent from WebMCP.
 
-For a judge or normal demo rerun:
+1. In Acme AP, review and confirm **Restore synthetic AP data**.
+2. In OpenFinance AR, review and confirm **Restore synthetic AR data**.
+3. Confirm AP shows nine open POs and three historical exception invoices.
+4. Confirm AR shows 24 invoices; only `INV-10482`, `INV-10491`, and `INV-10507` are ready; `INV-10417` and `INV-10463` need attention; and no `ERP-*` invoices exist.
+5. Confirm each audit panel contains one reset event, then verify the [starting state](JUDGE_GUIDE.md#starting-state).
 
-1. In Acme AP, choose **Restore demo start**, review the deletion notice, and choose **Restore synthetic AP data**.
-2. In OpenFinance AR, choose **Restore demo start**, review the deletion notice, and choose **Restore synthetic AR data**.
-3. Confirm Acme shows nine open POs plus three historical exception invoices and their open exceptions.
-4. Confirm OpenFinance shows 24 canonical invoices; exactly `INV-10482`, `INV-10491`, and `INV-10507` are ready; `INV-10417` and `INV-10463` need attention; no imported `ERP-*` invoices exist; and the ERP sequence is reset to `2 new → 0 new`.
-5. Each audit panel should contain exactly one visible reset event before the next workflow run.
-
-The reviewed SQL scripts remain an operator fallback:
-
-1. Confirm no demo submission is currently running and that both projects are the synthetic challenge projects listed above.
-2. In the **Acme AP** SQL editor, review and run `services/acme/supabase/demo/reset.sql`.
-3. Confirm it reports nine open POs, one seeded batch, three exception submissions, three open exceptions, and one reset audit event.
-4. In the **OpenFinance AR** SQL editor, review and run `services/openfinance/supabase/demo/reset.sql`.
-5. Confirm it reports 24 canonical invoices with the same three ready candidates, both narrated exception invoices in `needs_attention`, no delivery events, one reset audit event, and an ERP sync sequence reset to `2 new → 0 new`.
-6. Reload both applications and verify the [starting state](JUDGE_GUIDE.md#starting-state) before rerunning the test.
-
-Each script uses explicit synthetic IDs, an advisory transaction lock, exact affected-row assertions, and a transaction. Never run either script against a project containing real data, and never point a script at the other application's project.
+The reviewed operator fallback scripts are `services/acme/supabase/demo/reset.sql` and `services/openfinance/supabase/demo/reset.sql`. Use them only in their named synthetic project after confirming no demo submission is active. Never run them against real data.

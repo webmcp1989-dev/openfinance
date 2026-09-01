@@ -2,106 +2,49 @@
 
 ## System boundary
 
-OpenFinance AR and Acme AP are separate applications deployed on different origins and backed by different Supabase projects. Their only runtime bridge is the human-directed browser agent.
-
 ```text
-┌────────────────────────────┐                 ┌────────────────────────────┐
-│ OpenFinance AR             │                 │ Acme Supplier Portal       │
-│ openfinance-ar.vercel.app  │                 │ openfinance-ap.vercel.app  │
-│                            │                 │                            │
-│ Next.js UI + BFF routes    │                 │ Next.js UI + BFF routes    │
-│ imperative WebMCP tools    │                 │ imperative WebMCP tools    │
-│ own Supabase Auth + DB     │                 │ own Supabase Auth + DB     │
-└─────────────┬──────────────┘                 └─────────────┬──────────────┘
-              │ signed-in page tool                            │ signed-in page tool
-              └────────────── ChatGPT + human ─────────────────┘
+OpenFinance AR                     browser agent + human                     Acme AP
+Next.js + 7 WebMCP tools  <--------------- only bridge --------------->  Next.js + 12 WebMCP tools
+Supabase Auth + Postgres                                                Supabase Auth + Postgres
 ```
 
-There is no shared database, session cookie, service credential, server-to-server API, queue, webhook, or hidden synchronization path.
+The applications use separate origins, deployments, Supabase projects, users, sessions, credentials, schemas, and ledgers. There is no shared database, server-to-server API, queue, webhook, or hidden synchronization path. Matching synthetic identifiers are independently seeded demo fixtures.
 
-## AR remote MCP access surface
+The optional AR own-system OAuth MCP endpoint uses the AR user's bearer token and existing RLS. It cannot access Acme and is not the cross-company bridge.
 
-An AR team's own external agent may connect to `OpenFinance AR /mcp` through Streamable HTTP. The resource server publishes RFC 9728 metadata and delegates OAuth 2.1 authorization to the AR project's Supabase Auth server. Supabase supplies authorization code + PKCE, dynamic client registration, consent, refresh, and revocation. OpenFinance validates the ES256 signature, exact issuer, exact MCP resource audience, expiry, OAuth `client_id`, active Auth user, AR profile, tenant, and role before creating any tool server.
+## Application layers
 
-Each tool uses an unprivileged Supabase client carrying the OAuth bearer token. Existing RLS and RPC role checks therefore remain authoritative. The remote MCP never uses a service-role key and cannot access Acme AP. It is an additional own-system interface, not the cross-application bridge demonstrated by the challenge.
+1. React UI renders state, collects intent and approval, and registers authenticated page-scoped tools.
+2. Site tools call narrow same-origin Next.js routes with the existing session.
+3. Routes enforce method, content type, origin, authentication, and Zod input contracts.
+4. Services implement use cases and map provider records into domain objects.
+5. Supabase queries execute as the authenticated user; grants and RLS enforce tenant scope.
+6. Private Postgres functions perform consequential changes atomically and idempotently.
 
-## Layers inside each app
+The frontend is never authoritative. All 19 WebMCP capabilities also have human UI paths backed by the same routes and services.
 
-1. UI renders human-readable state and registers tools only on an authenticated top-level page.
-2. Site tools use narrow JSON Schemas and same-origin `fetch` with the site's existing cookie session.
-3. Next.js route handlers enforce content type, same-origin writes, verified Supabase claims, Zod validation, and stable error contracts.
-4. Services implement use cases and map database records into provider-agnostic domain objects.
-5. Supabase Data API calls run as the authenticated user; Postgres grants and RLS enforce tenant scope independently of application code.
-6. Private Postgres functions perform consequential multi-row changes atomically and idempotently.
+## Document approval and writes
 
-Both public mutation wrappers serialize tenant-scoped idempotency keys and derive authoritative request identity inside PostgreSQL. The compatibility fingerprint argument is format-checked but not trusted; exact stored content determines whether a retry is identical.
+AP's three document-writing tools—batch submission, exception evidence, and corrected replacement—pause on an accessible portal approval panel. The page prepares a bounded metadata-only manifest and receives a short-lived opaque approval identifier after the signed-in user approves. The identifier is internal page state, not a WebMCP argument.
 
-The browser never receives a service-role key. The frontend is not an authorization or business-rule boundary.
-Shared hashing and typed-error primitives live in framework-free `http-core` modules, so domain services and their tests do not initialize Next.js or Supabase infrastructure.
+Postgres independently derives the final manifest, verifies tenant, user, action, idempotency key, expiry, filenames, hashes, and exact payload, then consumes approval in the same transaction as the business mutation. Approval records never store PDF bytes. Successful tool calls display an agent-labelled result and reload authoritative backend state; presentation events cannot authorize or persist data.
 
-Every one of the 19 browser WebMCP operations also has a first-class human UI path. Those controls call the same same-origin routes and services as the tools; the UI adds guidance and informed confirmation but never replaces backend authorization or validation.
+## Financial workflows
 
-AP document writes add one explicit consent layer shared by agent and human UI paths. The page prepares a bounded metadata-only manifest, renders it in an accessible blocking review panel, and receives a short-lived opaque approval identifier only after the signed-in user approves. The identifier is never exposed as a WebMCP parameter. `submit_invoice_batch`, `respond_to_invoice_exception`, and `replace_rejected_invoice` pass it internally to approval-aware public RPCs. PostgreSQL derives the manifest again from the actual final payload, verifies user, supplier, buyer, action, idempotency key, expiry, and exact JSON equality, then consumes approval in the same transaction as the existing idempotent business mutation. The ledger stores filenames and SHA-256 values but no PDF base64. Read tools and non-document writes do not enter this gate.
+`submit_invoice_batch` derives the supplier from the caller, serializes the idempotency key, locks referenced POs, validates ownership, state, currency, balance, uniqueness, PDF structure, size, and checksum, then inserts receipts, updates balances, records audit data, and stores the immutable response in one transaction. All invoices commit or none do.
 
-After a browser tool succeeds, its client registration dispatches a typed, app-local presentation event containing only the actor label and values already present in the successful request/response. The owning workspace uses it for an agent-labelled confirmation, a persistent submission or reconciliation summary, affected-row emphasis, and read-attention markers, then independently refreshes its complete authoritative read model from the backend. These browser events are not accepted by an API, do not persist state, and are not a security or business-rule boundary.
+Exception responses enforce the stored owner, allowed action, and exact required evidence. Verified supplier evidence may resolve and accept an invoice only when no other blocker remains. Buyer-owned blockers remain blocked and use a tracked inquiry. Corrected revisions require an explicitly permitted replacement and atomically release and reallocate PO balance.
 
-The inventory has zero cross-writes by construction. The seven AR site tools can mutate only the AR database and the twelve AP tools only the AP database. Matching synthetic invoice and PO identifiers are independently seeded fixtures, not shared records or a synchronization channel. The browser agent may compare them, but only an informed human approval authorizes moving a package or recording the independently verified result.
+Every second committed synthetic invoice receives one immutable payment schedule for ten seconds later. Status reads expose matured state without mutating it. AR remittance writeback requires an existing portal receipt, matching currency, available balance, and an idempotent exact allocation.
 
-## AR ERP sync simulation
+AR and AP reset their deterministic synthetic data independently through human-only, tenant-scoped, audited transactions. Reset is not a WebMCP tool.
 
-The AR workspace includes **Sync invoices now**, which models an inbound ERP connector without turning customer interoperability into a hidden integration. It is available through the human UI and the separately authenticated AR remote MCP, while browser WebMCP exposes only the AR/AP capabilities needed for the human-agent workflow. Its same-origin UI route and MCP tool both reach the same authoritative service/RPC. PostgreSQL derives the signed-in organization and operator, locks the tenant state, and alternates imported results `2 -> 0 -> 2 -> 0`.
+## Documents and transfer
 
-Repeatable judging uses separate two-step human resets in AR and AP. These are not WebMCP tools and are not a cross-application integration: each app requires a same-origin confirmation, authorizes the fixed synthetic operator or submitter in its own database, restores only its own fixture rows in one serialized transaction, and writes one reset audit event. A reviewer must restore both applications independently.
+AR produces complete synthetic invoice and evidence PDFs with authoritative business fields and valid catalog, page, cross-reference, trailer, and `startxref` structures. Before release, AR validates canonical base64, decoded size, structure, and SHA-256. After informed transfer approval, AP independently verifies the same properties before validation or submission.
 
-Imported invoices use the organization's configured synthetic customer, valid synthetic PDF records, unique ERP invoice numbers, and auditable idempotent events. The operation never reads or writes the independent AP database and is not a hidden cross-site integration.
+The browser agent carries only the human-approved package. Seven AR tools can write only AR; twelve AP tools can write only AP.
 
-Synthetic AR documents are complete one-page PDF 1.4 invoices with supplier/customer identities, invoice and deterministic Net-30 due dates, PO, line item, currency, subtotal, tax, amount due, remittance details, and an explicit synthetic-data footer. They also contain a catalog, page tree, content stream, font resources, cross-reference table, trailer, and byte-accurate `startxref`. A private database renderer derives the financial fields from the authoritative invoice row, repairs fixtures during migration, and a private insert trigger handles future ERP imports before storage. This keeps documents reproducible without a runtime PDF dependency.
+## Performance
 
-## AP submission transaction
-
-`submit_invoice_batch` is a public security-invoker wrapper around a private security-definer function with `search_path = ''`. Execution is revoked from `public` and `anon` and granted only to `authenticated`.
-
-Within one database transaction it:
-
-1. verifies the caller has a submitter role and derives its supplier and buyer IDs;
-2. resolves or creates the supplier-scoped idempotency record;
-3. locks every referenced PO row;
-4. revalidates ownership, open status, currency, remaining balance, uniqueness, canonical encoding, PDF signature and tail marker, size, and SHA-256;
-5. inserts receipt records and decrements balances;
-6. writes one audit event and stores the immutable response;
-7. commits all invoices or none.
-
-Application preflight improves the human-agent experience but the transaction is authoritative, preventing time-of-check/time-of-use errors. The submission endpoint therefore calls the transaction directly instead of repeating the read-only preflight first: an identical retry reaches the stored idempotent response, while the transaction still revalidates every invariant before a first commit.
-
-## AP payment signal simulation
-
-After each committed submission, a private trigger assigns a serialized per-supplier sequence. Every second invoice receives one immutable synthetic payment schedule for 10 seconds later and a scheduling audit event in the same transaction. A public security-invoker wrapper delegates to a private function that derives supplier scope from the authenticated profile, computes the effective `paid` status from database time, and exposes the payment reference only after maturity. The settlement and sequence tables have no direct application read or write grants.
-
-The browser schedules a single refresh for the next known settlement time, avoiding polling. Status reads never mutate data, and idempotent submission retries cannot create another schedule. This is an explicit buyer-side challenge simulation inside Acme AP, not a payment processor or a hidden integration with OpenFinance AR.
-
-## Exception-to-cash records
-
-AP purchase orders expose supplier-scoped line, receipt, service-entry, tolerance, attachment, and payment-term context. AP status events, structured exceptions, supplier responses, verified evidence, corrected invoice revisions, tracked inquiries, and payment remittance remain durable tenant-owned records. Exception responses, inquiries, and replacements are idempotent database transactions; replacement is allowed only for a current rejected or disputed invoice whose open exception explicitly permits it, and PO balance release/reallocation is atomic. A tenant-scoped workflow read function joins each current exception to its invoice and latest inquiry in one database call so the human exception queue can update after tool writes without client-side authority inference or per-row queries.
-
-The canonical AP portfolio includes one supplier-owned missing-delivery-proof exception, one `buyer_receiving` missing-receipt exception, and one supplier-owned rejected replacement. The service adds an explicit `supplierCanResolve` boolean and authority statement to the stored owner. A guarded backend exception-response function permits only `supplier_ar` or shared owners with the declared action, and requires the exact supporting-document kind when AP names one. After the existing PDF structure, checksum, evidence-kind, authorization, and idempotency checks commit the requested evidence, the same transaction resolves that exception and accepts a disputed invoice only if no other actionable exception remains. Buyer-owned work cannot be converted into a supplier response or approval; it is routed through a separately approved inquiry and remains visibly on hold. This makes “This isn't mine to fix” an enforced authority boundary rather than only agent copy.
-
-AR stores evidence independently and never reads AP records directly. Its follow-up service derives actionable status-stale, overdue, blocked, rejected, and partially paid work from AR state. Verified remittance writeback is an idempotent transaction that requires an existing portal receipt, enforces invoice currency and remaining balance, and supports partial allocations without accepting overpayment.
-
-The default reset restores 24 AR invoices with exactly three narrated Acme candidates, nine AP purchase orders, and three AP historical exception submissions. `INV-10482` and `INV-10491` have independently valid AP capacity; `INV-10507` retains the deliberate buyer-side PO/service-entry blocker. The first invoice in the canonical approved pair receives the deterministic payment signal. AP payment discovery followed by approved AR remittance writeback is the terminal business outcome.
-
-## Data transfer
-
-The OpenFinance package tool returns a small challenge PDF as base64 plus its media type, filename, and SHA-256. After the human approves the exact invoices and Acme destination for read-only validation, the browser agent passes only those explicit packages to Acme. Acme independently decodes, bounds, verifies canonical base64, requires the accepted classic PDF structure (catalog, page, and byte-accurate `startxref` to `xref` before EOF), and verifies the hash. A separate human confirmation is still required immediately before AP submission. Production evolution can replace inline content with a governed attachment handoff without changing invoice or validation contracts.
-
-The same AR document is available to an authenticated human through a no-store download route. That route revalidates the stored document and relies on AR RLS before returning it; manual upload in Acme uses the same AP validation and confirmed-submission backend as agent-assisted transfer.
-
-## Performance choices
-
-- Server Components load identity and workspace data concurrently.
-- Workspace refreshes use one same-origin endpoint after writes.
-- A transient recent-audit read failure degrades only that panel: each workspace returns `auditAvailable: false`, renders an actionable retry message, and continues to show authoritative invoice, PO, and receipt state.
-- Query indexes match tenant, status, PO, uniqueness, and recent-audit access paths.
-- Validation queries PO and duplicate state concurrently.
-- No caching is allowed for authenticated financial state.
-
-These are bounded optimizations; correctness and isolation remain the primary constraints.
+Authenticated workspace state is never cached. Server reads are concurrent where independent, each workspace refreshes through one same-origin endpoint after writes, indexes match tenant and workflow queries, and payment maturity uses one scheduled refresh rather than polling. These choices never weaken correctness or isolation.

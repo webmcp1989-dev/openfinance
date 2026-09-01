@@ -128,33 +128,12 @@ describe("database mutation boundaries", () => {
     expect(migration).toContain("Portal status cannot move backwards");
   });
 
-  test("setup documentation includes every ordered hardening migration", async () => {
+  test("setup preserves independent ordered migration boundaries", async () => {
     const setup = await readFile(join(root, "docs/SETUP.md"), "utf8");
-    expect(setup).toContain("202608290003_enforce_delivery_event_contract.sql");
-    expect(setup).toContain("202608290004_bound_json_money.sql");
-    expect(setup).toContain("202608290005_canonicalize_delivery_requests.sql");
-    expect(setup).toContain("202608290006_simulate_erp_invoice_sync.sql");
-    expect(setup).toContain("202608290007_repair_renderable_invoice_pdfs.sql");
-    expect(setup).toContain("202608290011_add_authorized_demo_reset.sql");
-    expect(setup).toContain("202608290002_harden_submission_wrapper.sql");
-    expect(setup).toContain("202608290003_bound_json_money.sql");
-    expect(setup).toContain("202608290004_align_submission_policy.sql");
-    expect(setup).toContain("202608290005_canonicalize_submission_requests.sql");
-    expect(setup).toContain("202608290006_validate_pdf_structure.sql");
-    expect(setup).toContain("202608290007_simulate_payment_settlement.sql");
-    expect(setup).toContain("202608290008_add_authorized_demo_reset.sql");
-    expect(setup).toContain("202608300005_validate_supporting_document_pdfs.sql");
-    expect(setup).toContain("202608300005_validate_attachment_pdfs.sql");
-    expect(setup).toContain("202608300006_serialize_remittance_idempotency.sql");
-    expect(setup).toContain("202608300007_render_proof_of_delivery_fixture.sql");
-    expect(setup).toContain("202608300006_serialize_invoice_inquiries.sql");
-    expect(setup).toContain("202608300007_serialize_exception_responses.sql");
-    expect(setup).toContain("202608300008_name_postgrest_rpc_arguments.sql");
-    expect(setup).toContain("202608310001_complete_exception_workflow.sql");
-    expect(setup).toContain("202609010002_require_document_submission_approval.sql");
-    expect(setup).toContain("202609010003_fix_document_approval_wrappers.sql");
-    expect(setup).toContain("202609010004_align_document_approval_fingerprint.sql");
-    expect(setup).toContain("202609010005_preserve_canonical_document_mutations.sql");
+    expect(setup).toContain("services/openfinance/supabase/migrations");
+    expect(setup).toContain("services/acme/supabase/migrations");
+    expect(setup).toContain("filename order");
+    expect(setup).toContain("Never apply one application's SQL to the other project");
   });
 
   test("AP document consent composes with the established mutation boundary", async () => {
@@ -504,19 +483,16 @@ describe("WebMCP safety contracts", () => {
     expect(guide).toContain("separate document-write approval");
   });
 
-  test("judge-facing docs keep the optional remote MCP outside the browser challenge story", async () => {
-    const [readme, guide, remoteMcp, arWorkspace] = await Promise.all([
+  test("judge-facing docs stay focused on the browser WebMCP challenge story", async () => {
+    const [readme, guide, arWorkspace] = await Promise.all([
       readFile(join(root, "README.md"), "utf8"),
       readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8"),
-      readFile(join(root, "docs/MCP.md"), "utf8"),
       readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8"),
     ]);
 
     expect(readme).toContain("The primary submitted app is Acme AP");
-    expect(readme).toContain("The separate AR remote MCP is intentionally excluded from that judge-facing story");
-    expect(guide).toContain("Do not show the AR remote-MCP endpoint");
-    expect(remoteMcp).toContain("not counted among the 19 browser WebMCP tools");
-    expect(remoteMcp).toContain("never an AR-to-AP bridge");
+    expect(readme).not.toContain("/mcp");
+    expect(guide).not.toContain("remote MCP");
     expect(arWorkspace).not.toContain("7 site + 11 remote tools");
   });
 });

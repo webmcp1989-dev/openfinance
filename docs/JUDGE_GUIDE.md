@@ -6,7 +6,7 @@ The primary contest application is the independently authenticated [Acme AP supp
 
 The [OpenFinance AR system](https://openfinance-ar.vercel.app) is an independent synthetic supplier system used to reproduce the external records and writebacks in the complete demonstration. It exposes seven browser WebMCP tools. The two applications have separate deployments, authentication, databases, migrations, and credentials.
 
-The browser agent and informed human are the only runtime bridge: **19 browser tools, two companies, zero cross-writes**. Do not show the AR remote-MCP endpoint in the primary contest flow; it is an optional own-system extension and is not part of the 19-tool browser-WebMCP claim.
+The browser agent and informed human are the only runtime bridge: **19 browser tools, two companies, zero cross-writes**.
 
 ## Why WebMCP fits
 

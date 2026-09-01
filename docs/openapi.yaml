@@ -54,7 +54,7 @@ paths:
       summary: Invoke the OpenFinance AR Streamable HTTP MCP transport
       description: >-
         MCP JSON-RPC endpoint. Exact method, tool, input, output, notification, and
-        protocol-version contracts are defined by MCP and docs/MCP.md, not OpenAPI.
+        protocol-version contracts are defined by MCP discovery metadata, not OpenAPI.
       security:
         - oauthMcpBearer: []
       requestBody:
