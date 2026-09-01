@@ -13,6 +13,16 @@ import type { AuditEvent } from "@/lib/services/audit-service";
 import type { BuyerCase, InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
 import { hasStructuralPdf } from "@/lib/pdf-structure";
 import { AcmeSiteTools } from "./acme-site-tools";
+import {
+  ACME_AGENT_READ_EVENT,
+  ACME_DATA_CHANGED_EVENT,
+  buildAcmeSubmissionResult,
+  submissionConfirmationMessage,
+  type AcmeAgentReadDetail,
+  type AcmeAgentReadSection,
+  type AcmeDataChangedDetail,
+  type AcmeSubmissionResult,
+} from "./workspace-events";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const timestamp = new Intl.DateTimeFormat("en-US", {
@@ -224,7 +234,10 @@ export function AcmeWorkspace({
   const [starterPromptCopied, setStarterPromptCopied] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeSource, setNoticeSource] = useState<"agent" | "human" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submissionResult, setSubmissionResult] = useState<AcmeSubmissionResult | null>(null);
+  const [agentReadSection, setAgentReadSection] = useState<AcmeAgentReadSection | null>(null);
   const activeStatusInvoiceNumber = statusLookup?.invoiceNumber;
 
   const refresh = useCallback(async () => {
@@ -254,9 +267,26 @@ export function AcmeWorkspace({
   }, [activeStatusInvoiceNumber]);
 
   useEffect(() => {
-    const handleDataChanged = () => void refresh().catch(() => undefined);
-    window.addEventListener("acme:data-changed", handleDataChanged);
-    return () => window.removeEventListener("acme:data-changed", handleDataChanged);
+    const handleDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<AcmeDataChangedDetail>).detail;
+      if (detail?.actor === "agent" && typeof detail.message === "string") {
+        setError(null);
+        setNotice(detail.message);
+        setNoticeSource("agent");
+        if (detail.submissionResult) setSubmissionResult(detail.submissionResult);
+      }
+      void refresh().catch(() => undefined);
+    };
+    const handleAgentRead = (event: Event) => {
+      const detail = (event as CustomEvent<AcmeAgentReadDetail>).detail;
+      if (detail?.section) setAgentReadSection(detail.section);
+    };
+    window.addEventListener(ACME_DATA_CHANGED_EVENT, handleDataChanged);
+    window.addEventListener(ACME_AGENT_READ_EVENT, handleAgentRead);
+    return () => {
+      window.removeEventListener(ACME_DATA_CHANGED_EVENT, handleDataChanged);
+      window.removeEventListener(ACME_AGENT_READ_EVENT, handleAgentRead);
+    };
   }, [refresh]);
 
   useEffect(() => {
@@ -285,6 +315,7 @@ export function AcmeWorkspace({
 
   function clearFeedback() {
     setNotice(null);
+    setNoticeSource(null);
     setError(null);
   }
 
@@ -405,10 +436,11 @@ export function AcmeWorkspace({
         }),
       });
       await refresh();
+      setSubmissionResult(buildAcmeSubmissionResult("human", validatedBatch, result.items));
       setValidatedBatch([]);
       setValidation(null);
       setConfirmation(false);
-      setNotice(`${result.items.length} invoice${result.items.length === 1 ? " was" : "s were"} submitted and received portal references.`);
+      setNotice(submissionConfirmationMessage(result.items.length));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The invoice batch could not be submitted");
     } finally {
@@ -529,6 +561,8 @@ export function AcmeWorkspace({
       setConfirmation(false);
       setFileInputKey((key) => key + 1);
       setResetOpen(false);
+      setSubmissionResult(null);
+      setAgentReadSection(null);
       await refresh();
       setNotice("Acme AP was restored to the canonical synthetic starting state.");
     } catch (cause) {
@@ -578,7 +612,7 @@ export function AcmeWorkspace({
       <section className="workflow-board" id="exceptions" aria-labelledby="workflow-board-title">
         <div className="section-heading">
           <div><p className="kicker">Exception ownership</p><h2 id="workflow-board-title">Invoice exception queue</h2></div>
-          <span>{workflows.filter((item) => item.exception.status === "open").length} requiring action</span>
+          <div className="section-signals">{agentReadSection === "exceptions" && <span className="agent-read-marker">Agent read this</span>}<span>{workflows.filter((item) => item.exception.status === "open").length} requiring action</span></div>
         </div>
         {workflows.length === 0 ? <div className="empty-state"><strong>No invoice exceptions</strong><p>New buyer or supplier action items will appear here.</p></div> : (
           <div className="workflow-grid">{workflows.map((item) => {
@@ -639,9 +673,12 @@ export function AcmeWorkspace({
       <section className="requirements" aria-labelledby="requirements-title">
         <div><p className="kicker">Live submission policy</p><h2 id="requirements-title">Invoice requirements</h2></div>
         <ul><li>Open PO required</li><li>PDF up to {Math.round(requirements.maxDocumentBytes / 1_048_576)} MB</li><li>Unique invoice number</li><li>Within remaining balance</li></ul>
+        {agentReadSection === "requirements" && <span className="agent-read-marker">Agent read this</span>}
       </section>
 
-      {(notice || error) && <div className={`portal-notice ${error ? "error" : "success"}`} role={error ? "alert" : "status"}>{error ?? notice}</div>}
+      {(notice || error) && <div className={`portal-notice ${error ? "error" : "success"} ${noticeSource === "agent" && !error ? "agent-action-notice" : ""}`} role={error ? "alert" : "status"}>
+        {noticeSource === "agent" && !error && <strong>Agent · </strong>}{error ?? notice}
+      </div>}
 
       <section className="operations" id="operations" aria-labelledby="operations-title">
         <div className="section-heading"><div><p className="kicker">Human workspace</p><h2 id="operations-title">Invoice operations</h2></div><span>Same governed backend</span></div>
@@ -706,7 +743,7 @@ export function AcmeWorkspace({
       </section>
 
       <section className="orders" id="orders" aria-labelledby="orders-title">
-        <div className="section-heading"><div><p className="kicker">Authorized supplier data</p><h2 id="orders-title">Purchase orders</h2></div><span>{purchaseOrders.filter((order) => order.status === "open").length} open</span></div>
+        <div className="section-heading"><div><p className="kicker">Authorized supplier data</p><h2 id="orders-title">Purchase orders</h2></div><div className="section-signals">{agentReadSection === "orders" && <span className="agent-read-marker">Agent read this</span>}<span>{purchaseOrders.filter((order) => order.status === "open").length} open</span></div></div>
         <div className="cards">{purchaseOrders.map((order) => (
           <article id={`po-${order.purchaseOrderNumber}`} data-po={order.purchaseOrderNumber} data-status={order.status} key={order.purchaseOrderNumber} className="order-card">
             <div><strong>{order.purchaseOrderNumber}</strong><span>{order.status}</span></div>
@@ -763,7 +800,12 @@ export function AcmeWorkspace({
       </section>
 
       <section className="submissions" id="submissions" aria-labelledby="submissions-title">
-        <div className="section-heading"><div><p className="kicker">Portal receipts</p><h2 id="submissions-title">Invoice submissions</h2></div><span>{submissions.length} received</span></div>
+        <div className="section-heading"><div><p className="kicker">Portal receipts</p><h2 id="submissions-title">Invoice submissions</h2></div><div className="section-signals">{agentReadSection === "submissions" && <span className="agent-read-marker">Agent read this</span>}<span>{submissions.length} received</span></div></div>
+        {submissionResult && <aside className="submission-result" aria-label="Latest invoice submission result" role="status">
+          <div><span>{submissionResult.actor === "agent" ? "Agent submission complete" : "Submission complete"}</span><strong>{submissionResult.invoiceCount} invoice{submissionResult.invoiceCount === 1 ? "" : "s"} received</strong></div>
+          <strong>{submissionResult.totals.map((total) => new Intl.NumberFormat("en-US", { style: "currency", currency: total.currency, maximumFractionDigits: 0 }).format(total.amountMinor / 100)).join(" + ")}</strong>
+          <div><span>Portal references</span><p>{submissionResult.portalReferences.join(" · ")}</p></div>
+        </aside>}
         <div className="settlement-note"><strong>Synthetic buyer payment signal</strong><p>For this challenge demo, every second committed invoice settles 10 seconds after receipt. The portal and agent read the same live AP status.</p></div>
         <div className="submission-filters" aria-label="Invoice submission filters">
           <label><span>Status</span><select value={submissionStatusFilter} onChange={(event) => setSubmissionStatusFilter(event.target.value as SubmissionStatusFilter)}><option value="all">All statuses</option><option value="received">Received</option><option value="under_review">Under review</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option><option value="disputed">Disputed</option><option value="voided">Voided</option><option value="paid">Paid</option></select></label>
@@ -771,7 +813,7 @@ export function AcmeWorkspace({
         </div>
         {submissions.length === 0 ? <div className="empty-state"><strong>No invoices submitted yet</strong><p>Validated invoices will appear here immediately after confirmed submission.</p></div> : (
           filteredSubmissions.length === 0 ? <div className="empty-state"><strong>No matching invoices</strong><p>Adjust the status or purchase-order filter.</p></div> : <div className="submission-list">{filteredSubmissions.map((submission) => (
-            <article id={`inv-${submission.invoiceNumber}`} data-invoice={submission.invoiceNumber} data-po={submission.purchaseOrderNumber} data-status={submission.status} key={submission.portalReference}>
+            <article id={`inv-${submission.invoiceNumber}`} data-invoice={submission.invoiceNumber} data-po={submission.purchaseOrderNumber} data-status={submission.status} key={submission.portalReference} className={submissionResult?.invoiceNumbers.includes(submission.invoiceNumber) ? "recent-submission" : undefined}>
               <div><strong>{submission.invoiceNumber}</strong><span className={submission.status}>{submission.status}</span></div>
               <p>{submission.portalReference} · {submission.purchaseOrderNumber}</p>
               {submission.status === "paid" && submission.paymentReference && submission.paidAt

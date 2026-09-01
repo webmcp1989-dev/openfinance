@@ -4,6 +4,19 @@ import { useEffect } from "react";
 
 import { apiRequest } from "@/lib/browser-api";
 import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
+import {
+  buildPaymentReconciliationResult,
+  dispatchOpenFinanceAgentRead,
+  dispatchOpenFinanceDataChanged,
+  type OpenFinanceAgentReadSection,
+  type PaymentReconciliationResult,
+} from "./workspace-events";
+
+async function readForAgent<T>(section: OpenFinanceAgentReadSection, request: Promise<T>) {
+  const result = await request;
+  dispatchOpenFinanceAgentRead(section);
+  return result;
+}
 
 const invoiceNumberArray = {
   type: "array", minItems: 1, maxItems: MAX_TRANSFER_INVOICE_COUNT, uniqueItems: true,
@@ -50,7 +63,10 @@ export function OpenFinanceSiteTools() {
           const customerName = (input as { customerName?: unknown }).customerName;
           const query = new URLSearchParams({ readyOnly: "true" });
           if (typeof customerName === "string") query.set("customerName", customerName);
-          return apiRequest(`/api/agent/invoices?${query}`, { signal: options?.signal });
+          return readForAgent(
+            "invoices",
+            apiRequest(`/api/agent/invoices?${query}`, { signal: options?.signal }),
+          );
         },
       },
       {
@@ -62,9 +78,12 @@ export function OpenFinanceSiteTools() {
           properties: { invoiceNumbers: invoiceNumberArray },
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/packages", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "invoices",
+          apiRequest("/api/agent/packages", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
       {
         name: "list_portal_followups",
@@ -79,7 +98,10 @@ export function OpenFinanceSiteTools() {
           const customerName = (input as { customerName?: unknown }).customerName;
           const query = new URLSearchParams();
           if (typeof customerName === "string") query.set("customerName", customerName);
-          return apiRequest(`/api/agent/followups?${query}`, { signal: options?.signal });
+          return readForAgent(
+            "followups",
+            apiRequest(`/api/agent/followups?${query}`, { signal: options?.signal }),
+          );
         },
       },
       {
@@ -91,9 +113,12 @@ export function OpenFinanceSiteTools() {
           properties: { invoiceNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/supporting-documents", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "followups",
+          apiRequest("/api/agent/supporting-documents", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
       {
         name: "record_portal_result",
@@ -108,12 +133,20 @@ export function OpenFinanceSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
+          const request = input as { items: Array<{ invoiceNumber: string }> };
           const result = await apiRequest("/api/agent/delivery-events", {
             method: "POST",
             body: JSON.stringify({ eventType: "portal_result", ...(input as object) }),
             signal: options?.signal,
           });
-          window.dispatchEvent(new Event("openfinance:data-changed"));
+          const invoiceNumbers = request.items.map((item) => item.invoiceNumber);
+          dispatchOpenFinanceDataChanged({
+            actor: "agent",
+            message: invoiceNumbers.length === 1
+              ? `${invoiceNumbers[0]} portal result was recorded and added to the audit trail.`
+              : `${invoiceNumbers.length} portal results were recorded and added to the audit trail.`,
+            affectedInvoiceNumbers: invoiceNumbers,
+          });
           return result;
         },
       },
@@ -130,12 +163,20 @@ export function OpenFinanceSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
+          const request = input as { items: Array<{ invoiceNumber: string }> };
           const result = await apiRequest("/api/agent/delivery-events", {
             method: "POST",
             body: JSON.stringify({ eventType: "portal_exception", ...(input as object) }),
             signal: options?.signal,
           });
-          window.dispatchEvent(new Event("openfinance:data-changed"));
+          const invoiceNumbers = request.items.map((item) => item.invoiceNumber);
+          dispatchOpenFinanceDataChanged({
+            actor: "agent",
+            message: invoiceNumbers.length === 1
+              ? `${invoiceNumbers[0]} portal exception was recorded and added to the audit trail.`
+              : `${invoiceNumbers.length} portal exceptions were recorded and added to the audit trail.`,
+            affectedInvoiceNumbers: invoiceNumbers,
+          });
           return result;
         },
       },
@@ -158,10 +199,16 @@ export function OpenFinanceSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await apiRequest("/api/agent/remittances", {
+          const request = input as Omit<PaymentReconciliationResult, "actor" | "remainingDueMinor"> & { idempotencyKey: string };
+          const result = await apiRequest<{ remainingDueMinor: number }>("/api/agent/remittances", {
             method: "POST", body: JSON.stringify(input), signal: options?.signal,
           });
-          window.dispatchEvent(new Event("openfinance:data-changed"));
+          dispatchOpenFinanceDataChanged({
+            actor: "agent",
+            message: `${request.invoiceNumber} payment remittance was reconciled into OpenFinance.`,
+            affectedInvoiceNumbers: [request.invoiceNumber],
+            paymentResult: buildPaymentReconciliationResult("agent", request, result.remainingDueMinor),
+          });
           return result;
         },
       },

@@ -41,6 +41,8 @@ Shared hashing and typed-error primitives live in framework-free `http-core` mod
 
 Every one of the 19 browser WebMCP operations also has a first-class human UI path. Those controls call the same same-origin routes and services as the tools; the UI adds guidance and informed confirmation but never replaces backend authorization or validation.
 
+After a browser tool succeeds, its client registration dispatches a typed, app-local presentation event containing only the actor label and values already present in the successful request/response. The owning workspace uses it for an agent-labelled confirmation, a persistent submission or reconciliation summary, affected-row emphasis, and read-attention markers, then independently refreshes its complete authoritative read model from the backend. These browser events are not accepted by an API, do not persist state, and are not a security or business-rule boundary.
+
 The inventory has zero cross-writes by construction. The seven AR site tools can mutate only the AR database and the twelve AP tools only the AP database. Matching synthetic invoice and PO identifiers are independently seeded fixtures, not shared records or a synchronization channel. The browser agent may compare them, but only an informed human approval authorizes moving a package or recording the independently verified result.
 
 ## AR ERP sync simulation

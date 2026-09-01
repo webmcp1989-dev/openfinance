@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { isManualOutcomeStatusEligible, parseUtcDateTimeLocal } from "./openfinance-workspace";
+import { buildPaymentReconciliationResult } from "./workspace-events";
 
 describe("manual portal outcome eligibility", () => {
   test("keeps supplier exception and replacement writebacks reachable", () => {
@@ -27,5 +28,25 @@ describe("UTC remittance timestamps", () => {
   test("rejects missing and impossible timestamps", () => {
     expect(() => parseUtcDateTimeLocal("")).toThrow("exact UTC");
     expect(() => parseUtcDateTimeLocal("2026-02-30T10:00")).toThrow("valid UTC");
+  });
+});
+
+test("preserves the exact verified payment in the visible reconciliation result", () => {
+  expect(buildPaymentReconciliationResult("agent", {
+    invoiceNumber: "INV-10482",
+    paymentReference: "PAY-20260830-0DD9D23B",
+    amountMinor: 1_842_000,
+    currency: "USD",
+    paymentMethod: "ach",
+    paidAt: "2026-08-30T22:29:17.000Z",
+  }, 0)).toEqual({
+    actor: "agent",
+    invoiceNumber: "INV-10482",
+    paymentReference: "PAY-20260830-0DD9D23B",
+    amountMinor: 1_842_000,
+    currency: "USD",
+    paymentMethod: "ach",
+    paidAt: "2026-08-30T22:29:17.000Z",
+    remainingDueMinor: 0,
   });
 });

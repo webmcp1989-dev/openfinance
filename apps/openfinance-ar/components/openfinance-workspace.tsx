@@ -12,6 +12,15 @@ import type {
   RecordedBuyerCase,
 } from "@/lib/services/invoice-service";
 import { OpenFinanceSiteTools } from "./openfinance-site-tools";
+import {
+  OPENFINANCE_AGENT_READ_EVENT,
+  OPENFINANCE_DATA_CHANGED_EVENT,
+  buildPaymentReconciliationResult,
+  type OpenFinanceAgentReadDetail,
+  type OpenFinanceAgentReadSection,
+  type OpenFinanceDataChangedDetail,
+  type PaymentReconciliationResult,
+} from "./workspace-events";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const timestamp = new Intl.DateTimeFormat("en-US", {
@@ -138,7 +147,11 @@ export function OpenFinanceWorkspace({
   const [resetOpen, setResetOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeSource, setNoticeSource] = useState<"agent" | "human" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paymentResult, setPaymentResult] = useState<PaymentReconciliationResult | null>(null);
+  const [agentReadSection, setAgentReadSection] = useState<OpenFinanceAgentReadSection | null>(null);
+  const [agentAffectedInvoices, setAgentAffectedInvoices] = useState<readonly string[]>([]);
 
   const refresh = useCallback(async () => {
     const body = await apiRequest<{
@@ -160,9 +173,27 @@ export function OpenFinanceWorkspace({
   }, []);
 
   useEffect(() => {
-    const handleDataChanged = () => void refresh().catch(() => undefined);
-    window.addEventListener("openfinance:data-changed", handleDataChanged);
-    return () => window.removeEventListener("openfinance:data-changed", handleDataChanged);
+    const handleDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<OpenFinanceDataChangedDetail>).detail;
+      if (detail?.actor === "agent" && typeof detail.message === "string") {
+        setError(null);
+        setNotice(detail.message);
+        setNoticeSource("agent");
+        setAgentAffectedInvoices(detail.affectedInvoiceNumbers);
+        if (detail.paymentResult) setPaymentResult(detail.paymentResult);
+      }
+      void refresh().catch(() => undefined);
+    };
+    const handleAgentRead = (event: Event) => {
+      const detail = (event as CustomEvent<OpenFinanceAgentReadDetail>).detail;
+      if (detail?.section) setAgentReadSection(detail.section);
+    };
+    window.addEventListener(OPENFINANCE_DATA_CHANGED_EVENT, handleDataChanged);
+    window.addEventListener(OPENFINANCE_AGENT_READ_EVENT, handleAgentRead);
+    return () => {
+      window.removeEventListener(OPENFINANCE_DATA_CHANGED_EVENT, handleDataChanged);
+      window.removeEventListener(OPENFINANCE_AGENT_READ_EVENT, handleAgentRead);
+    };
   }, [refresh]);
 
   const metrics = useMemo(() => ({
@@ -186,6 +217,7 @@ export function OpenFinanceWorkspace({
 
   function clearFeedback() {
     setNotice(null);
+    setNoticeSource(null);
     setError(null);
   }
 
@@ -249,6 +281,9 @@ export function OpenFinanceWorkspace({
       setPackages([]);
       setWorkbenchOpen(false);
       setResetOpen(false);
+      setPaymentResult(null);
+      setAgentReadSection(null);
+      setAgentAffectedInvoices([]);
       await refresh();
       setNotice("OpenFinance AR was restored to the canonical synthetic starting state.");
     } catch (cause) {
@@ -341,19 +376,31 @@ export function OpenFinanceWorkspace({
     setPendingAction("remittance");
     try {
       const invoiceNumber = String(formData.get("invoiceNumber") ?? "");
-      await apiRequest("/api/agent/remittances", {
+      const paymentReference = String(formData.get("paymentReference") ?? "");
+      const amountMinor = parseAmountMinor(String(formData.get("amount") ?? ""));
+      const paymentMethod = String(formData.get("paymentMethod") ?? "ach");
+      const paidAt = parseUtcDateTimeLocal(String(formData.get("paidAt") ?? ""));
+      const result = await apiRequest<{ remainingDueMinor: number }>("/api/agent/remittances", {
         method: "POST",
         body: JSON.stringify({
           idempotencyKey: idempotencyKey("ui-remittance"),
           invoiceNumber,
-          paymentReference: String(formData.get("paymentReference") ?? ""),
-          amountMinor: parseAmountMinor(String(formData.get("amount") ?? "")),
+          paymentReference,
+          amountMinor,
           currency: "USD",
-          paymentMethod: String(formData.get("paymentMethod") ?? "ach"),
-          paidAt: parseUtcDateTimeLocal(String(formData.get("paidAt") ?? "")),
+          paymentMethod,
+          paidAt,
         }),
       });
       await refresh();
+      setPaymentResult(buildPaymentReconciliationResult("human", {
+        invoiceNumber,
+        paymentReference,
+        amountMinor,
+        currency: "USD",
+        paymentMethod,
+        paidAt,
+      }, result.remainingDueMinor));
       setNotice(`${invoiceNumber} payment remittance was reconciled into OpenFinance.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Payment remittance could not be recorded");
@@ -395,7 +442,9 @@ export function OpenFinanceWorkspace({
         </div>
       </section>
 
-      {(notice || error) && <div className={`notice ${error ? "error" : "success"}`} role={error ? "alert" : "status"}>{error ?? notice}</div>}
+      {(notice || error) && <div className={`notice ${error ? "error" : "success"} ${noticeSource === "agent" && !error ? "agent-action-notice" : ""}`} role={error ? "alert" : "status"}>
+        {noticeSource === "agent" && !error && <strong>Agent · </strong>}{error ?? notice}
+      </div>}
 
       <section className="agent-guide" aria-label="Suggested agent task">
         <span className="agent-dot" aria-hidden="true" />
@@ -423,7 +472,7 @@ export function OpenFinanceWorkspace({
 
       <section className="panel" aria-labelledby="invoice-title">
         <div className="panel-heading invoice-heading">
-          <div><p className="eyebrow">Invoice queue</p><h2 id="invoice-title">Customer portal submissions</h2></div>
+          <div><p className="eyebrow">Invoice queue</p><h2 id="invoice-title">Customer portal submissions</h2>{agentReadSection === "invoices" && <span className="agent-read-marker">Agent read this</span>}</div>
           <div className="filters" aria-label="Invoice filters">
             <label><span>Customer</span><input value={customerFilter} onChange={(event) => setCustomerFilter(event.target.value)} placeholder="Filter customer" /></label>
             <label><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
@@ -462,14 +511,14 @@ export function OpenFinanceWorkspace({
               data-invoice={invoice.invoiceNumber}
               data-po={invoice.purchaseOrderNumber ?? undefined}
               data-status={displayStatus(invoice)}
-              className={isSelected ? "selected-row" : undefined}
+              className={[isSelected ? "selected-row" : "", agentAffectedInvoices.includes(invoice.invoiceNumber) ? "agent-updated-row" : ""].filter(Boolean).join(" ") || undefined}
             >
               <td className="select-column"><input type="checkbox" aria-label={`Select ${invoice.invoiceNumber}`} checked={isSelected} disabled={selectionDisabled} onChange={() => toggleSelected(invoice.invoiceNumber)} /></td>
               <td><strong>{invoice.invoiceNumber}</strong><small>{invoice.invoiceDate}</small></td>
               <td>{invoice.customerName}</td>
               <td>{money.format(invoice.amountMinor / 100)}</td>
               <td>{invoice.purchaseOrderNumber ?? "Missing"}</td>
-              <td><span className={`badge ${displayStatus(invoice)}`}>{statusLabel(invoice)}</span></td>
+              <td><span className={`badge ${displayStatus(invoice)}`}>{statusLabel(invoice)}</span>{paymentResult?.invoiceNumber === invoice.invoiceNumber && paymentResult.remainingDueMinor === 0 && <span className="reconciled-chip">Reconciled</span>}</td>
               <td className="result-cell">{invoice.portalReference ?? invoice.exceptionMessage ?? "Awaiting portal review"}</td>
               <td className="payment-cell">{payment ? <dl aria-label={`Payment details for ${invoice.invoiceNumber}`}>
                 <div><dt>Reference</dt><dd>{payment.paymentReference}</dd></div>
@@ -556,7 +605,17 @@ export function OpenFinanceWorkspace({
       </section>
 
       <section className="workbench" aria-labelledby="followup-title">
-        <div className="workbench-heading"><div><p className="eyebrow">Exception to cash</p><h2 id="followup-title">Portal follow-ups and remittance</h2></div><span>{followups.length} actionable</span></div>
+        <div className="workbench-heading"><div><p className="eyebrow">Exception to cash</p><h2 id="followup-title">Portal follow-ups and remittance</h2>{agentReadSection === "followups" && <span className="agent-read-marker">Agent read this</span>}</div><span>{followups.length} actionable</span></div>
+        {paymentResult && <aside className="payment-result" aria-label="Latest reconciled payment" role="status">
+          <div className="payment-result-title"><span>{paymentResult.actor === "agent" ? "Agent reconciliation complete" : "Reconciliation complete"}</span><strong>{paymentResult.invoiceNumber}</strong><b>Reconciled</b></div>
+          <dl>
+            <div><dt>Payment reference</dt><dd>{paymentResult.paymentReference}</dd></div>
+            <div><dt>Paid amount</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: paymentResult.currency, maximumFractionDigits: 0 }).format(paymentResult.amountMinor / 100)}</dd></div>
+            <div><dt>Method</dt><dd>{paymentResult.paymentMethod.toUpperCase()}</dd></div>
+            <div><dt>Paid at</dt><dd>{timestamp.format(new Date(paymentResult.paidAt))}</dd></div>
+            <div><dt>Remaining due</dt><dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: paymentResult.currency, maximumFractionDigits: 0 }).format(paymentResult.remainingDueMinor / 100)}</dd></div>
+          </dl>
+        </aside>}
         <div className="workbench-grid">
           <div className="package-review">
             <h3>Invoices needing follow-up</h3>

@@ -4,6 +4,19 @@ import { useEffect } from "react";
 
 import { apiRequest } from "@/lib/browser-api";
 import { MAX_TRANSFER_INVOICE_COUNT } from "@/lib/domain/transfer-limits";
+import {
+  buildAcmeSubmissionResult,
+  dispatchAcmeAgentRead,
+  dispatchAcmeDataChanged,
+  submissionConfirmationMessage,
+  type AcmeAgentReadSection,
+} from "./workspace-events";
+
+async function readForAgent<T>(section: AcmeAgentReadSection, request: Promise<T>) {
+  const result = await request;
+  dispatchAcmeAgentRead(section);
+  return result;
+}
 
 const invoiceSchema = {
   type: "object",
@@ -57,7 +70,10 @@ export function AcmeSiteTools() {
         description: "Read Acme's current invoice submission policy for the signed-in supplier. This does not modify the portal.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true },
-        execute: (_input, options) => apiRequest("/api/agent/requirements", { signal: options?.signal }),
+        execute: (_input, options) => readForAgent(
+          "requirements",
+          apiRequest("/api/agent/requirements", { signal: options?.signal }),
+        ),
       },
       {
         name: "list_open_purchase_orders",
@@ -65,7 +81,10 @@ export function AcmeSiteTools() {
         description: "List every open purchase order visible to the signed-in supplier, including line, receipt, service-entry, tolerance, attachment, and balance context. This does not reserve funds or modify an order.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (_input, options) => apiRequest("/api/agent/purchase-orders", { signal: options?.signal }),
+        execute: (_input, options) => readForAgent(
+          "orders",
+          apiRequest("/api/agent/purchase-orders", { signal: options?.signal }),
+        ),
       },
       {
         name: "get_purchase_order_details",
@@ -76,9 +95,12 @@ export function AcmeSiteTools() {
           properties: { purchaseOrderNumber: { type: "string", pattern: "^[A-Z0-9][A-Z0-9-]{1,39}$" } },
         },
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/purchase-orders", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "orders",
+          apiRequest("/api/agent/purchase-orders", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
       {
         name: "list_supplier_invoices",
@@ -97,7 +119,10 @@ export function AcmeSiteTools() {
           const filters = input as { status?: unknown; purchaseOrderNumber?: unknown };
           if (typeof filters.status === "string") query.set("status", filters.status);
           if (typeof filters.purchaseOrderNumber === "string") query.set("purchaseOrderNumber", filters.purchaseOrderNumber);
-          return apiRequest(`/api/agent/supplier-invoices?${query}`, { signal: options?.signal });
+          return readForAgent(
+            "submissions",
+            apiRequest(`/api/agent/supplier-invoices?${query}`, { signal: options?.signal }),
+          );
         },
       },
       {
@@ -106,9 +131,12 @@ export function AcmeSiteTools() {
         description: "Validate one complete invoice package against Acme's live PO balance, currency, uniqueness, and PDF rules. Call only after the human approves transferring that exact package to Acme. This read-only preflight does not reserve balance or submit the invoice.",
         inputSchema: invoiceSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/validate", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "requirements",
+          apiRequest("/api/agent/validate", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
       {
         name: "submit_invoice_batch",
@@ -123,10 +151,18 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await apiRequest("/api/agent/submissions", {
+          const request = input as {
+            invoices: Array<{ invoiceNumber: string; amountMinor: number; currency: string }>;
+          };
+          const result = await apiRequest<{ items: Array<{ invoiceNumber: string; portalReference: string }> }>("/api/agent/submissions", {
             method: "POST", body: JSON.stringify(input), signal: options?.signal,
           });
-          window.dispatchEvent(new Event("acme:data-changed"));
+          dispatchAcmeDataChanged({
+            actor: "agent",
+            message: submissionConfirmationMessage(result.items.length),
+            affectedInvoiceNumbers: result.items.map((item) => item.invoiceNumber),
+            submissionResult: buildAcmeSubmissionResult("agent", request.invoices, result.items),
+          });
           return result;
         },
       },
@@ -136,9 +172,12 @@ export function AcmeSiteTools() {
         description: "Read one supplier invoice's current receipt, revision, complete timestamped AP timeline across revisions, current structured exceptions, current inquiries, and any completed synthetic payment reference. This is a read-only status check.",
         inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/status", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "submissions",
+          apiRequest("/api/agent/status", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
       {
         name: "get_invoice_exception",
@@ -146,9 +185,12 @@ export function AcmeSiteTools() {
         description: "Read structured exceptions for one supplier invoice, including owner, whether supplier AR has authority to resolve it, an explicit authority-boundary statement, permitted actions, and required evidence. For a buyer-owned blocker, state plainly that it is not yours to fix and offer to open a tracked AP case. This does not change the exception.",
         inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/exceptions", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "exceptions",
+          apiRequest("/api/agent/exceptions", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
       {
         name: "respond_to_invoice_exception",
@@ -167,10 +209,18 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await apiRequest("/api/agent/exception-responses", {
+          const request = input as { invoiceNumber: string; attachments: unknown[] };
+          const result = await apiRequest<{ exceptionStatus: string; invoiceStatus: string }>("/api/agent/exception-responses", {
             method: "POST", body: JSON.stringify(input), signal: options?.signal,
           });
-          window.dispatchEvent(new Event("acme:data-changed"));
+          const message = result.exceptionStatus === "resolved" && result.invoiceStatus === "accepted"
+            ? `${request.invoiceNumber} evidence was verified, the exception cleared, and the invoice was approved.`
+            : `${request.invoiceNumber} exception response was sent with ${request.attachments.length} supporting document${request.attachments.length === 1 ? "" : "s"}.`;
+          dispatchAcmeDataChanged({
+            actor: "agent",
+            message,
+            affectedInvoiceNumbers: [request.invoiceNumber],
+          });
           return result;
         },
       },
@@ -187,10 +237,15 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
+          const request = input as { invoice: { invoiceNumber: string } };
           const result = await apiRequest("/api/agent/replacements", {
             method: "POST", body: JSON.stringify(input), signal: options?.signal,
           });
-          window.dispatchEvent(new Event("acme:data-changed"));
+          dispatchAcmeDataChanged({
+            actor: "agent",
+            message: `${request.invoice.invoiceNumber} was replaced by a corrected, newly validated revision.`,
+            affectedInvoiceNumbers: [request.invoice.invoiceNumber],
+          });
           return result;
         },
       },
@@ -211,10 +266,15 @@ export function AcmeSiteTools() {
         },
         annotations: { readOnlyHint: false },
         execute: async (input, options) => {
-          const result = await apiRequest("/api/agent/inquiries", {
+          const request = input as { invoiceNumber: string };
+          const result = await apiRequest<{ caseReference: string }>("/api/agent/inquiries", {
             method: "POST", body: JSON.stringify(input), signal: options?.signal,
           });
-          window.dispatchEvent(new Event("acme:data-changed"));
+          dispatchAcmeDataChanged({
+            actor: "agent",
+            message: `${result.caseReference} was opened for ${request.invoiceNumber}.`,
+            affectedInvoiceNumbers: [request.invoiceNumber],
+          });
           return result;
         },
       },
@@ -224,9 +284,12 @@ export function AcmeSiteTools() {
         description: "Read the payment schedule and, once paid, the exact payment reference, method, amount, currency, and invoice allocation for one supplier invoice. Use the completed allocation to finish the workflow by proposing an approved record_payment_remittance write in AR. This AP read does not trigger payment and cannot write to AR.",
         inputSchema: invoiceNumberInputSchema,
         annotations: { readOnlyHint: true, untrustedContentHint: true },
-        execute: (input, options) => apiRequest("/api/agent/remittance", {
-          method: "POST", body: JSON.stringify(input), signal: options?.signal,
-        }),
+        execute: (input, options) => readForAgent(
+          "submissions",
+          apiRequest("/api/agent/remittance", {
+            method: "POST", body: JSON.stringify(input), signal: options?.signal,
+          }),
+        ),
       },
     ];
 

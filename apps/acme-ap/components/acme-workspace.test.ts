@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { SubmissionRequirements } from "@/lib/domain/submissions";
 import type { InvoiceWorkflowItem, SubmissionRow } from "@/lib/services/submission-service";
 import { AP_AGENT_STARTER_PROMPT, fileDocument, filterSubmissionRows, workflowPresentation } from "./acme-workspace";
+import { buildAcmeSubmissionResult, submissionConfirmationMessage } from "./workspace-events";
 
 function renderStructuralPdf() {
   const prefix = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\n";
@@ -131,4 +132,25 @@ test("presents the canonical short instruction for starting the agent workflow",
     "Use the Acme Supplier Portal at https://openfinance-ap.vercel.app to review and process my invoices.",
   );
   expect(AP_AGENT_STARTER_PROMPT).not.toContain("OpenFinance AR");
+});
+
+describe("visible agent submission results", () => {
+  test("summarizes the exact submitted amount and returned portal references", () => {
+    expect(buildAcmeSubmissionResult("agent", [
+      { invoiceNumber: "INV-10482", amountMinor: 1_842_000, currency: "USD" },
+      { invoiceNumber: "INV-10491", amountMinor: 725_000, currency: "USD" },
+    ], [
+      { invoiceNumber: "INV-10482", portalReference: "ACME-20260901-D39D2868" },
+      { invoiceNumber: "INV-10491", portalReference: "ACME-20260901-01E252C2" },
+    ])).toEqual({
+      actor: "agent",
+      invoiceNumbers: ["INV-10482", "INV-10491"],
+      invoiceCount: 2,
+      totals: [{ currency: "USD", amountMinor: 2_567_000 }],
+      portalReferences: ["ACME-20260901-D39D2868", "ACME-20260901-01E252C2"],
+    });
+    expect(submissionConfirmationMessage(2)).toBe(
+      "2 invoices were submitted and received portal references.",
+    );
+  });
 });
