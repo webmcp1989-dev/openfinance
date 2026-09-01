@@ -498,25 +498,23 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain('id={`inv-${submission.invoiceNumber}`}');
   });
 
-  test("the demo runbook requires separate transfer and submission confirmations", async () => {
-    const demo = await readFile(join(root, "docs/DEMO.md"), "utf8");
-    expect(demo).toContain("informed transfer confirmation");
-    expect(demo).toContain("separate submission confirmation");
+  test("the judge guide requires separate transfer and document-write approvals", async () => {
+    const guide = await readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8");
+    expect(guide).toContain("informed transfer approval");
+    expect(guide).toContain("separate document-write approval");
   });
 
   test("judge-facing docs keep the optional remote MCP outside the browser challenge story", async () => {
-    const [readme, demo, submission, remoteMcp, arWorkspace] = await Promise.all([
+    const [readme, guide, remoteMcp, arWorkspace] = await Promise.all([
       readFile(join(root, "README.md"), "utf8"),
-      readFile(join(root, "docs/DEMO.md"), "utf8"),
-      readFile(join(root, "docs/SUBMISSION.md"), "utf8"),
+      readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8"),
       readFile(join(root, "docs/MCP.md"), "utf8"),
       readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8"),
     ]);
 
     expect(readme).toContain("The primary submitted app is Acme AP");
     expect(readme).toContain("The separate AR remote MCP is intentionally excluded from that judge-facing story");
-    expect(demo).toContain("Do not show the AR remote-MCP endpoint");
-    expect(submission).toContain("Do not include the optional AR remote MCP");
+    expect(guide).toContain("Do not show the AR remote-MCP endpoint");
     expect(remoteMcp).toContain("not counted among the 19 browser WebMCP tools");
     expect(remoteMcp).toContain("never an AR-to-AP bridge");
     expect(arWorkspace).not.toContain("7 site + 11 remote tools");

@@ -83,7 +83,7 @@ bun run build
 bun audit
 ```
 
-Run every SQL file under each service's `supabase/tests` directory in its corresponding project after applying all migrations. Then sign into both live applications in separate tabs, inspect Available site tools, and run the [demo checklist](DEMO.md).
+Run every SQL file under each service's `supabase/tests` directory in its corresponding project after applying all migrations. Then sign into both live applications in separate tabs, inspect Available site tools, and run the [judge workflow](JUDGE_GUIDE.md#workflow).
 
 For Acme AP, include `services/acme/supabase/tests/document-submission-approval.test.sql`. It verifies that old mutation signatures cannot bypass consent; denied, expired, cross-action, idempotency-mismatched, and payload-mismatched approvals fail; exact approval commits and is consumed; a completed decision cannot be changed; idempotent replay remains safe; no PDF base64 is retained; and reset clears approval artifacts.
 
@@ -106,6 +106,6 @@ The reviewed SQL scripts remain an operator fallback:
 3. Confirm it reports nine open POs, one seeded batch, three exception submissions, three open exceptions, and one reset audit event.
 4. In the **OpenFinance AR** SQL editor, review and run `services/openfinance/supabase/demo/reset.sql`.
 5. Confirm it reports 24 canonical invoices with the same three ready candidates, both narrated exception invoices in `needs_attention`, no delivery events, one reset audit event, and an ERP sync sequence reset to `2 new → 0 new`.
-6. Reload both applications and verify the [starting state](DEMO.md#starting-state) before rerunning the test.
+6. Reload both applications and verify the [starting state](JUDGE_GUIDE.md#starting-state) before rerunning the test.
 
 Each script uses explicit synthetic IDs, an advisory transaction lock, exact affected-row assertions, and a transaction. Never run either script against a project containing real data, and never point a script at the other application's project.

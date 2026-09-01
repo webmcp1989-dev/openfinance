@@ -47,6 +47,16 @@ Both portals are also complete human workspaces: every WebMCP capability can be 
 
 The authority model is deliberately asymmetric: **19 browser tools, zero cross-writes**. Seven OpenFinance tools write only AR; twelve Acme tools write only AP. The agent can reconcile both authenticated views, but only the human authorizes the financial data transferred between them. Buyer-owned blockers are explicitly named as outside supplier authority and routed into tracked AP cases.
 
+## Why WebMCP
+
+Financial work needs reliable business semantics, not coordinate-based browser guessing. Acme exposes narrow operations for requirements, validation, document submission, exception handling, buyer cases, and remittance. The agent can reason across those capabilities while Acme continues to enforce authorization and financial invariants in its own backend.
+
+| Human | Agent | Applications |
+| --- | --- | --- |
+| States the business intent and reviews exact previews | Discovers the relevant tools, records, rules, and blockers | Authenticate users and enforce their own permissions |
+| Approves each cross-company transfer and consequential document write | Explains what qualifies, what is excluded, and who owns each exception | Validate inputs and commit only authorized state changes |
+| Retains final authority and can inspect the visible result | Carries only approved information between the two sessions | Keep independent ledgers, audit trails, and human UI paths |
+
 ### Contest scope
 
 The primary submitted app is Acme AP. The video broadens the proof by exercising it from the independent OpenFinance AR reference system. The live prompt and **19-tool** count cover the complete browser-mediated workflow: twelve AP tools plus seven reference-system AR tools, with zero cross-writes. This distinction should remain explicit in the submission description and demo so the supporting system is never mistaken for a hidden product dependency.
@@ -91,9 +101,8 @@ The default seed is a realistic 24-invoice AR portfolio with exactly three narra
 - `apps/openfinance-ar`: **independent reference/demo application**—the synthetic supplier invoice system used in the complete workflow.
 - `services/openfinance`: AR reference schema, migrations, deterministic synthetic seed, reset logic, and database security tests.
 - `tests`: repository and production-contract verification across the public submission.
-- `scripts/demo-video`: reproducible demo-video source tooling and production notes.
 - `docs/openapi.yaml`: same-origin HTTP contracts for both independently deployed applications.
-- `docs`: architecture, security, WebMCP, setup, demo, verification, and submission documentation.
+- `docs`: architecture, security, setup, WebMCP, API, and concise judge guidance.
 
 The folder order above reflects the contest hierarchy, not a runtime dependency direction. Neither application imports the other's business logic, connects to the other's database, or calls the other's backend.
 
@@ -113,17 +122,14 @@ Copy `.env.example` to each app's `.env.local` and use only that app's Supabase 
 
 ## Documentation
 
-- [Challenge and demo north star](docs/NORTH_STAR.md)
+- [Judge guide](docs/JUDGE_GUIDE.md)
+- [Setup and deployment](docs/SETUP.md)
 - [System architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY.md)
 - [WebMCP tool inventory](docs/WEBMCP.md)
-- [Optional AR remote MCP and OAuth](docs/MCP.md)
-- [Demo runbook](docs/DEMO.md)
-- [Verification record](docs/VERIFICATION.md)
-- [Challenge submission package](docs/SUBMISSION.md)
-- [YouTube publication package](docs/YOUTUBE.md)
 - [OpenAPI contract](docs/openapi.yaml)
-- [Architecture decisions](docs/decisions/0001-independent-applications.md)
+
+The [optional AR remote MCP appendix](docs/MCP.md) documents an own-system extension that is intentionally outside the browser-WebMCP contest narrative.
 
 ## License
 

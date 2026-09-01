@@ -17,9 +17,9 @@ test-results/
 .vercel/
 .supabase/
 
-# Locally rendered contest media
-artifacts/demo-video/*.wav
-artifacts/demo-video/*.webm
+# Local-only working material and rendered media
+.local/
+/artifacts/
 
 # Tooling
 *.tsbuildinfo
