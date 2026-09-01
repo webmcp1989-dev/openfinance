@@ -268,6 +268,15 @@ function inspectDocument(invoice: InvoiceCandidate): ValidationIssue | null {
   return null;
 }
 
+function formatMoney(amountMinor: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amountMinor / 100);
+}
+
 export async function validateInvoice(supabase: SupabaseClient, invoice: InvoiceCandidate) {
   const [purchaseOrder, duplicateResult] = await Promise.all([
     findPurchaseOrder(supabase, invoice.purchaseOrderNumber),
@@ -290,13 +299,13 @@ export async function validateInvoice(supabase: SupabaseClient, invoice: Invoice
     if (purchaseOrder.remainingAmountMinor < invoice.amountMinor) {
       issues.push({
         code: "amount_exceeds_remaining_balance",
-        message: `Invoice amount ${invoice.amountMinor} exceeds remaining balance ${purchaseOrder.remainingAmountMinor} ${purchaseOrder.currency}.`,
+        message: `Invoice amount ${formatMoney(invoice.amountMinor, invoice.currency)} exceeds the remaining balance of ${formatMoney(purchaseOrder.remainingAmountMinor, purchaseOrder.currency)}.`,
       });
     }
     if (purchaseOrder.receiptRequired && purchaseOrder.receivedAmountMinor < invoice.amountMinor) {
       issues.push({
         code: "missing_receipt",
-        message: `Only ${purchaseOrder.receivedAmountMinor} ${purchaseOrder.currency} has been received against this purchase order.`,
+        message: `Only ${formatMoney(purchaseOrder.receivedAmountMinor, purchaseOrder.currency)} has been received against this purchase order.`,
       });
     }
     if (purchaseOrder.serviceEntryRequired && purchaseOrder.serviceEntryStatus !== "accepted") {

@@ -50,6 +50,8 @@ function invoice(overrides: Partial<InvoiceCandidate> = {}): InvoiceCandidate {
 
 function fakeSupabase(options: {
   remainingAmountMinor?: number;
+  receivedAmountMinor?: number;
+  receiptRequired?: boolean;
   duplicate?: boolean;
   rpcResult?: unknown;
 } = {}) {
@@ -61,6 +63,8 @@ function fakeSupabase(options: {
     currency: "USD",
     authorized_amount_minor: 2_400_000,
     remaining_amount_minor: options.remainingAmountMinor ?? 2_400_000,
+    receipt_required: options.receiptRequired ?? false,
+    received_amount_minor: options.receivedAmountMinor ?? 2_400_000,
     status: "open",
     version: 1,
   };
@@ -331,10 +335,21 @@ describe("Acme invoice validation", () => {
   });
 
   test("reports the deliberate remaining-balance exception without mutating", async () => {
-    const { client } = fakeSupabase({ remainingAmountMinor: 1_000_000 });
+    const { client } = fakeSupabase({
+      remainingAmountMinor: 1_000_000,
+      receiptRequired: true,
+      receivedAmountMinor: 600_000,
+    });
     const result = await validateInvoice(client as never, invoice({ amountMinor: 1_290_000 }));
     expect(result.valid).toBe(false);
-    expect(result.issues).toContainEqual(expect.objectContaining({ code: "amount_exceeds_remaining_balance" }));
+    expect(result.issues).toContainEqual({
+      code: "amount_exceeds_remaining_balance",
+      message: "Invoice amount $12,900 exceeds the remaining balance of $10,000.",
+    });
+    expect(result.issues).toContainEqual({
+      code: "missing_receipt",
+      message: "Only $6,000 has been received against this purchase order.",
+    });
   });
 
   test("rejects a duplicate invoice and a checksum mismatch", async () => {
