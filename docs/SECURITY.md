@@ -38,4 +38,4 @@ No backend URL fetch is accepted. Authenticated PDF downloads rely on RLS, reval
 - Security headers restrict script sources, framing, MIME sniffing, referrer data, cross-origin resources, and unused browser capabilities.
 - All tool capabilities remain available through human UI controls backed by the same services.
 
-The authority claim is enforced by architecture: **19 browser tools and zero cross-writes**. AR mutations terminate in AR, AP mutations terminate in AP, and only the human authorizes data crossing the two sessions.
+Acme AP's security boundary covers its **12 browser tools**: every AP read and mutation terminates inside AP, and no AP tool can access an external supplier ledger. The independent AR reference system has its own **7-tool boundary** and cannot access Acme. The two inventories are not one product and are not combined into a contest tool count; only the human can authorize information moving between their separate browser sessions.

@@ -123,7 +123,7 @@ export function OpenFinanceSiteTools() {
       {
         name: "record_portal_result",
         title: "Record portal results",
-        description: "Record exact portal references and statuses returned by Acme AP. After AP accepts proof for a supplier-owned missing_delivery_proof exception, record portalStatus accepted with the same current portalReference so AR visibly moves the invoice from needs attention to accepted. For a corrected AP revision, include the exact prior reference in supersedesPortalReference. This changes the OpenFinance queue; use only after verifying the AP result.",
+        description: "Record exact portal references and statuses returned by a customer AP portal. After the portal accepts proof for a supplier-owned missing_delivery_proof exception, record portalStatus accepted with the same current portalReference so AR visibly moves the invoice from needs attention to accepted. For a corrected revision, include the exact prior reference in supersedesPortalReference. This changes the OpenFinance queue; use only after verifying the external result.",
         inputSchema: {
           type: "object", additionalProperties: false, required: ["idempotencyKey", "items"],
           properties: {

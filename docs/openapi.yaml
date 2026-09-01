@@ -1,15 +1,19 @@
 openapi: 3.1.0
 info:
-  title: OpenFinance WebMCP demo HTTP APIs
+  title: Acme AP and independent AR reference HTTP contracts
   version: 2.0.0
   license:
     name: MIT
     identifier: MIT
   description: >-
-    Same-origin backend APIs used by the OpenFinance AR and independent Acme AP
-    WebMCP tools, plus the OpenFinance AR OAuth discovery and remote MCP transport.
-    Application APIs require their own Supabase cookie session; remote MCP uses a
-    resource-bound Supabase OAuth Bearer token and MCP JSON-RPC semantics.
+    Same-origin backend contracts for the submitted Acme AP product and, separately,
+    the OpenFinance AR demo reference system. Acme AP owns 12 browser WebMCP tools;
+    AR owns an independent seven-tool browser inventory plus its own OAuth discovery
+    and remote MCP transport. The contracts share this document for repository
+    convenience only: the applications do not share authentication, data, services,
+    or tool counts. Application APIs require their own Supabase cookie session;
+    remote MCP uses a resource-bound Supabase OAuth Bearer token and MCP JSON-RPC
+    semantics.
 servers:
   - url: https://openfinance-ar.vercel.app
     description: OpenFinance AR

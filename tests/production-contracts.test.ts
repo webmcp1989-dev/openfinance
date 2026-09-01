@@ -484,15 +484,31 @@ describe("WebMCP safety contracts", () => {
   });
 
   test("judge-facing docs stay focused on the browser WebMCP challenge story", async () => {
-    const [readme, guide, arWorkspace] = await Promise.all([
+    const [readme, guide, architecture, security, webmcp, arWorkspace, apWorkspace] = await Promise.all([
       readFile(join(root, "README.md"), "utf8"),
       readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8"),
+      readFile(join(root, "docs/ARCHITECTURE.md"), "utf8"),
+      readFile(join(root, "docs/SECURITY.md"), "utf8"),
+      readFile(join(root, "docs/WEBMCP.md"), "utf8"),
       readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8"),
+      readFile(join(root, "apps/acme-ap/components/acme-workspace.tsx"), "utf8"),
     ]);
 
-    expect(readme).toContain("The primary submitted app is Acme AP");
+    expect(readme).toContain("The contest submission is the independently authenticated");
+    expect(readme).toContain("12 authenticated browser tools");
+    expect(readme).toContain("AR is a demo reference system, not part of the submitted AP product");
     expect(readme).not.toContain("/mcp");
+    expect(guide).toContain("as the contest entry");
     expect(guide).not.toContain("remote MCP");
+    for (const publicDocument of [readme, guide, architecture, security, webmcp]) {
+      expect(publicDocument).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
+    }
+    expect(apWorkspace).toContain("12 authenticated tools, one governed portal");
+    expect(apWorkspace).not.toContain("OpenFinance AR");
+    expect(apWorkspace).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
+    expect(arWorkspace).toContain("7 authenticated tools, one supplier system");
+    expect(arWorkspace).not.toContain("Acme&apos;s 12");
+    expect(arWorkspace).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
     expect(arWorkspace).not.toContain("7 site + 11 remote tools");
   });
 });

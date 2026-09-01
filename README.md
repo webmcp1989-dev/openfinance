@@ -1,30 +1,20 @@
-# OpenFinance
+# OpenFinance Supplier Portal — Acme AP
 
-OpenFinance is a WebMCP-native supplier portal submitted to the [OpenAI WebMCP Challenge](https://openai.com/webmcp-challenge/). The primary contest application is the independently authenticated [Acme AP supplier portal](https://openfinance-ap.vercel.app). The repository also includes an independent [OpenFinance AR reference system](https://openfinance-ar.vercel.app) so the complete supplier workflow is reproducible.
+The contest submission is the independently authenticated [Acme AP supplier portal](https://openfinance-ap.vercel.app). It is a WebMCP-native buyer portal with **12 authenticated browser tools** for purchase-order context, invoice validation and submission, exceptions, buyer cases, corrected revisions, receipt status, and payment remittance.
 
-## What is submitted
+## Contest scope
 
-| Component | Role |
-| --- | --- |
-| [`apps/acme-ap`](apps/acme-ap) | Primary application. Twelve authenticated browser WebMCP tools expose buyer requirements, PO context, validation, governed invoice submission, exceptions, cases, revisions, and remittance. |
-| [`apps/openfinance-ar`](apps/openfinance-ar) | Independent synthetic supplier system used to demonstrate invoice discovery, evidence retrieval, and remittance writeback. It exposes seven browser WebMCP tools. |
-| Browser agent + human | The only runtime bridge. The agent coordinates each site's tools; the human approves data transfer and consequential document writes. |
+Only [`apps/acme-ap`](apps/acme-ap) and its independently deployed backend in [`services/acme`](services/acme) constitute the submitted product. The AP portal owns its authentication, authorization, supplier boundary, business rules, database, and ledger. Every AP WebMCP tool operates only inside that AP boundary and has a corresponding human UI path.
 
-The primary submitted app is Acme AP. OpenFinance AR is supporting evidence that the portal can participate in a real external-supplier workflow rather than a required companion product.
+The repository also contains [`apps/openfinance-ar`](apps/openfinance-ar), an independently operated synthetic supplier invoice system with its own deployment, authentication, database, and **7 browser tools**. AR is a demo reference system, not part of the submitted AP product and not included in the AP tool count. It exists only to reproduce how an external supplier system can interact with a WebMCP-enabled buyer portal through a browser agent and informed human.
 
 ## Why WebMCP
 
 Supplier teams repeatedly re-key invoices into buyer portals, interpret different PO and evidence rules, resolve exceptions, and retrieve payment details. Direct API integration is usually a separate project for every buyer.
 
-WebMCP lets each portal expose precise capabilities inside its existing authenticated page. The agent handles cross-system discovery and reasoning; each application retains its own authorization, business rules, and ledger; the human retains authority over information crossing company boundaries.
+WebMCP lets Acme expose precise AP capabilities inside its existing authenticated supplier portal. A browser agent can discover and operate those capabilities without a bespoke supplier integration, while Acme retains its own authorization, business rules, customer relationship, and ledger. The human retains authority over every consequential document write.
 
-```text
-OpenFinance AR              browser agent + human              Acme AP
-independent auth + data  <-------- WebMCP -------->  independent auth + data
-7 browser tools                                           12 browser tools
-```
-
-There is no shared database, credential, session, server-to-server API, queue, webhook, or hidden integration. The core claim is **19 browser tools, two independently authenticated companies, and zero cross-writes**. All tool capabilities also have human UI paths backed by the same backend rules.
+The demonstration uses the independent AR reference system as an external source and destination. There is no shared database, credential, session, server-to-server API, queue, webhook, or hidden integration between it and Acme AP. No AP tool can read or write the AR database, and Acme AP does not depend on the reference application.
 
 ## Demo
 
@@ -36,12 +26,12 @@ Follow-up instruction:
 
 > Resolve supplier-owned exceptions, open cases for buyer-owned blockers, and reconcile approved payments back into OpenFinance.
 
-The deterministic workflow qualifies three candidates, submits two totaling $25,670 after approval, leaves one blocked by buyer rules, resolves supplier-owned evidence, opens a buyer-owned case without overstepping authority, and finishes by reconciling exact payment remittance. See the [judge guide](docs/JUDGE_GUIDE.md) for the starting state and expected visible results.
+The deterministic demonstration qualifies three external supplier invoices, submits two totaling $25,670 after approval, leaves one blocked by Acme's rules, resolves supplier-owned evidence, opens a buyer-owned case without overstepping authority, and exposes exact payment remittance. The independent AR reference system separately records the verified AP outcomes so the end-to-end use case is reproducible. See the [judge guide](docs/JUDGE_GUIDE.md) for the starting state and expected visible results.
 
 ## Repository
 
-- `apps/acme-ap` and `services/acme`: primary AP application, independent Supabase migrations, reset, and database tests.
-- `apps/openfinance-ar` and `services/openfinance`: independent AR reference application and its own Supabase boundary.
+- `apps/acme-ap` and `services/acme`: submitted AP product, independent Supabase migrations, reset, and database tests.
+- `apps/openfinance-ar` and `services/openfinance`: demo-only AR reference system with a separate Supabase boundary.
 - `tests`: repository and production-contract tests.
 - `docs/openapi.yaml`: same-origin HTTP contracts.
 - `docs`: only the setup, architecture, security, WebMCP, API, and judge guidance needed to understand and reproduce the project.

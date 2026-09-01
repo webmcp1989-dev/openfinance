@@ -1,12 +1,12 @@
-# OpenFinance judge guide
+# Acme AP contest judge guide
 
 ## What to evaluate
 
-The primary contest application is the independently authenticated [Acme AP supplier portal](https://openfinance-ap.vercel.app). It exposes twelve browser WebMCP tools for buyer requirements, purchase-order context, validation, governed document writes, submission status, exception ownership, buyer cases, corrected revisions, and payment remittance.
+Judge [Acme AP](https://openfinance-ap.vercel.app) as the contest entry. It exposes **12 browser WebMCP tools** for buyer requirements, purchase-order context, validation, governed document writes, submission status, exception ownership, buyer cases, corrected revisions, and payment remittance.
 
-The [OpenFinance AR system](https://openfinance-ar.vercel.app) is an independent synthetic supplier system used to reproduce the external records and writebacks in the complete demonstration. It exposes seven browser WebMCP tools. The two applications have separate deployments, authentication, databases, migrations, and credentials.
+The [OpenFinance AR system](https://openfinance-ar.vercel.app) is an independent synthetic supplier reference system used only to reproduce external invoice discovery and writeback in the demonstration. It has **7 browser WebMCP tools**, its own deployment, authentication, database, migrations, and credentials, and is not part of the submitted AP product or its tool count.
 
-The browser agent and informed human are the only runtime bridge: **19 browser tools, two companies, zero cross-writes**.
+Acme AP has no server-side integration with the reference system. The browser agent carries only human-approved information into Acme's separately governed 12-tool portal.
 
 ## Why WebMCP fits
 
@@ -39,7 +39,8 @@ The agent discovers and reasons across those capabilities. The applications enfo
 
 ## Expected proof
 
-- Both portals remain usable through normal human UI for every browser WebMCP capability.
+- Acme AP remains usable through normal human UI for each of its 12 browser WebMCP capabilities.
+- The independent AR reference system separately provides human UI paths for its seven demo capabilities.
 - Read and write results update visible application state without a manual refresh.
 - Every document transfer has an exact preview and informed approval.
 - Buyer-owned work remains buyer-owned; the supplier agent opens a case instead of overstepping its authority.

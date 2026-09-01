@@ -1,14 +1,24 @@
 # Architecture
 
-## System boundary
+## Submitted AP product boundary
 
 ```text
-OpenFinance AR                     browser agent + human                     Acme AP
-Next.js + 7 WebMCP tools  <--------------- only bridge --------------->  Next.js + 12 WebMCP tools
-Supabase Auth + Postgres                                                Supabase Auth + Postgres
+browser agent + informed human  <-------- WebMCP -------->  Acme AP
+                                                        Next.js + 12 tools
+                                                        Supabase Auth + Postgres
 ```
 
-The applications use separate origins, deployments, Supabase projects, users, sessions, credentials, schemas, and ledgers. There is no shared database, server-to-server API, queue, webhook, or hidden synchronization path. Matching synthetic identifiers are independently seeded demo fixtures.
+Acme AP is the submitted product. Its 12 browser tools, UI, backend, Supabase project, supplier identities, and ledger form one independently governed application boundary.
+
+## Independent AR reference boundary
+
+```text
+browser agent + informed human  <-------- WebMCP -------->  OpenFinance AR
+                                                        Next.js + 7 tools
+                                                        Supabase Auth + Postgres
+```
+
+OpenFinance AR is a separate synthetic supplier reference system used by the demonstration. It is not an AP module, dependency, service, or part of the contest tool count. The applications use separate origins, deployments, Supabase projects, users, sessions, credentials, schemas, and ledgers. There is no shared database, server-to-server API, queue, webhook, or hidden synchronization path. Matching synthetic identifiers are independently seeded demo fixtures.
 
 The optional AR own-system OAuth MCP endpoint uses the AR user's bearer token and existing RLS. It cannot access Acme and is not the cross-company bridge.
 
@@ -21,7 +31,7 @@ The optional AR own-system OAuth MCP endpoint uses the AR user's bearer token an
 5. Supabase queries execute as the authenticated user; grants and RLS enforce tenant scope.
 6. Private Postgres functions perform consequential changes atomically and idempotently.
 
-The frontend is never authoritative. All 19 WebMCP capabilities also have human UI paths backed by the same routes and services.
+The frontend is never authoritative. Within Acme AP, all 12 WebMCP capabilities have human UI paths backed by AP routes and services. Separately, the AR reference system provides human UI paths for each of its seven capabilities through its own routes and services.
 
 ## Document approval and writes
 
@@ -43,7 +53,7 @@ AR and AP reset their deterministic synthetic data independently through human-o
 
 AR produces complete synthetic invoice and evidence PDFs with authoritative business fields and valid catalog, page, cross-reference, trailer, and `startxref` structures. Before release, AR validates canonical base64, decoded size, structure, and SHA-256. After informed transfer approval, AP independently verifies the same properties before validation or submission.
 
-The browser agent carries only the human-approved package. Seven AR tools can write only AR; twelve AP tools can write only AP.
+The browser agent carries only the human-approved package into Acme AP. Each of Acme's 12 tools terminates inside the AP boundary. The independent AR reference system's seven tools terminate inside AR and cannot write Acme state.
 
 ## Performance
 

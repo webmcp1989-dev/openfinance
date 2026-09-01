@@ -1,18 +1,10 @@
 # WebMCP browser tools
 
-Both authenticated top-level pages register imperative `document.modelContext` tools. Registrations follow the page lifecycle and are aborted on navigation or sign-out. Every tool calls only its application's same-origin backend using the current session; the browser receives no database credential.
+## Contest scope
 
-## OpenFinance AR — 7 tools
+The submitted Acme AP product registers **12 authenticated browser tools**. Every AP tool calls only Acme's same-origin backend using the current supplier session; the browser receives no database credential.
 
-| Tool | Purpose |
-| --- | --- |
-| `list_ready_invoices` | List ready invoices for a customer named in the user's instruction. |
-| `get_submission_package` | Return exact invoice fields and verified PDF packages for selected ready invoices or authorized corrections. |
-| `list_portal_followups` | Find blocked, rejected, overdue, stale, or partially paid invoices. |
-| `get_invoice_supporting_documents` | Return verified evidence PDFs for one invoice. |
-| `record_portal_result` | Idempotently record exact AP references and statuses already returned by Acme. |
-| `record_portal_exception` | Idempotently record exact validation exceptions or verified buyer-case outcomes. |
-| `record_payment_remittance` | Idempotently reconcile an approved AP payment allocation into AR. |
+This repository also includes an independent OpenFinance AR reference system with **7 browser tools** for the external side of the demonstration. AR is not part of Acme AP and its tools are not included in the AP contest count. Each page registers its own imperative `document.modelContext` tools for only its authenticated lifetime.
 
 ## Acme AP — 12 tools
 
@@ -30,6 +22,18 @@ Both authenticated top-level pages register imperative `document.modelContext` t
 | `replace_rejected_invoice` | After portal approval, transactionally supersede an eligible rejected invoice. |
 | `create_invoice_inquiry` | Open an idempotent tracked buyer case without resolving the underlying blocker. |
 | `get_payment_remittance` | Read scheduled or completed payment details and exact allocations. |
+
+## Independent OpenFinance AR reference — 7 tools
+
+| Tool | Purpose |
+| --- | --- |
+| `list_ready_invoices` | List ready invoices for a customer named in the user's instruction. |
+| `get_submission_package` | Return exact invoice fields and verified PDF packages for selected ready invoices or authorized corrections. |
+| `list_portal_followups` | Find blocked, rejected, overdue, stale, or partially paid invoices. |
+| `get_invoice_supporting_documents` | Return verified evidence PDFs for one invoice. |
+| `record_portal_result` | Idempotently record exact AP references and statuses already returned by Acme. |
+| `record_portal_exception` | Idempotently record exact validation exceptions or verified buyer-case outcomes. |
+| `record_payment_remittance` | Idempotently reconcile an approved AP payment allocation into AR. |
 
 ## Enforced contracts
 
@@ -54,4 +58,4 @@ Both authenticated top-level pages register imperative `document.modelContext` t
 7. Follow AP's stored exception owner: resolve supplier-owned evidence after approval; open a tracked case for buyer-owned work without claiming resolution.
 8. Read exact AP remittance and, after approval, reconcile it in AR.
 
-The authority boundary is **19 browser tools and zero cross-writes**. Seven AR tools can affect only AR; twelve AP tools can affect only AP. The human is the only authority spanning the two sessions. HTTP payloads and errors are defined in [openapi.yaml](openapi.yaml); backend boundaries are described in [SECURITY.md](SECURITY.md).
+Acme AP's 12-tool inventory is the contest product boundary. The independent AR reference system has its own seven-tool inventory. No tool crosses those boundaries, and the counts are never combined as one product. HTTP payloads and errors are defined in [openapi.yaml](openapi.yaml); backend boundaries are described in [SECURITY.md](SECURITY.md).

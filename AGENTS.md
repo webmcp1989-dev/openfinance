@@ -4,13 +4,13 @@
 
 ## Current task
 
-Record the final OpenFinance WebMCP Challenge demo in Chrome using the real **ChatGPT for Chrome** pinned side panel. The recording must show genuine ChatGPT prompts, responses, WebMCP tool activity, application approval screens, and resulting live application state. Do not reconstruct, imitate, or overlay a fake agent interface.
+Record the final Acme AP WebMCP Challenge demo in Chrome using the real **ChatGPT for Chrome** pinned side panel. The recording must show genuine ChatGPT prompts, responses, AP WebMCP tool activity, application approval screens, and resulting live application state. Do not reconstruct, imitate, or overlay a fake agent interface.
 
-Primary live application:
+Contest application — the only submitted product:
 
 - Acme AP supplier portal: <https://openfinance-ap.vercel.app>
 
-Independent supplier reference application used in the workflow:
+Independent supplier reference system used only to provide external demo records:
 
 - OpenFinance AR: <https://openfinance-ar.vercel.app>
 
@@ -40,7 +40,7 @@ The canonical workflow is:
 7. For supplier-owned `INV-10417`, retrieve the verified `INV-10417-proof-of-delivery.pdf`, show the exact external-sharing preview, obtain human approval, submit it to Acme, and visibly show the exception change from action required to approved/resolved.
 8. For buyer-owned `INV-10463`, state plainly: **“This isn't mine to fix.”** Open an Acme buyer case, show the returned case reference and `buyer_receiving` ownership, then record that same case in AR without claiming resolution.
 9. Read Acme's exact remittance for `INV-10482`: `PAY-20260830-0DD9D23B`, `$18,420`, ACH. Show the AR approval preview, record it in AR, and visibly show remaining due `$0` and reconciled status.
-10. End on both ledgers' visible audit outcomes: invoices submitted, supplier exception resolved, buyer case open, and payment reconciled.
+10. End on Acme AP's visible outcomes: invoices submitted, supplier exception resolved, buyer case open, and remittance available. Separately show the AR reference system recording the verified AP results and payment.
 
 ## Recording requirements
 
@@ -55,16 +55,13 @@ The canonical workflow is:
 
 ## Repository invariants
 
-OpenFinance demonstrates this boundary:
-
-```text
-OpenFinance AR <-> WebMCP <-> browser agent + human <-> WebMCP <-> Acme AP
-```
-
+- Acme AP is the only contest product. It has exactly **12 authenticated browser tools**.
+- OpenFinance AR is an independent demo reference system. It has exactly **7 browser tools** and is not part of the AP product or contest tool count.
+- Never describe them as one 19-tool product in the UI, video, README, submission, or agent response.
 - The applications are independently authenticated, deployed, and persisted.
 - Never add a shared database, credential, session, server-to-server integration, queue, webhook, or hidden cross-write between them.
-- Preserve **19 browser tools, two independently authenticated companies, and zero cross-writes**: seven AR tools write only AR; twelve AP tools write only AP.
-- The human is the only authority that permits data to cross company boundaries.
+- Each of Acme AP's 12 tools terminates in AP. Each of the AR reference system's seven tools terminates in AR.
+- The human is the only authority that permits information to move between the separate applications.
 - Buyer-owned blockers must remain outside supplier authority and be routed through a tracked case.
 - Critical authorization, validation, tenant isolation, financial state, and integration rules remain backend-authoritative.
 - Use only synthetic data. Never expose secrets or service-role credentials.

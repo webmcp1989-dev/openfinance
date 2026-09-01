@@ -448,7 +448,7 @@ export function OpenFinanceWorkspace({
 
       <section className="agent-guide" aria-label="Suggested agent task">
         <span className="agent-dot" aria-hidden="true" />
-        <div><strong>19 tools, zero cross-writes</strong><p>These 7 site tools write only OpenFinance AR; Acme&apos;s 12 write only its AP portal. Your agent reconciles both live views, and you alone authorize data crossing between them.</p></div>
+        <div><strong>7 authenticated tools, one supplier system</strong><p>Every tool operates only within OpenFinance AR and follows this system&apos;s authorization, tenant, and human-approval rules.</p></div>
       </section>
 
       <section className="demo-controls" aria-labelledby="demo-controls-title">
@@ -541,7 +541,7 @@ export function OpenFinanceWorkspace({
               <div><strong>{item.invoiceNumber}</strong><span>{money.format(item.amountMinor / 100)}</span></div>
               <dl><div><dt>Purchase order</dt><dd>{item.purchaseOrderNumber}</dd></div><div><dt>Document</dt><dd>{item.document.fileName}</dd></div><div><dt>Integrity</dt><dd title={item.document.sha256}>{item.document.sha256.slice(0, 12)}… verified</dd></div></dl>
               <div className="document-actions">
-                <p>Download this verified PDF, then upload it in Acme AP for manual validation.</p>
+                <p>Download this verified PDF, then upload it to the customer&apos;s AP portal for manual validation.</p>
                 <a className="button secondary" href={`/api/agent/invoices/${encodeURIComponent(item.invoiceNumber)}/document`} download={item.document.fileName} aria-label={`Download ${item.invoiceNumber} PDF`}>
                   Download PDF
                 </a>
