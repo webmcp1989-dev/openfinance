@@ -7,7 +7,7 @@ select set_config(
   (select id::text from auth.users where lower(email) = 'supplier@acme.demo'),
   true
 );
-select plan(17);
+select plan(21);
 
 set local role authenticated;
 select public.reset_demo_state();
@@ -176,6 +176,52 @@ select is(
   'INV-APPROVAL-02',
   'an exact retry returns the original idempotent result without another side effect'
 );
+select throws_ok(
+  $$ select public.decide_document_submission_approval(
+    (select id from approval_test_ids where name = 'approved'),
+    'denied'
+  ) $$,
+  'P0001',
+  'Document approval is no longer pending',
+  'a consumed approval cannot be changed to another decision'
+);
+select throws_ok(
+  $$ select public.replace_rejected_invoice(
+    'approved-action-20260901', repeat('c', 64),
+    pg_temp.invoice('INV-APPROVAL-02'),
+    (select id from approval_test_ids where name = 'approved')
+  ) $$,
+  'P0001',
+  'Document approval does not match this request',
+  'an approval cannot be reused for a different document action'
+);
+
+insert into approval_test_ids
+select 'expired', (result->>'approvalId')::uuid
+from (
+  select public.request_document_submission_approval(
+    'submit_invoice_batch', 'expired-approval-20260901', repeat('e', 64),
+    pg_temp.batch_manifest(pg_temp.invoice('INV-APPROVAL-04')),
+    'agent'
+  ) as result
+) as prepared;
+select public.decide_document_submission_approval((select id from approval_test_ids where name = 'expired'), 'approved');
+reset role;
+update public.document_submission_approvals
+set created_at = statement_timestamp() - interval '2 minutes',
+    expires_at = statement_timestamp() - interval '1 minute'
+where id = (select id from approval_test_ids where name = 'expired');
+set local role authenticated;
+select throws_ok(
+  $$ select public.submit_invoice_batch(
+    'expired-approval-20260901', repeat('e', 64),
+    jsonb_build_array(pg_temp.invoice('INV-APPROVAL-04')),
+    (select id from approval_test_ids where name = 'expired')
+  ) $$,
+  'P0001',
+  'Document approval is not active',
+  'an expired approval cannot mutate AP state'
+);
 
 insert into approval_test_ids
 select 'tampered', (result->>'approvalId')::uuid
@@ -196,6 +242,16 @@ select throws_ok(
   'P0001',
   'Document approval does not match this request',
   'changing an amount after approval invalidates consent'
+);
+select throws_ok(
+  $$ select public.submit_invoice_batch(
+    'different-idempotency-20260901', repeat('d', 64),
+    jsonb_build_array(pg_temp.invoice('INV-APPROVAL-03')),
+    (select id from approval_test_ids where name = 'tampered')
+  ) $$,
+  'P0001',
+  'Document approval does not match this request',
+  'changing the idempotency key after approval invalidates consent'
 );
 reset role;
 select is(

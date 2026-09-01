@@ -85,7 +85,7 @@ bun audit
 
 Run every SQL file under each service's `supabase/tests` directory in its corresponding project after applying all migrations. Then sign into both live applications in separate tabs, inspect Available site tools, and run the [demo checklist](DEMO.md).
 
-For Acme AP, include `services/acme/supabase/tests/document-submission-approval.test.sql`. It verifies that old mutation signatures cannot bypass consent, denied and mismatched approvals fail, exact approval commits and is consumed, idempotent replay remains safe, no PDF base64 is retained, and reset clears approval artifacts.
+For Acme AP, include `services/acme/supabase/tests/document-submission-approval.test.sql`. It verifies that old mutation signatures cannot bypass consent; denied, expired, cross-action, idempotency-mismatched, and payload-mismatched approvals fail; exact approval commits and is consumed; a completed decision cannot be changed; idempotent replay remains safe; no PDF base64 is retained; and reset clears approval artifacts.
 
 ## Restore the synthetic demo state
 

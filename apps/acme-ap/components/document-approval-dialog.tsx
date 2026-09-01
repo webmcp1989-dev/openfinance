@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { DocumentSubmissionManifest } from "@/lib/domain/document-approvals";
 import {
   ACME_DOCUMENT_APPROVAL_EVENT,
+  ACME_DOCUMENT_APPROVAL_SETTLED_EVENT,
   type PendingDocumentSubmissionApproval,
 } from "./document-submission-approval";
 
@@ -58,8 +59,17 @@ export function DocumentApprovalDialog() {
       setAcknowledged(false);
       setPending(detail);
     };
+    const handleSettled = (event: Event) => {
+      const detail = (event as CustomEvent<{ approvalId: string }>).detail;
+      setPending((current) => current?.approvalId === detail.approvalId ? null : current);
+      setAcknowledged(false);
+    };
     window.addEventListener(ACME_DOCUMENT_APPROVAL_EVENT, handleApproval);
-    return () => window.removeEventListener(ACME_DOCUMENT_APPROVAL_EVENT, handleApproval);
+    window.addEventListener(ACME_DOCUMENT_APPROVAL_SETTLED_EVENT, handleSettled);
+    return () => {
+      window.removeEventListener(ACME_DOCUMENT_APPROVAL_EVENT, handleApproval);
+      window.removeEventListener(ACME_DOCUMENT_APPROVAL_SETTLED_EVENT, handleSettled);
+    };
   }, []);
 
   if (!pending) return null;
