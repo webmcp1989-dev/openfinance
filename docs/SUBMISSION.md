@@ -6,20 +6,26 @@ This file contains judge-facing copy and the recording plan for the OpenFinance 
 
 - **Title:** OpenFinance
 - **Tagline:** Agent-mediated invoice delivery between independently authenticated AR and AP applications—without a point-to-point integration.
-- **Primary live URL:** https://openfinance-ar.vercel.app
-- **Independent AP portal:** https://openfinance-ap.vercel.app
+- **Primary submitted application:** Acme AP supplier portal
+- **Primary live URL:** https://openfinance-ap.vercel.app
+- **Independent reference/demo system:** OpenFinance AR
+- **Reference-system URL:** https://openfinance-ar.vercel.app
 - **Public repository:** https://github.com/webmcp1989-dev/openfinance
 - **Opening demo prompt:** “Submit all Acme invoices that can be paid.”
 
 ## Submission scope boundary
 
-Keep the title, description, screenshots, video, live run, and 19-tool inventory focused on browser WebMCP across the independently authenticated AR and AP applications. Do not include the optional AR remote MCP, OAuth connector setup, or its tool inventory in the primary contest narrative. That separate own-system interface may be mentioned only as an additional technical extension if a reviewer asks; it cannot access Acme and is not the interoperability layer demonstrated by the submission.
+The Acme AP supplier portal is the primary submitted application. OpenFinance AR is an independently authenticated reference supplier system included in the public repository and live demonstration so reviewers can reproduce the external records, document transfer, exception evidence, and remittance writeback used to prove the AP portal's interoperability. It is not a shared backend, a required commercial companion product, or a private integration.
+
+Keep the description, screenshots, video, live run, and 19-tool inventory focused on browser WebMCP across those independently authenticated applications while making that hierarchy explicit. Do not include the optional AR remote MCP, OAuth connector setup, or its tool inventory in the primary contest narrative. That separate own-system interface may be mentioned only as an additional technical extension if a reviewer asks; it cannot access Acme and is not the interoperability layer demonstrated by the submission.
 
 ## Ready-to-paste description
 
 ### Why this is a strong fit for WebMCP
 
-Supplier accounts-receivable teams routinely leave their own system, sign into customer-specific AP portals, re-enter invoice data, upload documents, reconcile purchase-order rules, and copy submission references back. OpenFinance demonstrates a WebMCP-native alternative: two independent web applications expose precise, discoverable capabilities to the browser agent while retaining their own authentication, authorization, data, and business rules.
+The primary submitted application is a buyer-operated AP supplier portal with native WebMCP support. Supplier accounts-receivable teams routinely leave their own system, sign into portals like this one, re-enter invoice data, upload documents, reconcile purchase-order rules, and copy submission references back. OpenFinance demonstrates a WebMCP-native alternative: the AP portal exposes precise, discoverable capabilities to the browser agent while retaining its own authentication, authorization, data, and business rules.
+
+The repository also includes an independent AR reference system so the complete workflow can be reproduced instead of relying on an opaque video dependency. It models an external supplier's existing system; it is not a backend dependency of the AP portal and is not connected to it.
 
 There is no shared database, credential, private connector, or server-to-server workflow integration between OpenFinance AR and the Acme AP portal. The human-directed ChatGPT browser agent is the interoperability layer. It reads invoice packages from the seller’s current session, discovers the buyer portal’s requirements and purchase orders in its separate session, reconciles the records, and uses only each site’s WebMCP tools to complete the approved transaction.
 

@@ -513,7 +513,8 @@ describe("WebMCP safety contracts", () => {
       readFile(join(root, "apps/openfinance-ar/components/openfinance-workspace.tsx"), "utf8"),
     ]);
 
-    expect(readme).toContain("The primary submission, video, live prompt, and **19-tool** count cover only the browser-mediated WebMCP workflow");
+    expect(readme).toContain("The primary submitted app is Acme AP");
+    expect(readme).toContain("The separate AR remote MCP is intentionally excluded from that judge-facing story");
     expect(demo).toContain("Do not show the AR remote-MCP endpoint");
     expect(submission).toContain("Do not include the optional AR remote MCP");
     expect(remoteMcp).toContain("not counted among the 19 browser WebMCP tools");
