@@ -18,7 +18,7 @@ export default async function LoginPage({
       <section className="auth-card" aria-labelledby="login-title">
         <form action={signIn} className="auth-form">
           <p className="eyebrow">OpenFinance</p>
-          <h1 id="login-title">Sign in to portal delivery</h1>
+          <h1 id="login-title">Sign in to Supplier Invoice System</h1>
           <p>Use your supplier workspace credentials. Site tools become available only after authentication.</p>
           <input name="returnTo" type="hidden" value={returnTo} />
           <label>Email<input name="email" type="email" autoComplete="username" required /></label>

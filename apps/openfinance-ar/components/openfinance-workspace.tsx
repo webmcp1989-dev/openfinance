@@ -366,7 +366,7 @@ export function OpenFinanceWorkspace({
     <main className="shell">
       <OpenFinanceSiteTools />
       <header className="topbar">
-        <div><p className="eyebrow">OpenFinance</p><h1>Portal delivery</h1></div>
+        <div><p className="eyebrow">OpenFinance</p><h1>Supplier Invoice System</h1></div>
         <div className="identity" aria-label="Signed-in organization">
           <div><span>{fullName}</span><small>{organizationName}</small></div>
           <form action={signOutAction}><button className="text-button" type="submit">Sign out</button></form>
