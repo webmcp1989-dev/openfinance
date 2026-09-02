@@ -498,7 +498,7 @@ describe("WebMCP safety contracts", () => {
     expect(readme).toContain("12 browser WebMCP tools");
     expect(readme).toContain("AR exists only to make the cross-company demo reproducible");
     expect(readme).not.toContain("/mcp");
-    expect(guide).toContain("as the contest entry");
+    expect(guide).toContain("is the complete contest entry");
     expect(guide).not.toContain("remote MCP");
     for (const publicDocument of [readme, guide, architecture, security, webmcp]) {
       expect(publicDocument).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
@@ -522,10 +522,16 @@ describe("WebMCP safety contracts", () => {
     ]);
 
     expect(readme).toContain("Judge quick start");
+    expect(readme).toContain("Using only this supplier portal's tools");
     expect(judgeGuide).toContain("ChatGPT desktop app");
+    expect(judgeGuide).toContain("AP-only evaluation — recommended");
+    expect(judgeGuide).toContain("Evaluate Acme AP on its own by default");
+    expect(judgeGuide).toContain("Optional full-loop reference");
     expect(webmcp).toContain("a Chrome agent side panel are separate capabilities");
+    expect(webmcp).toContain("AP-only evaluation workflow");
     expect(layout).toContain('href="/llms.txt"');
-    expect(llms).toContain("Evaluate Acme AP as the submitted product");
+    expect(llms).toContain("Evaluate Acme AP as the complete submitted product");
+    expect(llms).toContain("Do not open or use the repository's AR reference system unless");
     expect(llms).toContain("AP WebMCP inventory — exactly 12 tools");
     expect(llms).toContain("get_payment_remittance");
     expect(llms).not.toMatch(/19 (?:browser |WebMCP )?tools/i);

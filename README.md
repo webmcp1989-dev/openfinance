@@ -7,9 +7,9 @@ Supplier teams normally learn and operate a different portal for every large cus
 ## Judge quick start
 
 1. Evaluate **Acme AP** as the submitted product. Open it in the ChatGPT desktop app's built-in browser, enable **Site tools** in Browser permissions, and sign in with the private credentials supplied in Devpost.
-2. Confirm that the authenticated page exposes exactly **12 tools**. Ask the agent to read Acme's invoice requirements or open purchase orders to test AP by itself.
-3. To reproduce the complete cross-company story, also open the independent AR reference system and follow the [judge guide](docs/JUDGE_GUIDE.md). It supplies synthetic external invoices; it is not part of Acme AP.
-4. Agents can read the deployed [evaluation guide](https://openfinance-ap.vercel.app/llms.txt).
+2. Confirm that the authenticated page exposes exactly **12 tools**.
+3. Ask: **“Using only this supplier portal's tools, review its invoice requirements, open purchase orders, current invoices, exceptions, buyer cases, and payment remittance. Explain what the supplier can act on and what Acme owns. Do not make changes.”**
+4. Use the [judge guide](docs/JUDGE_GUIDE.md) for expected AP evidence. Agents can also read the deployed [evaluation guide](https://openfinance-ap.vercel.app/llms.txt).
 
 The Chrome WebMCP flag exposes the experimental page API for lower-level testing. The complete ChatGPT agent workflow uses the desktop app's built-in browser and Site tools; installing or opening a Chrome side panel alone does not enable Site tools.
 
@@ -30,9 +30,11 @@ The demo proves interoperability rather than a hidden integration. AP and AR sha
 | WebMCP leverage | 12 distinct authenticated capabilities cover a real invoice lifecycle, not a single wrapper call. |
 | Execution | Read and write results appear in the same production UI; writes are validated, transactional, idempotent, and auditable. |
 | Impact | One agent can operate buyer-specific rules and exception workflows that suppliers otherwise handle portal by portal. |
-| Creativity and ambition | Two mutually independent financial applications cooperate through the browser without a partner-specific integration. |
+| Creativity and ambition | AP exposes a governed browser interface that can interoperate with external supplier systems without a partner-specific integration. |
 
-## Demo
+## Optional full-loop demonstration
+
+Acme AP can be evaluated on its own. The repository also includes an independent synthetic AR reference system for judges who want to reproduce the complete external-system loop shown in the video.
 
 Opening instruction:
 
@@ -42,7 +44,7 @@ Follow-up instruction:
 
 > Resolve supplier-owned exceptions, open cases for buyer-owned blockers, and reconcile approved payments back into OpenFinance.
 
-The deterministic demonstration finds three external supplier invoices, submits the two that qualify for a total of $25,670 after approval, and leaves one blocked by Acme's live rules. It then resolves a supplier-owned evidence exception, opens a case for a buyer-owned blocker without falsely claiming resolution, and reads exact payment remittance. The AR reference system separately records the verified AP outcomes. See the [judge guide](docs/JUDGE_GUIDE.md) for the starting state and visible results.
+The optional deterministic demonstration finds three external supplier invoices, submits the two that qualify for a total of $25,670 after approval, and leaves one blocked by Acme's live rules. It then resolves a supplier-owned evidence exception, opens a case for a buyer-owned blocker without falsely claiming resolution, and reads exact payment remittance. The AR reference system separately records the verified AP outcomes. See the [judge guide](docs/JUDGE_GUIDE.md#optional-full-loop-reference) for the starting state and visible results.
 
 ## Repository
 

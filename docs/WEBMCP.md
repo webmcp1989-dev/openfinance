@@ -49,7 +49,18 @@ For ChatGPT evaluation, use the desktop app's built-in browser with **Site tools
 - Successful writes refresh authoritative UI state and display an **Agent ·** result notice. Presentation events never authorize or persist business state.
 - Reset is human-only and is not part of the browser tool inventory.
 
-## Required workflow
+## AP-only evaluation workflow
+
+1. Open only Acme AP in the ChatGPT desktop app's built-in browser and sign in.
+2. Confirm that the authenticated page registers the 12 AP tools listed above.
+3. Ask the agent to review requirements, open POs, current invoices, exception ownership, buyer cases, and remittance using only this portal's tools.
+4. Compare the agent's answer with the same records in the visible AP interface.
+
+The AR reference system is not required for this evaluation.
+
+## Optional full-loop reference workflow
+
+The following workflow reproduces the external supplier-system loop shown in the demo. It is optional and does not expand the submitted AP product boundary.
 
 1. Read ready invoices from AR and preview the destination, invoice numbers, POs, and amounts.
 2. Obtain informed approval before package data leaves AR.
