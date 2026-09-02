@@ -524,7 +524,7 @@ describe("WebMCP safety contracts", () => {
     expect(readme).toContain("Judge quick start");
     expect(readme).toContain("Using only this supplier portal's tools");
     expect(judgeGuide).toContain("ChatGPT desktop app");
-    expect(judgeGuide).toContain("AP-only evaluation — recommended");
+    expect(judgeGuide).toContain("Recommended AP-only evaluation");
     expect(judgeGuide).toContain("Evaluate Acme AP on its own by default");
     expect(judgeGuide).toContain("Optional full-loop reference");
     expect(webmcp).toContain("a Chrome agent side panel are separate capabilities");

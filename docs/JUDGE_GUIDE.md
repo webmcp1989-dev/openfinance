@@ -12,7 +12,7 @@ Supplier teams repeatedly re-key invoices into buyer portals, interpret differen
 
 WebMCP lets Acme expose precise capabilities inside its existing authenticated portal. The agent can discover the portal's live rules and permitted actions; Acme's backend still enforces supplier authorization, financial invariants, and state transitions. The human separately approves every consequential document write.
 
-## AP-only evaluation — recommended
+## Recommended AP-only evaluation
 
 1. In the ChatGPT desktop app, enable **Site tools** under Browser permissions.
 2. Open only [Acme AP](https://openfinance-ap.vercel.app) in the built-in browser and sign in using the private Devpost credentials.

@@ -5,7 +5,7 @@ import "./audit.css";
 
 export const metadata: Metadata = {
   title: "OpenFinance Supplier Portal · Acme AP",
-  description: "Contest-ready Acme AP supplier portal with 12 authenticated WebMCP tools for invoice submission, exceptions, buyer cases, and remittance.",
+  description: "Authenticated Acme AP supplier portal with 12 WebMCP tools for governed invoice submission, exception handling, buyer cases, and payment remittance.",
   robots: { index: true, follow: true },
 };
 
