@@ -477,13 +477,13 @@ describe("WebMCP safety contracts", () => {
     expect(ap).toContain('id={`inv-${submission.invoiceNumber}`}');
   });
 
-  test("the judge guide requires separate transfer and document-write approvals", async () => {
+  test("the evaluation guide requires separate transfer and document-write approvals", async () => {
     const guide = await readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8");
     expect(guide).toContain("informed transfer approval");
     expect(guide).toContain("separate document-write approval");
   });
 
-  test("judge-facing docs stay focused on the browser WebMCP challenge story", async () => {
+  test("public docs keep Acme AP as the primary browser WebMCP application", async () => {
     const [readme, guide, architecture, security, webmcp, arWorkspace, apWorkspace] = await Promise.all([
       readFile(join(root, "README.md"), "utf8"),
       readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8"),
@@ -494,11 +494,11 @@ describe("WebMCP safety contracts", () => {
       readFile(join(root, "apps/acme-ap/components/acme-workspace.tsx"), "utf8"),
     ]);
 
-    expect(readme).toContain("is the contest submission: an authenticated buyer portal");
+    expect(readme).toContain("is the submitted application: an authenticated buyer portal");
     expect(readme).toContain("12 browser WebMCP tools");
     expect(readme).toContain("AR exists only to make the cross-company demo reproducible");
     expect(readme).not.toContain("/mcp");
-    expect(guide).toContain("is the complete contest entry");
+    expect(guide).toContain("is the submitted application");
     expect(guide).not.toContain("remote MCP");
     for (const publicDocument of [readme, guide, architecture, security, webmcp]) {
       expect(publicDocument).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
@@ -512,7 +512,7 @@ describe("WebMCP safety contracts", () => {
     expect(arWorkspace).not.toContain("7 site + 11 remote tools");
   });
 
-  test("publishes a precise agent-readable AP evaluation guide", async () => {
+  test("publishes an agent-readable AP evaluation guide", async () => {
     const [readme, judgeGuide, webmcp, llms, layout] = await Promise.all([
       readFile(join(root, "README.md"), "utf8"),
       readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8"),
@@ -521,18 +521,18 @@ describe("WebMCP safety contracts", () => {
       readFile(join(root, "apps/acme-ap/app/layout.tsx"), "utf8"),
     ]);
 
-    expect(readme).toContain("Judge quick start");
+    expect(readme).toContain("Quick start");
     expect(readme).toContain("Using only this supplier portal's tools");
     expect(judgeGuide).toContain("ChatGPT desktop app");
-    expect(judgeGuide).toContain("Recommended AP-only evaluation");
-    expect(judgeGuide).toContain("Evaluate Acme AP on its own by default");
+    expect(judgeGuide).toContain("AP-only workflow");
+    expect(judgeGuide).toContain("Use Acme AP on its own by default");
     expect(judgeGuide).toContain("Optional full-loop reference");
     expect(webmcp).toContain("a Chrome agent side panel are separate capabilities");
-    expect(webmcp).toContain("AP-only evaluation workflow");
+    expect(webmcp).toContain("AP-only inspection");
     expect(layout).toContain('href="/llms.txt"');
-    expect(llms).toContain("Evaluate Acme AP as the complete submitted product");
-    expect(llms).toContain("Do not open or use the repository's AR reference system unless");
-    expect(llms).toContain("AP WebMCP inventory — exactly 12 tools");
+    expect(llms).toContain("Use Acme AP as the submitted application");
+    expect(llms).toContain("Open the repository's AR reference system only when");
+    expect(llms).toContain("AP WebMCP inventory - 12 tools");
     expect(llms).toContain("get_payment_remittance");
     expect(llms).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
   });

@@ -2,13 +2,13 @@
 
 ## Scope and product boundary
 
-The submitted product is **OpenFinance Supplier Portal — Acme AP**. Its authenticated workspace registers **12 browser WebMCP tools**: eight read-only tools and four tools that write only to Acme AP. No AP tool reads from or writes to the separate OpenFinance AR reference system.
+The submitted application is **OpenFinance Supplier Portal - Acme AP**. Its authenticated workspace registers **12 browser WebMCP tools**: eight read-only tools and four tools that write only to Acme AP. No AP tool reads from or writes to the separate OpenFinance AR reference system.
 
 The repository also contains an independently authenticated OpenFinance AR reference application with seven browser tools. AR exists only to make the external supplier side of the demo reproducible. It is not part of the Acme AP product or its 12-tool count.
 
-| Inventory | Read-only | Writes its own system | Contest role |
+| Inventory | Read-only | Writes its own system | Repository role |
 | --- | ---: | ---: | --- |
-| Acme AP | 8 | 4 | Submitted product |
+| Acme AP | 8 | 4 | Submitted application |
 | OpenFinance AR | 4 | 3 | Optional demo reference |
 
 ## How agents discover and call the tools
@@ -17,7 +17,7 @@ After a supplier signs in, [`AcmeSiteTools`](../apps/acme-ap/components/acme-sit
 
 Registration lasts only for the authenticated page lifetime. The component unregisters the tools when it unmounts or registration fails. A signed-out page exposes none of the business tools.
 
-For ChatGPT evaluation, use the desktop app's built-in browser with **Site tools** enabled in Browser permissions. Chrome may expose the experimental `document.modelContext` page API through its WebMCP testing flag or an applicable origin trial; that page API and a Chrome agent side panel are separate capabilities.
+In ChatGPT, use the desktop app's built-in browser with **Site tools** enabled in Browser permissions. Chrome may expose the experimental `document.modelContext` page API through its WebMCP testing flag or an applicable origin trial; that page API and a Chrome agent side panel are separate capabilities.
 
 Each call follows the same path:
 
@@ -38,8 +38,8 @@ Tool metadata helps an agent select a capability; it is not an authorization bou
 
 All input objects reject undeclared properties. Identifiers use these formats:
 
-- `invoiceNumber` and `purchaseOrderNumber`: 2–40 uppercase letters, digits, or hyphens, beginning with a letter or digit.
-- `idempotencyKey`: 16–128 characters. Reusing a key with the identical request returns the original result; reusing it for different content is rejected.
+- `invoiceNumber` and `purchaseOrderNumber`: 2 to 40 uppercase letters, digits, or hyphens, beginning with a letter or digit.
+- `idempotencyKey`: 16 to 128 characters. Reusing a key with the identical request returns the original result; reusing it for different content is rejected.
 - Monetary values: integer minor units, such as `1842000` for USD 18,420.00, within JavaScript's exact-integer range.
 - Currency: three uppercase letters.
 - Dates: ISO `YYYY-MM-DD`; timestamps: ISO date-time strings.
@@ -53,7 +53,7 @@ A complete invoice package contains:
 | `amountMinor` | Positive integer minor units |
 | `currency` | Three-letter uppercase currency |
 | `purchaseOrderNumber` | Acme PO identifier |
-| `document.fileName` | Safe 1–120 character filename |
+| `document.fileName` | Safe 1 to 120 character filename |
 | `document.mediaType` | Exactly `application/pdf` |
 | `document.contentBase64` | Canonical base64; at most 1.4 MB encoded and 1 MiB decoded |
 | `document.sha256` | Lowercase 64-character SHA-256 digest of the decoded PDF |
@@ -171,7 +171,7 @@ The routes call the use cases in [`submission-service.ts`](../apps/acme-ap/lib/s
 
 **Why it exists.** Allows a supplier to resolve only the exception work it actually owns and to attach exact evidence under a separate document-consent decision.
 
-- **Input:** `idempotencyKey`, `invoiceNumber`, `exceptionCode`, a 1–1,000 character `message`, and zero to three supporting PDF attachments. Each attachment adds `documentKind`: `proof_of_delivery`, `service_acceptance`, `timesheet`, `tax_document`, `contract`, or `other`.
+- **Input:** `idempotencyKey`, `invoiceNumber`, `exceptionCode`, a 1 to 1,000 character `message`, and zero to three supporting PDF attachments. Each attachment adds `documentKind`: `proof_of_delivery`, `service_acceptance`, `timesheet`, `tax_document`, `contract`, or `other`.
 - **Returns:** invoice and exception identifiers, authoritative `exceptionStatus`, resulting `invoiceStatus`, response/resolution timestamps, attachment count, and resolution outcome.
 - **How it works:** the portal obtains an exact document approval, then PostgreSQL locks the actionable exception, verifies ownership and permitted action, validates every PDF, enforces required evidence, records the response and audit trail, and resolves the exception when the requested evidence is present. The invoice becomes accepted only when no other actionable blocker remains.
 - **Mandatory approval:** yes. The human sees the invoice, exception, message, attachment kinds, filenames, and hashes before anything is attached.
@@ -207,7 +207,7 @@ The routes call the use cases in [`submission-service.ts`](../apps/acme-ap/lib/s
 
 - **Input:** `{ invoiceNumber }`.
 - **Returns:** invoice and portal references, `paymentStatus` (`not_scheduled`, `scheduled`, or `paid`), scheduled and paid timestamps, payment reference, amount, currency, method, and exact invoice allocations. Payment details and allocations remain null/empty until paid.
-- **How it works:** reads the current supplier invoice and its settlement row. The read never triggers payment. In the synthetic challenge environment, every second newly committed invoice receives a deterministic settlement scheduled ten seconds after receipt.
+- **How it works:** reads the current supplier invoice and its settlement row. The read never triggers payment. In the synthetic demo environment, every second newly committed invoice receives a deterministic settlement scheduled ten seconds after receipt.
 - **Visible result:** Finish on cash and the invoice receipt show the same payment status, reference, method, amount, and timing; the receipt section receives a read marker.
 - **Authority boundary:** this AP tool cannot write to AR. In the optional full-loop demo, the agent must separately propose the exact AR reconciliation and obtain approval there.
 - **Important failures:** invoice not found or outside supplier scope, malformed input, unauthenticated session, or remittance-query failure.
@@ -239,16 +239,16 @@ An approved identifier is valid for five minutes, single-use, and bound to the s
 
 POs, invoice records, exception messages, and tool results are business data and remain untrusted content for the agent. They cannot expand tool authority or override the user's instruction. All responses use private no-store caching, and write results are safe to retry only with their original idempotency key and identical content.
 
-## Evaluation workflows
+## Usage workflows
 
-### AP-only evaluation workflow
+### AP-only inspection
 
 1. Open Acme AP in a WebMCP-capable browser and sign in.
 2. Enumerate the authenticated page tools and confirm the 12 definitions above.
 3. Ask the agent to read requirements, open POs, current invoices, exception ownership, buyer cases, and remittance using only this portal's tools.
 4. Compare the answer with the same records in the visible AP interface.
 
-The AR reference application is not required for this evaluation.
+The AR reference application is not required for this workflow.
 
 ### Optional full-loop reference
 

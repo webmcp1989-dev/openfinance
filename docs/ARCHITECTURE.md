@@ -18,7 +18,7 @@ browser agent + informed human  <-------- WebMCP -------->  OpenFinance AR
                                                         Supabase Auth + Postgres
 ```
 
-OpenFinance AR is a separate synthetic supplier reference system used by the demonstration. It is not an AP module, dependency, service, or part of the contest tool count. The applications use separate origins, deployments, Supabase projects, users, sessions, credentials, schemas, and ledgers. There is no shared database, server-to-server API, queue, webhook, or hidden synchronization path. Matching synthetic identifiers are independently seeded demo fixtures.
+OpenFinance AR is a separate synthetic supplier reference system used by the demonstration. It is not an AP module, dependency, service, or part of the AP tool inventory. The applications use separate origins, deployments, Supabase projects, users, sessions, credentials, schemas, and ledgers. There is no shared database, server-to-server API, queue, webhook, or hidden synchronization path. Matching synthetic identifiers are independently seeded demo fixtures.
 
 The optional AR own-system OAuth MCP endpoint uses the AR user's bearer token and existing RLS. It cannot access Acme and is not the cross-company bridge.
 
@@ -35,7 +35,7 @@ The frontend is never authoritative. Within Acme AP, all 12 WebMCP capabilities 
 
 ## Document approval and writes
 
-AP's three document-writing tools—batch submission, exception evidence, and corrected replacement—pause on an accessible portal approval panel. The page prepares a bounded metadata-only manifest and receives a short-lived opaque approval identifier after the signed-in user approves. The identifier is internal page state, not a WebMCP argument.
+AP's three document-writing tools - batch submission, exception evidence, and corrected replacement - pause on an accessible portal approval panel. The page prepares a bounded metadata-only manifest and receives a short-lived opaque approval identifier after the signed-in user approves. The identifier is internal page state, not a WebMCP argument.
 
 Postgres independently derives the final manifest, verifies tenant, user, action, idempotency key, expiry, filenames, hashes, and exact payload, then consumes approval in the same transaction as the business mutation. Approval records never store PDF bytes. Successful tool calls display an agent-labelled result and reload authoritative backend state; presentation events cannot authorize or persist data.
 

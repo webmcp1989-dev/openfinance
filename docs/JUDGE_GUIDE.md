@@ -1,18 +1,18 @@
-# Judge guide — Acme AP
+# Acme AP evaluation guide
 
-## What to evaluate
+## Scope
 
-[Acme AP](https://openfinance-ap.vercel.app) is the complete contest entry. Its **12 authenticated browser WebMCP tools** cover buyer requirements, purchase orders, validation, governed document writes, submission status, exception ownership, buyer cases, corrected revisions, and payment remittance.
+[Acme AP](https://openfinance-ap.vercel.app) is the submitted application. Its **12 authenticated browser WebMCP tools** cover buyer requirements, purchase orders, validation, governed document writes, submission status, exception ownership, buyer cases, corrected revisions, and payment remittance.
 
-Evaluate Acme AP on its own by default. The separate OpenFinance AR application is not required to understand, run, or judge the submitted product.
+Use Acme AP on its own by default. The separate OpenFinance AR application is not required to understand or run the submitted application.
 
-## Why WebMCP fits
+## Agents and finance operators
 
 Supplier teams repeatedly re-key invoices into buyer portals, interpret different PO and evidence rules, resolve exceptions, and retrieve remittance. A traditional API connection is a separate integration project for every buyer.
 
-WebMCP lets Acme expose precise capabilities inside its existing authenticated portal. The agent can discover the portal's live rules and permitted actions; Acme's backend still enforces supplier authorization, financial invariants, and state transitions. The human separately approves every consequential document write.
+WebMCP lets Acme expose defined capabilities inside its existing authenticated portal. The agent can discover the portal's current rules and permitted actions; Acme's backend still enforces supplier authorization, financial invariants, and state transitions. The human separately approves every consequential document write.
 
-## Recommended AP-only evaluation
+## AP-only workflow
 
 1. In the ChatGPT desktop app, enable **Site tools** under Browser permissions.
 2. Open only [Acme AP](https://openfinance-ap.vercel.app) in the built-in browser and sign in using the private Devpost credentials.
@@ -23,9 +23,9 @@ WebMCP lets Acme expose precise capabilities inside its existing authenticated p
 
 A Chrome WebMCP flag can expose the page API for lower-level testing, but a Chrome side panel alone is not the ChatGPT Site tools environment.
 
-## What AP proves
+## Expected AP behavior
 
-- Twelve distinct authenticated capabilities cover a real invoice lifecycle rather than wrapping one generic endpoint.
+- Twelve authenticated capabilities cover requirements, purchase orders, validation, submission, status, exceptions, cases, replacements, and remittance.
 - Every browser capability has a corresponding human interface path backed by the same services.
 - Tool calls use the signed-in supplier session and can read or write only Acme AP state.
 - AP validation uses current PO lines, receipts, service-entry state, balances, tolerances, and evidence rules.

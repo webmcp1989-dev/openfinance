@@ -1,44 +1,44 @@
-# OpenFinance Supplier Portal — Acme AP
+# OpenFinance Supplier Portal - Acme AP
 
-> Contest entry: an independently authenticated buyer AP supplier portal exposing 12 browser WebMCP tools. All data is synthetic.
+> Submitted application: an independently authenticated buyer AP supplier portal exposing 12 browser WebMCP tools. All data is synthetic.
 
-## Canonical resources
+## Project resources
 
 - Live product: https://openfinance-ap.vercel.app
 - Public source: https://github.com/webmcp1989-dev/openfinance
-- Judge guide: https://github.com/webmcp1989-dev/openfinance/blob/main/docs/JUDGE_GUIDE.md
+- Evaluation guide: https://github.com/webmcp1989-dev/openfinance/blob/main/docs/JUDGE_GUIDE.md
 - WebMCP design: https://github.com/webmcp1989-dev/openfinance/blob/main/docs/WEBMCP.md
 - Architecture: https://github.com/webmcp1989-dev/openfinance/blob/main/docs/ARCHITECTURE.md
 - Security: https://github.com/webmcp1989-dev/openfinance/blob/main/docs/SECURITY.md
 
-## Evaluation scope
+## Application scope
 
-Evaluate Acme AP as the complete submitted product. Do not open or use the repository's AR reference system unless the judge specifically chooses the optional full-loop demonstration.
+Use Acme AP as the submitted application. Open the repository's AR reference system only when reproducing the optional full-loop demonstration.
 
-## Agent evaluation
+## Agent access
 
 Use the ChatGPT desktop app's built-in browser with Site tools enabled in Browser permissions. Sign in with the private AP credentials supplied through Devpost. The authenticated page registers its tools only for the lifetime of that signed-in page.
 
-Recommended AP-only instruction: "Using only this supplier portal's tools, review its invoice requirements, open purchase orders, current invoices, exceptions, buyer cases, and payment remittance. Explain what the supplier can act on and what Acme owns. Do not make changes."
+Read-only inspection prompt: "Using only this supplier portal's tools, review its invoice requirements, open purchase orders, current invoices, exceptions, buyer cases, and payment remittance. Explain what the supplier can act on and what Acme owns. Do not make changes."
 
 A Chrome WebMCP flag can expose the experimental page API for lower-level testing. A Chrome side panel alone is not the ChatGPT Site tools environment.
 
-## AP WebMCP inventory — exactly 12 tools
+## AP WebMCP inventory - 12 tools
 
-1. get_invoice_requirements — read the current AP submission policy.
-2. list_open_purchase_orders — list supplier-authorized open POs and operational context.
-3. get_purchase_order_details — read live lines, receipts, balances, tolerances, terms, and evidence rules.
-4. list_supplier_invoices — list the signed-in supplier's AP invoices and effective statuses.
-5. validate_invoice — preflight an approved invoice package without reserving funds or submitting it.
-6. submit_invoice_batch — atomically submit up to three validated invoices after mandatory portal approval.
-7. get_invoice_status — read current status, revisions, timeline, exceptions, inquiries, and payment reference.
-8. get_invoice_exception — read ownership, authority boundary, permitted actions, and required evidence.
-9. respond_to_invoice_exception — send an approved response and supporting PDFs through mandatory portal approval.
-10. replace_rejected_invoice — atomically supersede an eligible rejected invoice through mandatory portal approval.
-11. create_invoice_inquiry — open a persistent tracked buyer AP case without falsely resolving buyer-owned work.
-12. get_payment_remittance — read exact payment status, reference, method, amount, currency, and allocation.
+1. `get_invoice_requirements` - read the current AP submission policy.
+2. `list_open_purchase_orders` - list supplier-authorized open POs and operational context.
+3. `get_purchase_order_details` - read current lines, receipts, balances, tolerances, terms, and evidence rules.
+4. `list_supplier_invoices` - list the signed-in supplier's AP invoices and effective statuses.
+5. `validate_invoice` - preflight an approved invoice package without reserving funds or submitting it.
+6. `submit_invoice_batch` - atomically submit up to three validated invoices after mandatory portal approval.
+7. `get_invoice_status` - read current status, revisions, timeline, exceptions, inquiries, and payment reference.
+8. `get_invoice_exception` - read ownership, authority boundary, permitted actions, and required evidence.
+9. `respond_to_invoice_exception` - send an approved response and supporting PDFs through mandatory portal approval.
+10. `replace_rejected_invoice` - atomically supersede an eligible rejected invoice through mandatory portal approval.
+11. `create_invoice_inquiry` - open a persistent tracked buyer AP case without falsely resolving buyer-owned work.
+12. `get_payment_remittance` - read exact payment status, reference, method, amount, currency, and allocation.
 
-## What the implementation proves
+## Operational properties
 
 - AP authorization and business rules remain authoritative on the backend.
 - Browser tools use the signed-in supplier session and write only to the AP ledger.

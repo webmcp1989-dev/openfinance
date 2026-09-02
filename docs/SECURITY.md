@@ -7,7 +7,7 @@
 - Public signup is disabled. Demo users are administratively provisioned and passwords remain outside Git.
 - Every exposed table has RLS enabled, anonymous access revoked, and minimum authenticated grants.
 - Runtime code receives only the Supabase URL and publishable key. Service-role keys and database passwords are prohibited.
-- Cross-tenant SQL tests create foreign fixtures and prove they cannot be read or mutated.
+- Cross-tenant SQL tests create foreign fixtures and verify that they cannot be read or mutated.
 - The optional AR OAuth MCP accepts only signature-, issuer-, expiry-, audience-, client-, user-, role-, and RLS-validated tokens. It uses an unprivileged bearer client and cannot access AP.
 
 ## Backend enforcement
@@ -38,4 +38,4 @@ No backend URL fetch is accepted. Authenticated PDF downloads rely on RLS, reval
 - Security headers restrict script sources, framing, MIME sniffing, referrer data, cross-origin resources, and unused browser capabilities.
 - All tool capabilities remain available through human UI controls backed by the same services.
 
-Acme AP's security boundary covers its **12 browser tools**: every AP read and mutation terminates inside AP, and no AP tool can access an external supplier ledger. The independent AR reference system has its own **7-tool boundary** and cannot access Acme. The two inventories are not one product and are not combined into a contest tool count; only the human can authorize information moving between their separate browser sessions.
+Acme AP's security boundary covers its **12 browser tools**: every AP read and mutation terminates inside AP, and no AP tool can access an external supplier ledger. The independent AR reference system has its own **7-tool boundary** and cannot access Acme. The two inventories are separate; only the human can authorize information moving between their browser sessions.

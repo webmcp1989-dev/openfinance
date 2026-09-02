@@ -665,7 +665,7 @@ paths:
       - url: https://openfinance-ap.vercel.app
     post:
       operationId: restoreSyntheticDemoState
-      summary: Restore one application's independent synthetic challenge baseline
+      summary: Restore one application's independent synthetic demo state
       description: >-
         Human-only capability. It is intentionally absent from WebMCP and must be
         confirmed separately in each application. The authenticated database function

@@ -1,6 +1,6 @@
 # Setup and deployment
 
-Acme AP is the submitted product and can be run and evaluated on its own. The independent OpenFinance AR reference system is needed only to reproduce the optional full-loop demonstration. If both applications are deployed, they must use separate Supabase projects, Vercel projects, environment values, and authenticated sessions.
+Acme AP is the submitted application and runs independently. The OpenFinance AR reference system is needed only to reproduce the optional full-loop demonstration. If both applications are deployed, they must use separate Supabase projects, Vercel projects, environment values, and authenticated sessions.
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ For the optional full-loop demonstration, also create the OpenFinance AR user af
 
 - OpenFinance AR: `demo@openfinance.dev`
 
-Use strong unique passwords and provide them only through the contest's private credential field. Disable public signup after creating the users; keep email/password login enabled.
+Use strong unique passwords and provide them only through Devpost's private credential field. Disable public signup after creating the users; keep email/password login enabled.
 
 ## Environment and hosting
 
@@ -71,7 +71,7 @@ bun run build
 bun audit
 ```
 
-After applying the Acme AP migrations, run every SQL file in `services/acme/supabase/tests` against the AP project. Then sign in to Acme AP, confirm its 12 registered tools, and run the [recommended AP-only evaluation](JUDGE_GUIDE.md#recommended-ap-only-evaluation).
+After applying the Acme AP migrations, run every SQL file in `services/acme/supabase/tests` against the AP project. Then sign in to Acme AP, confirm its 12 registered tools, and run the [AP-only workflow](JUDGE_GUIDE.md#ap-only-workflow).
 
 If you deploy the optional AR reference system, also run every SQL file in `services/openfinance/supabase/tests` against the AR project, sign in to both deployments, and follow the [optional full-loop workflow](JUDGE_GUIDE.md#optional-full-loop-reference).
 
