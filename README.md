@@ -2,6 +2,15 @@
 
 The contest submission is the independently authenticated [Acme AP supplier portal](https://openfinance-ap.vercel.app). It is a WebMCP-native buyer portal with **12 authenticated browser tools** for purchase-order context, invoice validation and submission, exceptions, buyer cases, corrected revisions, receipt status, and payment remittance.
 
+## Judge quick start
+
+1. Evaluate **Acme AP** as the submitted product; OpenFinance AR is only an independent synthetic reference system for the demo.
+2. Open the AP portal in the ChatGPT desktop app's built-in browser, enable **Site tools** in Browser permissions, and sign in with the private credentials supplied in Devpost.
+3. Confirm that the page exposes exactly **12 authenticated WebMCP tools**, then run **“Submit all Acme invoices that can be paid.”**
+4. Use the [judge guide](docs/JUDGE_GUIDE.md) for the deterministic workflow and expected evidence, or read the live [agent-readable guide](https://openfinance-ap.vercel.app/llms.txt).
+
+The ChatGPT Chrome side panel does not currently expose ChatGPT Site Tools. Chrome's WebMCP testing flag is useful for testing the underlying browser API, but the ChatGPT desktop built-in browser is the supported evaluation surface for the real agent workflow.
+
 ## Contest scope
 
 Only [`apps/acme-ap`](apps/acme-ap) and its independently deployed backend in [`services/acme`](services/acme) constitute the submitted product. The AP portal owns its authentication, authorization, supplier boundary, business rules, database, and ledger. Every AP WebMCP tool operates only inside that AP boundary and has a corresponding human UI path.

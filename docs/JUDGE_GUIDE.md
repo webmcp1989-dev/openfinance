@@ -24,7 +24,7 @@ The agent discovers and reasons across those capabilities. The applications enfo
 
 ## Workflow
 
-1. Sign into both live applications in the same WebMCP-capable browser.
+1. In the ChatGPT desktop app, enable **Site tools** under Browser permissions, open both live applications in its built-in browser, and sign in using the private Devpost credentials. The ChatGPT Chrome side panel is not the Site Tools evaluation surface; Chrome's WebMCP flag is only needed for lower-level browser API testing.
 2. Ask the agent: **“Submit all Acme invoices that can be paid.”**
 3. The agent reads the three supplier candidates and shows their invoice numbers, POs, amounts, and Acme destination. No PDF leaves AR before informed transfer approval.
 4. Acme exposes requirements and PO lines, receipts, service-entry state, balances, and evidence rules. The agent validates only the approved packages.
@@ -48,3 +48,5 @@ The agent discovers and reasons across those capabilities. The applications enfo
 - The story ends with reconciled cash, not merely uploaded paperwork.
 
 Technical details are available in [WEBMCP.md](WEBMCP.md), [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), and [openapi.yaml](openapi.yaml).
+
+For automated discovery from the deployed product, read [`/llms.txt`](https://openfinance-ap.vercel.app/llms.txt).

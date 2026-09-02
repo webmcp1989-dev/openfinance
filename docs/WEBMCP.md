@@ -6,6 +6,8 @@ The submitted Acme AP product registers **12 authenticated browser tools**. Ever
 
 This repository also includes an independent OpenFinance AR reference system with **7 browser tools** for the external side of the demonstration. AR is not part of Acme AP and its tools are not included in the AP contest count. Each page registers its own imperative `document.modelContext` tools for only its authenticated lifetime.
 
+For ChatGPT evaluation, use the ChatGPT desktop app's built-in browser with **Site tools** enabled in Browser permissions. Chrome can expose the experimental `document.modelContext` API when its WebMCP testing flag or an applicable origin trial is enabled, but the ChatGPT Chrome side panel is not the ChatGPT Site Tools surface. The deployed AP origin also publishes a concise agent-readable overview at [`/llms.txt`](https://openfinance-ap.vercel.app/llms.txt).
+
 ## Acme AP — 12 tools
 
 | Tool | Purpose |

@@ -511,6 +511,25 @@ describe("WebMCP safety contracts", () => {
     expect(arWorkspace).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
     expect(arWorkspace).not.toContain("7 site + 11 remote tools");
   });
+
+  test("publishes a precise agent-readable AP evaluation guide", async () => {
+    const [readme, judgeGuide, webmcp, llms, layout] = await Promise.all([
+      readFile(join(root, "README.md"), "utf8"),
+      readFile(join(root, "docs/JUDGE_GUIDE.md"), "utf8"),
+      readFile(join(root, "docs/WEBMCP.md"), "utf8"),
+      readFile(join(root, "apps/acme-ap/public/llms.txt"), "utf8"),
+      readFile(join(root, "apps/acme-ap/app/layout.tsx"), "utf8"),
+    ]);
+
+    expect(readme).toContain("Judge quick start");
+    expect(judgeGuide).toContain("ChatGPT desktop app");
+    expect(webmcp).toContain("ChatGPT Chrome side panel is not");
+    expect(layout).toContain('href="/llms.txt"');
+    expect(llms).toContain("Evaluate Acme AP as the submitted product");
+    expect(llms).toContain("AP WebMCP inventory — exactly 12 tools");
+    expect(llms).toContain("get_payment_remittance");
+    expect(llms).not.toMatch(/19 (?:browser |WebMCP )?tools/i);
+  });
 });
 
 describe("OpenAPI contract coverage", () => {
