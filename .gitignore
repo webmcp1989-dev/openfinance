@@ -20,6 +20,7 @@ test-results/
 # Local-only working material and rendered media
 .local/
 /artifacts/
+/AGENTS.md
 
 # Tooling
 *.tsbuildinfo

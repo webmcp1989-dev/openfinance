@@ -1,34 +1,17 @@
-# OpenFinance Supabase boundary
+# OpenFinance AR database boundary
 
-This directory belongs only to the OpenFinance AR Supabase project.
+This directory belongs only to the independent synthetic AR reference system. It is not part of the submitted Acme AP product. Never apply its SQL to the Acme project.
 
-- `supabase/migrations/202608290001_initial.sql` creates tenant-scoped AR data, seeds the challenge queue, enables RLS, and installs idempotent delivery-result recording.
-- `supabase/migrations/202608290002_reject_duplicate_delivery_items.sql` serializes retries for an organization-scoped idempotency key and rejects duplicate invoice numbers inside one delivery event.
-- `supabase/migrations/202608290003_enforce_delivery_event_contract.sql` enforces exact event fields, allowed portal statuses, field bounds, purchase-order presence, and legal invoice state transitions at the database boundary.
-- `supabase/migrations/202608290004_bound_json_money.sql` prevents invoice amounts from exceeding JSON's exact-integer range.
-- `supabase/migrations/202608290005_canonicalize_delivery_requests.sql` makes PostgreSQL derive delivery-event request identity and compare exact stored retry content instead of trusting a caller-supplied fingerprint.
-- `supabase/migrations/202608290006_simulate_erp_invoice_sync.sql` adds a tenant-configured, idempotent demo ERP pull. Distinct calls deterministically alternate between importing two synthetic invoices and importing none; state changes and audit events are transactional.
-- `supabase/migrations/202608290007_repair_renderable_invoice_pdfs.sql` replaces header/footer-shaped placeholders with complete one-page PDFs, repairs existing challenge documents, and guarantees future ERP imports receive valid cross-reference tables and trailers.
-- `supabase/migrations/202608290011_add_authorized_demo_reset.sql` adds the explicitly confirmed, operator-scoped human reset used to make the synthetic challenge repeatable; it is audited and intentionally absent from WebMCP.
-- `supabase/migrations/202608290012_secure_mcp_oauth_activity.sql` distinguishes OAuth MCP mutations in the audit trail and prevents OAuth clients from reaching the human-only reset at either public or private database boundaries.
-- `supabase/migrations/202608300001_bind_oauth_tokens_to_mcp.sql` installs the Supabase Custom Access Token hook that assigns the exact MCP audience only to OAuth tokens and preserves normal portal-token claims.
-- `supabase/migrations/202608300002_expand_exception_to_cash.sql` adds due/follow-up state, tenant-scoped supporting documents, and idempotent full or partial payment-remittance reconciliation.
-- `supabase/migrations/202608300003_align_exception_to_cash_reset.sql` keeps the synthetic reset complete after remittance expansion.
-- `supabase/migrations/202608300004_track_portal_checks.sql` records when verified portal results were last observed without trusting the UI.
-- `supabase/migrations/202608300005_validate_supporting_document_pdfs.sql` enforces PDF signature and terminal-marker integrity for supporting evidence at the database boundary.
-- `supabase/migrations/202608300006_serialize_remittance_idempotency.sql` serializes organization-scoped remittance retries so concurrent identical calls replay one result and conflicting reuse fails closed.
-- `supabase/migrations/202608300007_render_proof_of_delivery_fixture.sql` replaces the initial evidence placeholder with a distinct, standards-compliant synthetic proof-of-delivery PDF.
-- `supabase/migrations/202608300008_seed_realistic_invoice_portfolio.sql` creates the complete 24-invoice tenant-owned portfolio and exact proof-of-delivery fixture. `202609010001_align_narrated_demo_state.sql` narrows the reset to the three narrated Acme candidates and adds the audited evidence-resolution writeback while remaining independent of Acme AP.
-- `supabase/migrations/202608300009_default_invoice_due_date.sql` enforces the canonical Net-30 fallback for adapter-created invoices at the database boundary, including synthetic ERP sync imports.
-- `supabase/migrations/202608300010_record_portal_replacement_results.sql` permits an AP replacement reference to be reconciled only with an exact, row-locked `supersedesPortalReference`; ordinary result writes retain the prior hardened implementation.
-- `supabase/migrations/202608300015_accept_rejected_replacement_results.sql` permits that same exact-reference transition from the canonical locally rejected state as well as submitted state, so a verified AP corrected revision can be reconciled without weakening stale-reference or idempotency guards.
-- `supabase/tests/rls.test.sql` asserts grants, policy and privileged-function hardening, then creates a foreign organization and proves its invoices cannot be read or mutated.
-- `supabase/tests/delivery-events.test.sql` exercises duplicate rejection, direct-RPC field validation, legal state transitions, database-derived idempotency identity, identical retry replay, single state mutation, and changed-payload rejection using the same caller fingerprint.
-- `supabase/tests/erp-sync.test.sql` proves the `2 → 0 → 2` sequence, idempotent replay, internal-state isolation, wrapper privilege boundaries, and audit creation.
-- `supabase/tests/renderable-pdfs.test.sql` verifies renderer isolation, document repair, ERP trigger installation, PDF object markers, and exact `startxref` byte offsets.
-- `supabase/tests/mcp-oauth.test.sql` proves OAuth audit attribution, private reset isolation, OAuth reset denial, and preserved human reset behavior.
-- `supabase/tests/mcp-token-audience.test.sql` proves hook privileges and separate OAuth/portal audience behavior.
-- `supabase/tests/exception-to-cash.test.sql` verifies RLS, privilege boundaries, serialized remittance idempotency, and PDF evidence integrity.
-- `supabase/demo/reset.sql` is the reviewed administrative fallback for only the fixed synthetic challenge organization.
+## Contents
 
-Do not point these migrations at the Acme project. Runtime access uses only the OpenFinance publishable key and the authenticated OpenFinance user session.
+- `supabase/migrations`: forward-only AR schema, RLS, grants, private transaction functions, deterministic invoice and evidence fixtures, portal-result recording, remittance reconciliation, optional own-system OAuth MCP support, and human-only reset support. Apply every migration in filename order.
+- `supabase/tests`: rollback-only pgTAP coverage for tenant isolation, privileges, delivery events, PDF rendering and integrity, ERP simulation, OAuth audience and reset isolation, exception follow-up, and remittance idempotency.
+- `supabase/demo/reset.sql`: reviewed administrative fallback for the fixed synthetic AR organization. Prefer the authenticated **Restore demo start** UI.
+
+## Runtime boundary
+
+The application uses only AR's Supabase URL, publishable key, and authenticated organization session. Tenant identity comes from verified claims and RLS, not request data. Its browser tools and optional OAuth MCP can read or write only AR state; neither can access Acme AP.
+
+Matching invoice and PO identifiers are deterministic demo fixtures. They are not evidence of a shared database or hidden synchronization path.
+
+See [SETUP](../../docs/SETUP.md), [SECURITY](../../docs/SECURITY.md), and [ARCHITECTURE](../../docs/ARCHITECTURE.md).

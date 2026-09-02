@@ -1,29 +1,36 @@
 # OpenFinance Supplier Portal — Acme AP
 
-The contest submission is the independently authenticated [Acme AP supplier portal](https://openfinance-ap.vercel.app). It is a WebMCP-native buyer portal with **12 authenticated browser tools** for purchase-order context, invoice validation and submission, exceptions, buyer cases, corrected revisions, receipt status, and payment remittance.
+[Acme AP](https://openfinance-ap.vercel.app) is the contest submission: an authenticated buyer portal with **12 browser WebMCP tools** for purchase-order context, invoice validation and submission, exceptions, buyer cases, corrected revisions, receipt status, and payment remittance.
+
+Supplier teams normally learn and operate a different portal for every large customer. Direct API integration is a costly project per buyer; manual work is repetitive and error-prone. Acme AP makes the existing portal agent-operable without giving up its authentication, business rules, ledger, or human approval controls.
 
 ## Judge quick start
 
-1. Evaluate **Acme AP** as the submitted product; OpenFinance AR is only an independent synthetic reference system for the demo.
-2. Open the AP portal in the ChatGPT desktop app's built-in browser, enable **Site tools** in Browser permissions, and sign in with the private credentials supplied in Devpost.
-3. Confirm that the page exposes exactly **12 authenticated WebMCP tools**, then run **“Submit all Acme invoices that can be paid.”**
-4. Use the [judge guide](docs/JUDGE_GUIDE.md) for the deterministic workflow and expected evidence, or read the live [agent-readable guide](https://openfinance-ap.vercel.app/llms.txt).
+1. Evaluate **Acme AP** as the submitted product. Open it in the ChatGPT desktop app's built-in browser, enable **Site tools** in Browser permissions, and sign in with the private credentials supplied in Devpost.
+2. Confirm that the authenticated page exposes exactly **12 tools**. Ask the agent to read Acme's invoice requirements or open purchase orders to test AP by itself.
+3. To reproduce the complete cross-company story, also open the independent AR reference system and follow the [judge guide](docs/JUDGE_GUIDE.md). It supplies synthetic external invoices; it is not part of Acme AP.
+4. Agents can read the deployed [evaluation guide](https://openfinance-ap.vercel.app/llms.txt).
 
-The ChatGPT Chrome side panel does not currently expose ChatGPT Site Tools. Chrome's WebMCP testing flag is useful for testing the underlying browser API, but the ChatGPT desktop built-in browser is the supported evaluation surface for the real agent workflow.
+The Chrome WebMCP flag exposes the experimental page API for lower-level testing. The complete ChatGPT agent workflow uses the desktop app's built-in browser and Site tools; installing or opening a Chrome side panel alone does not enable Site tools.
 
 ## Contest scope
 
-Only [`apps/acme-ap`](apps/acme-ap) and its independently deployed backend in [`services/acme`](services/acme) constitute the submitted product. The AP portal owns its authentication, authorization, supplier boundary, business rules, database, and ledger. Every AP WebMCP tool operates only inside that AP boundary and has a corresponding human UI path.
+Only [`apps/acme-ap`](apps/acme-ap) and [`services/acme`](services/acme) constitute the submitted product. Acme AP owns its authentication, authorization, supplier boundary, business rules, database, and ledger. Every AP tool operates only inside that boundary and has a corresponding human UI path.
 
-The repository also contains [`apps/openfinance-ar`](apps/openfinance-ar), an independently operated synthetic supplier invoice system with its own deployment, authentication, database, and **7 browser tools**. AR is a demo reference system, not part of the submitted AP product and not included in the AP tool count. It exists only to reproduce how an external supplier system can interact with a WebMCP-enabled buyer portal through a browser agent and informed human.
+The repository also contains [`apps/openfinance-ar`](apps/openfinance-ar), an independently operated synthetic supplier invoice system with its own deployment, authentication, database, and **7 browser tools**. AR exists only to make the cross-company demo reproducible. It is not part of Acme AP or its tool count.
 
-## Why WebMCP
+## Why this is a strong WebMCP use case
 
-Supplier teams repeatedly re-key invoices into buyer portals, interpret different PO and evidence rules, resolve exceptions, and retrieve payment details. Direct API integration is usually a separate project for every buyer.
+WebMCP turns portal actions into precise, discoverable capabilities inside the authenticated page. An agent can read Acme's live PO and evidence rules, explain which invoices qualify, submit an approved batch, route exceptions to the correct owner, and retrieve exact remittance. Acme's backend remains authoritative, and the human retains control of every document write.
 
-WebMCP lets Acme expose precise AP capabilities inside its existing authenticated supplier portal. A browser agent can discover and operate those capabilities without a bespoke supplier integration, while Acme retains its own authorization, business rules, customer relationship, and ledger. The human retains authority over every consequential document write.
+The demo proves interoperability rather than a hidden integration. AP and AR share no database, credential, session, server-to-server API, queue, or webhook. The browser agent carries only information the human approves, and each application writes only its own ledger.
 
-The demonstration uses the independent AR reference system as an external source and destination. There is no shared database, credential, session, server-to-server API, queue, webhook, or hidden integration between it and Acme AP. No AP tool can read or write the AR database, and Acme AP does not depend on the reference application.
+| Judging area | Verifiable product evidence |
+| --- | --- |
+| WebMCP leverage | 12 distinct authenticated capabilities cover a real invoice lifecycle, not a single wrapper call. |
+| Execution | Read and write results appear in the same production UI; writes are validated, transactional, idempotent, and auditable. |
+| Impact | One agent can operate buyer-specific rules and exception workflows that suppliers otherwise handle portal by portal. |
+| Creativity and ambition | Two mutually independent financial applications cooperate through the browser without a partner-specific integration. |
 
 ## Demo
 
@@ -35,7 +42,7 @@ Follow-up instruction:
 
 > Resolve supplier-owned exceptions, open cases for buyer-owned blockers, and reconcile approved payments back into OpenFinance.
 
-The deterministic demonstration qualifies three external supplier invoices, submits two totaling $25,670 after approval, leaves one blocked by Acme's rules, resolves supplier-owned evidence, opens a buyer-owned case without overstepping authority, and exposes exact payment remittance. The independent AR reference system separately records the verified AP outcomes so the end-to-end use case is reproducible. See the [judge guide](docs/JUDGE_GUIDE.md) for the starting state and expected visible results.
+The deterministic demonstration finds three external supplier invoices, submits the two that qualify for a total of $25,670 after approval, and leaves one blocked by Acme's live rules. It then resolves a supplier-owned evidence exception, opens a case for a buyer-owned blocker without falsely claiming resolution, and reads exact payment remittance. The AR reference system separately records the verified AP outcomes. See the [judge guide](docs/JUDGE_GUIDE.md) for the starting state and visible results.
 
 ## Repository
 
@@ -43,7 +50,7 @@ The deterministic demonstration qualifies three external supplier invoices, subm
 - `apps/openfinance-ar` and `services/openfinance`: demo-only AR reference system with a separate Supabase boundary.
 - `tests`: repository and production-contract tests.
 - `docs/openapi.yaml`: same-origin HTTP contracts.
-- `docs`: only the setup, architecture, security, WebMCP, API, and judge guidance needed to understand and reproduce the project.
+- `docs`: setup, architecture, security, WebMCP, API, and judge guidance.
 
 ## Run and verify
 

@@ -494,9 +494,9 @@ describe("WebMCP safety contracts", () => {
       readFile(join(root, "apps/acme-ap/components/acme-workspace.tsx"), "utf8"),
     ]);
 
-    expect(readme).toContain("The contest submission is the independently authenticated");
-    expect(readme).toContain("12 authenticated browser tools");
-    expect(readme).toContain("AR is a demo reference system, not part of the submitted AP product");
+    expect(readme).toContain("is the contest submission: an authenticated buyer portal");
+    expect(readme).toContain("12 browser WebMCP tools");
+    expect(readme).toContain("AR exists only to make the cross-company demo reproducible");
     expect(readme).not.toContain("/mcp");
     expect(guide).toContain("as the contest entry");
     expect(guide).not.toContain("remote MCP");
@@ -523,7 +523,7 @@ describe("WebMCP safety contracts", () => {
 
     expect(readme).toContain("Judge quick start");
     expect(judgeGuide).toContain("ChatGPT desktop app");
-    expect(webmcp).toContain("ChatGPT Chrome side panel is not");
+    expect(webmcp).toContain("a Chrome agent side panel are separate capabilities");
     expect(layout).toContain('href="/llms.txt"');
     expect(llms).toContain("Evaluate Acme AP as the submitted product");
     expect(llms).toContain("AP WebMCP inventory — exactly 12 tools");

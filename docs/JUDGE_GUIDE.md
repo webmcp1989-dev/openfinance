@@ -1,18 +1,18 @@
-# Acme AP contest judge guide
+# Judge guide — Acme AP
 
 ## What to evaluate
 
-Judge [Acme AP](https://openfinance-ap.vercel.app) as the contest entry. It exposes **12 browser WebMCP tools** for buyer requirements, purchase-order context, validation, governed document writes, submission status, exception ownership, buyer cases, corrected revisions, and payment remittance.
+Judge [Acme AP](https://openfinance-ap.vercel.app) as the contest entry. Its **12 authenticated browser WebMCP tools** cover buyer requirements, purchase orders, validation, governed document writes, submission status, exception ownership, buyer cases, corrected revisions, and payment remittance.
 
 The [OpenFinance AR system](https://openfinance-ar.vercel.app) is an independent synthetic supplier reference system used only to reproduce external invoice discovery and writeback in the demonstration. It has **7 browser WebMCP tools**, its own deployment, authentication, database, migrations, and credentials, and is not part of the submitted AP product or its tool count.
 
-Acme AP has no server-side integration with the reference system. The browser agent carries only human-approved information into Acme's separately governed 12-tool portal.
+Acme AP has no server-side integration with the reference system. The browser agent is the only bridge, and it carries only human-approved information.
 
 ## Why WebMCP fits
 
 Supplier teams repeatedly re-key invoices into buyer portals, interpret different PO and evidence rules, resolve exceptions, and retrieve remittance. A traditional API connection is a per-partner integration project. WebMCP lets each existing portal expose precise capabilities inside its authenticated page while retaining its own rules and customer relationship.
 
-The agent discovers and reasons across those capabilities. The applications enforce authorization and financial invariants. The human reviews exact data before it crosses company boundaries and separately approves consequential document writes.
+The agent discovers and reasons across those capabilities. Each application enforces its own authorization and financial invariants. The human reviews exact data before it crosses company boundaries and separately approves consequential document writes.
 
 ## Starting state
 
@@ -24,16 +24,16 @@ The agent discovers and reasons across those capabilities. The applications enfo
 
 ## Workflow
 
-1. In the ChatGPT desktop app, enable **Site tools** under Browser permissions, open both live applications in its built-in browser, and sign in using the private Devpost credentials. The ChatGPT Chrome side panel is not the Site Tools evaluation surface; Chrome's WebMCP flag is only needed for lower-level browser API testing.
+1. In the ChatGPT desktop app, enable **Site tools** under Browser permissions. Open both live applications in its built-in browser and sign in using the private Devpost credentials. A Chrome WebMCP flag can expose the page API for lower-level testing, but a Chrome side panel alone is not the ChatGPT Site tools environment.
 2. Ask the agent: **“Submit all Acme invoices that can be paid.”**
 3. The agent reads the three supplier candidates and shows their invoice numbers, POs, amounts, and Acme destination. No PDF leaves AR before informed transfer approval.
 4. Acme exposes requirements and PO lines, receipts, service-entry state, balances, and evidence rules. The agent validates only the approved packages.
 5. The agent explains why `INV-10507` is excluded and previews the two qualifying invoices and their exact $25,670 total.
 6. Acme opens its own mandatory approval panel. No invoice document is committed before the separate document-write approval bound to that exact payload.
-7. Acme submits the two-invoice batch atomically, returns portal references, refreshes visible state, and makes retries idempotent. AR records only the verified results through its own tools.
+7. Acme submits the two-invoice batch atomically, returns portal references, refreshes visible state, and makes retries idempotent. The AR reference system records only those returned results through its own tools.
 8. Ask the follow-up: **“Resolve supplier-owned exceptions, open cases for buyer-owned blockers, and reconcile approved payments back into OpenFinance.”**
 9. For `INV-10417`, the agent finds verified proof of delivery, previews the external transfer, obtains approval, and responds. AP visibly resolves and accepts the invoice; AR visibly records the exact result.
-10. For `INV-10463`, the agent states that buyer receiving owns the blocker and opens a tracked AP case rather than claiming resolution. Both systems visibly retain the exact case reference after their respective writes.
+10. For `INV-10463`, the agent states that Acme receiving owns the blocker and opens a tracked AP case rather than claiming resolution. Both systems visibly retain the exact case reference after their separate writes.
 11. Acme's deterministic test payment marks `INV-10482` paid after ten seconds. The agent reads `PAY-20260830-0DD9D23B` and its $18,420 allocation.
 12. After exact human review, AR records that remittance and visibly shows the payment reference, amount, method, paid-at time, and zero remaining due.
 

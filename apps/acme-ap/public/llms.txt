@@ -17,13 +17,15 @@ Evaluate Acme AP as the submitted product. The repository's OpenFinance AR appli
 
 ## Agent evaluation
 
-Use the ChatGPT desktop app's built-in browser with Site tools enabled in Browser permissions. Sign in with the private AP credentials supplied through Devpost. The authenticated page registers the tools only for the lifetime of that signed-in page.
+Use the ChatGPT desktop app's built-in browser with Site tools enabled in Browser permissions. Sign in with the private AP credentials supplied through Devpost. The authenticated page registers its tools only for the lifetime of that signed-in page.
+
+To test Acme AP by itself, ask the agent to read this portal's invoice requirements or open purchase orders. The opening demo instruction below also requires the independent AR reference system to be open and signed in because the candidate invoice documents originate there.
 
 Opening instruction: "Submit all Acme invoices that can be paid."
 
 Follow-up instruction: "Resolve supplier-owned exceptions, open cases for buyer-owned blockers, and reconcile approved payments back into OpenFinance."
 
-The ChatGPT Chrome side panel is not the ChatGPT Site Tools evaluation surface. Chrome's experimental WebMCP flag is useful only for lower-level testing of the page API.
+A Chrome WebMCP flag can expose the experimental page API for lower-level testing. A Chrome side panel alone is not the ChatGPT Site tools environment.
 
 ## AP WebMCP inventory — exactly 12 tools
 
